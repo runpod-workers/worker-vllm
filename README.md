@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>Template | Worker</h1>
+<h1>LLM Endpoint | Worker</h1>
 
 [![CI | Test Worker](https://github.com/runpod-workers/worker-template/actions/workflows/CI-test_worker.yml/badge.svg)](https://github.com/runpod-workers/worker-template/actions/workflows/CI-test_worker.yml)
 &nbsp;
