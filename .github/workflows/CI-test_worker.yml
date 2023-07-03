@@ -1,0 +1,70 @@
+name: CI | Test Worker
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  initialize_worker:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.extract_id.outputs.runpod_job_id }}
+
+    steps:
+      - name: Deploy Worker
+        id: deploy
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://api.runpod.ai/v2/${{ secrets.RUNPOD_ENDPOINT }}/run"
+          method: "POST"
+          customHeaders: '{"Content-Type": "application/json"}'
+          bearerToken: ${{ secrets.RUNPOD_API_KEY }}
+          data: '{"input":{"github_pat": "${{ secrets.GH_PAT }}", "github_org":"${{ secrets.GH_ORG }}"}}'
+
+      - name: Extract Job ID
+        id: extract_id
+        run: |
+          ID=$(echo '${{ steps.deploy.outputs.response }}' | jq -r '.id')
+          echo "::set-output name=runpod_job_id::$ID"
+
+  run_tests:
+    needs: initialize_worker
+    runs-on: runpod
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11 & install dependencies
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r builder/requirements.txt
+
+      - name: Execute Tests
+        run: |
+          python src/handler.py --test_input='{"input": "test"}'
+
+  terminate_worker:
+    if: ${{ always() && !success() }}
+    needs: initialize_worker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Shutdown Worker
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://api.runpod.ai/v2/${{ secrets.RUNPOD_ENDPOINT }}/cancel/${{ needs.initialize_worker.outputs.id }}"
+          method: "POST"
+          customHeaders: '{"Content-Type": "application/json"}'
+          bearerToken: ${{ secrets.RUNPOD_API_KEY }}

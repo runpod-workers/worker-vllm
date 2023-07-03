@@ -1,0 +1,50 @@
+name: CI | Update runpod package version
+
+on:
+  repository_dispatch:
+    types: [python-package-release]
+
+  push:
+    branches: ["main"]
+
+  workflow_dispatch:
+
+jobs:
+  check_dep:
+    runs-on: ubuntu-latest
+    name: Check python requirements file and update
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check for new package version and update
+        run: |
+          # Get current version
+          current_version=$(grep -oP 'runpod==\K[^"]+' ./builder/requirements.txt)
+
+          # Get new version
+          new_version=$(curl -s https://pypi.org/pypi/runpod/json | jq -r .info.version)
+          echo "NEW_VERSION_ENV=$new_version" >> $GITHUB_ENV
+
+          if [ -z "$new_version" ]; then
+              echo "Failed to fetch the new version."
+              exit 1
+          fi
+
+          # Check if the version is already up-to-date
+          if [ "$current_version" = "$new_version" ]; then
+              echo "The package version is already up-to-date."
+              exit 0
+          fi
+
+          # Update requirements.txt
+          sed -i "s/runpod==.*/runpod==$new_version/" ./builder/requirements.txt
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update package version
+          title: Update runpod package version
+          body: The package version has been updated to ${{ env.NEW_VERSION_ENV }}
+          branch: runpod-package-update
