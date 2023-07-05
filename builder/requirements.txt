@@ -2,4 +2,4 @@
 # Reccomended to lock the version number to avoid unexpected changes.
 
 runpod==git+https://github.com/runpod/runpod-python@vllm#egg=runpod
-vllm==0.1.1
+vllm=git+https://github.com/runpod/vllm@runpod#egg=vllm

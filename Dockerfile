@@ -1,5 +1,5 @@
 # Base image
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu20.04
+FROM runpod/pytorch:3.10-2.0.0-117
 
 # Use bash shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -23,5 +23,4 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Add src files (Worker Template)
 ADD src .
 
-CMD python -m vllm.entrypoints.openai.api_server --model facebook/opt-125m --port 443 --host 127.0.0.1
 CMD python -u /handler.py
