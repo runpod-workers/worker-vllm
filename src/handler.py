@@ -116,3 +116,6 @@ optimizing its performance and scalability.
 """
 runpod.serverless.start(
     {"handler": handler, "vllm": vllm}, serverless_llm=True)
+
+# Start the VLLM server
+vllm.start()

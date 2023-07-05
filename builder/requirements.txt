@@ -4,6 +4,6 @@
 # Use the following additional index URL to get the latest PyTorch.
 --extra-index-url https://download.pytorch.org/whl/cu118
 
-runpod==git+https://github.com/runpod/runpod-python@vllm#egg=runpod
-vllm=git+https://github.com/runpod/vllm@runpod#egg=vllm
+runpod @ git+https://github.com/runpod/runpod-python@vllm#egg=runpod
+vllm @ git+https://github.com/runpod/vllm@runpod#egg=vllm
 torch==2.0.1
