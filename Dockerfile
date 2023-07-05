@@ -23,4 +23,5 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Add src files (Worker Template)
 ADD src .
 
+CMD python -m vllm.entrypoints.openai.api_server --model facebook/opt-125m --port 443 --host 127.0.0.1
 CMD python -u /handler.py

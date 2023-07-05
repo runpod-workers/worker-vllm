@@ -1,4 +1,5 @@
 # Required Python packages get listed here, one per line.
 # Reccomended to lock the version number to avoid unexpected changes.
 
-runpod==0.9.12
+runpod==git+https://github.com/runpod/runpod-python@vllm#egg=runpod
+vllm==0.1.1
