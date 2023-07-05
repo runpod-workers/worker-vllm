@@ -42,7 +42,7 @@ def prepare_request(event: Dict) -> Dict:
     return request_data
 
 
-def make_request(request_data: Dict) -> requests.Response:
+def make_vllm_request(request_data: Dict) -> requests.Response:
     url = request_data['url']
     headers = request_data['headers']
     request_type = request_data['request_type']
@@ -96,7 +96,7 @@ def handler(event):
     request_data = prepare_request(event)
 
     # Make the request.
-    response = make_request(request_data)
+    response = make_vllm_request(request_data)
 
     # Process the response from vllm.
     response_data = process_response(response)
