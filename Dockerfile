@@ -1,7 +1,6 @@
 # Base image
-# runpod/pytorch:3.10-2.0.0-117
-# The following docker base image is recommended by VLLM.
-FROM nvcr.io/nvidia/pytorch:22.12-py3 
+# The following docker base image is recommended by VLLM: nvcr.io/nvidia/pytorch:22.12-py3 
+FROM runpod/pytorch:3.10-2.0.0-117
 
 # Use bash shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

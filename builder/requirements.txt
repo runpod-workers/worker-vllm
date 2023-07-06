@@ -2,7 +2,7 @@
 # Reccomended to lock the version number to avoid unexpected changes.
 
 # Use the following additional index URL to get the latest PyTorch.
---extra-index-url https://download.pytorch.org/whl/cu118
+# --extra-index-url https://download.pytorch.org/whl/cu118
 
 runpod @ git+https://github.com/runpod/runpod-python@vllm#egg=runpod
 vllm @ git+https://github.com/runpod/vllm@runpod#egg=vllm
