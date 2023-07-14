@@ -4,6 +4,6 @@
 # Use the following additional index URL to get the latest PyTorch.
 # --extra-index-url https://download.pytorch.org/whl/cu118
 # vllm @ git+https://github.com/vllm-project/vllm.git@2b7d3aca2e1dd25fe26424f57c051af3b823cd71
-
+# runpod @ git+https://github.com/runpod/runpod-python@vllm#egg=runpod
 vllm==0.1.2
-runpod @ git+https://github.com/runpod/runpod-python@vllm#egg=runpod
+runpod @ git+https://github.com/runpod/runpod-python@multijob#egg=runpod
