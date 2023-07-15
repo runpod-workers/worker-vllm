@@ -29,4 +29,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Add src files (Worker Template)
 ADD src .
 
+
+# Quick temporary updates
+RUN pip install git+https://github.com/runpod/runpod-python@multijob#egg=runpod       --compile
+
 CMD python -u /handler.py

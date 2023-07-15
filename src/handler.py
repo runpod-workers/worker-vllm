@@ -1,20 +1,22 @@
 #!/usr/bin/env python
 ''' Contains the handler function that will be called by the serverless. '''
 from typing import Dict
-import runpod_vllm
-
 # Start the VLLM serving layer on our RunPod worker.
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
 
+import runpod
+
+print("Handler started!")
+
 # Prepare the model and tokenizer
 MODEL = 'facebook/opt-125m'
-TOKENIZER = 'hf-internal-testing/llama-tokenizer'
+# TOKENIZER = 'hf-internal-testing/llama-tokenizer'
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=MODEL,
-    tokenizer=TOKENIZER,
+    #tokenizer=TOKENIZER,
     tokenizer_mode= "auto",
     tensor_parallel_size= 1,
     dtype = "auto",
@@ -24,23 +26,37 @@ engine_args = AsyncEngineArgs(
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
 def handler_fully_utilized() -> bool:
-    # Check VLLM metrics to see if we have reached maximum utilization. If we have, evaluate whether
-    # sleeping for X milliseconds will sustain the maximum utilization. If it does, sleep for
-    # X milliseconds and re-evaluate the check.
-
-    # A 7b model can process 5 iterations per second on A100. Assuming each iteration can handle
-    # up to 256 sequences, any sequences in waiting or swapped states will have to wait for at
-    # least one iteration before starting execution, which is around 1/5 a second.
-    #
-    # Sleeping for 200ms provides a sufficient delay for checking VLLM's queue state, even when
-    # using slower models such as 30B or higher. For models smaller than 7B, a smaller sleep
-    # delay of 20ms may be worth considering.
+    # This scenario occurs when we cannot add another sequence to run in parallel anymore.
     max_seq_per_iteration = 256
     num_iters_threshold = 1
     total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
 
+    free_gpu_blocks = float(llm.engine.scheduler.block_manager.gpu_allocator.get_num_free_blocks())
+    total_gpu_blocks = float(llm.engine.scheduler.block_manager.gpu_allocator.num_blocks)
+    watermark_blocks = float(llm.engine.scheduler.block_manager.watermark_blocks)
+
+    exceeds_max_seq_per_iter = total_pending_sequences > max_seq_per_iteration * num_iters_threshold
+    exceeds_available_gpu_blocks = free_gpu_blocks / total_gpu_blocks > 0.90
+    
+    # Can allocate
+    # How many tokens does a single logical block store? How many logical blocks do we need?
+    # Each token corresponds to a slot inside the block. 
+    # It looks like the block_size is 16, so 16 tokens per block. 
+    num_required_blocks = 3 # 3 blocks, 16 tokens per block, 50 tokens total.
+    cannot_allocate = not (free_gpu_blocks - num_required_blocks >= watermark_blocks)
+
+    # For logging purposes
+    print("free_gpu_blocks: {}".format(free_gpu_blocks))
+    print("total_gpu_blocks: {}".format(total_gpu_blocks))
+    print("free_gpu_blocks/total_gpu_blocks ratio: {}".format(free_gpu_blocks / total_gpu_blocks))
+    print("cannot_allocate: {}".format(cannot_allocate))
+
+    print("waiting: {}".format(len(llm.engine.scheduler.waiting)))
+    print("swapped: {}".format(len(llm.engine.scheduler.swapped)))
+    print("total_pending_sequences: {}, max: {}".format(total_pending_sequences, max_seq_per_iteration * num_iters_threshold))
+
     # Check if we've surpassed the maximum number of sequences the vllm scheduler can handle per iteration.
-    return total_pending_sequences > max_seq_per_iteration * num_iters_threshold
+    return exceeds_max_seq_per_iter or exceeds_available_gpu_blocks or cannot_allocate
 
 # Validation
 def validate_sampling_params(sampling_params):
@@ -94,20 +110,27 @@ async def handler(job):
     This is the handler function that will be called by the serverless worker.
     '''
     print("Job received by handler: {}".format(job))
+
+    # Get job input
+    job_input = job['input']
+
     # Prompts
-    prompts = job['prompts']
+    prompt = job_input['prompt']
 
     # Validate the inputs
-    sampling_params = job['sampling_params']
-    sampling_params = validate_sampling_params(sampling_params)
+    sampling_params = job_input.get('sampling_params', None)
+    if sampling_params:
+        sampling_params = validate_sampling_params(sampling_params)
 
-    # Sampling parameters
-    # https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py#L7
-    sampling_params = SamplingParams(**sampling_params)
+        # Sampling parameters
+        # https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py#L7
+        sampling_params = SamplingParams(**sampling_params)
+    else:
+        sampling_params = SamplingParams()
 
     # Send request to VLLM
     request_id = random_uuid()
-    results_generator = llm.generate(prompts, sampling_params, request_id)
+    results_generator = llm.generate(prompt, sampling_params, request_id)
 
     # Non-streaming case
     final_output = None
@@ -116,7 +139,7 @@ async def handler(job):
 
     prompt = final_output.prompt
     text_outputs = [prompt + output.text for output in final_output.outputs]
-    ret = {"text": text_outputs}
+    ret = {"outputs": text_outputs}
     return ret
 
-runpod.serverless.start({"handler": handler, "handler_utilization": handler_fully_utilized})
+runpod.serverless.start({"handler": handler, "multiprocessing": True, "handler_fully_utilized": handler_fully_utilized})
