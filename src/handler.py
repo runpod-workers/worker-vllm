@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 ''' Contains the handler function that will be called by the serverless. '''
 from typing import Dict
+
 # Start the VLLM serving layer on our RunPod worker.
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
-
 import runpod
-
-print("Handler started!")
 
 # Prepare the model and tokenizer
 MODEL = 'facebook/opt-125m'
@@ -24,39 +22,12 @@ engine_args = AsyncEngineArgs(
     worker_use_ray=False,
 )
 llm = AsyncLLMEngine.from_engine_args(engine_args)
+llm.engine.step()
 
 def handler_fully_utilized() -> bool:
-    # This scenario occurs when we cannot add another sequence to run in parallel anymore.
-    max_seq_per_iteration = 256
-    num_iters_threshold = 1
+    # Compute pending sequences
     total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
-
-    free_gpu_blocks = float(llm.engine.scheduler.block_manager.gpu_allocator.get_num_free_blocks())
-    total_gpu_blocks = float(llm.engine.scheduler.block_manager.gpu_allocator.num_blocks)
-    watermark_blocks = float(llm.engine.scheduler.block_manager.watermark_blocks)
-
-    exceeds_max_seq_per_iter = total_pending_sequences > max_seq_per_iteration * num_iters_threshold
-    exceeds_available_gpu_blocks = free_gpu_blocks / total_gpu_blocks > 0.90
-    
-    # Can allocate
-    # How many tokens does a single logical block store? How many logical blocks do we need?
-    # Each token corresponds to a slot inside the block. 
-    # It looks like the block_size is 16, so 16 tokens per block. 
-    num_required_blocks = 3 # 3 blocks, 16 tokens per block, 50 tokens total.
-    cannot_allocate = not (free_gpu_blocks - num_required_blocks >= watermark_blocks)
-
-    # For logging purposes
-    print("free_gpu_blocks: {}".format(free_gpu_blocks))
-    print("total_gpu_blocks: {}".format(total_gpu_blocks))
-    print("free_gpu_blocks/total_gpu_blocks ratio: {}".format(free_gpu_blocks / total_gpu_blocks))
-    print("cannot_allocate: {}".format(cannot_allocate))
-
-    print("waiting: {}".format(len(llm.engine.scheduler.waiting)))
-    print("swapped: {}".format(len(llm.engine.scheduler.swapped)))
-    print("total_pending_sequences: {}, max: {}".format(total_pending_sequences, max_seq_per_iteration * num_iters_threshold))
-
-    # Check if we've surpassed the maximum number of sequences the vllm scheduler can handle per iteration.
-    return exceeds_max_seq_per_iter or exceeds_available_gpu_blocks or cannot_allocate
+    return total_pending_sequences > 10
 
 # Validation
 def validate_sampling_params(sampling_params):
