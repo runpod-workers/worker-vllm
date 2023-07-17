@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 ''' Contains the handler function that will be called by the serverless. '''
-from typing import Dict
+import json
+import types
+from typing import AsyncGenerator, Dict
 
 # Start the VLLM serving layer on our RunPod worker.
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
@@ -21,7 +23,11 @@ engine_args = AsyncEngineArgs(
     seed = 0,
     worker_use_ray=False,
 )
+
+# Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
+
+# Run the engine for one step without inputs to ensure it's ready for handling.
 llm.engine.step()
 
 def handler_fully_utilized() -> bool:
@@ -76,6 +82,7 @@ def validate_sampling_params(sampling_params):
         'logprobs': logprobs,
     }
 
+
 async def handler(job):
     '''
     This is the handler function that will be called by the serverless worker.
@@ -87,6 +94,9 @@ async def handler(job):
 
     # Prompts
     prompt = job_input['prompt']
+
+    # Streaming
+    streaming = job_input['streaming'] or False
 
     # Validate the inputs
     sampling_params = job_input.get('sampling_params', None)
@@ -103,14 +113,32 @@ async def handler(job):
     request_id = random_uuid()
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
-    # Non-streaming case
-    final_output = None
-    async for request_output in results_generator:
-        final_output = request_output
+    # Enable HTTP Streaming
+    async def stream_output():
+        # Streaming case
+        async for request_output in results_generator:
+            prompt = request_output.prompt
+            text_outputs = [
+                prompt + output.text for output in request_output.outputs
+            ]
+            ret = {"text": text_outputs}
+            yield ret
 
-    prompt = final_output.prompt
-    text_outputs = [prompt + output.text for output in final_output.outputs]
-    ret = {"outputs": text_outputs}
-    return ret
+    # Regular submission
+    async def submit_output():
+        # Non-streaming case
+        final_output = None
+        async for request_output in results_generator:
+            final_output = request_output
 
-runpod.serverless.start({"handler": handler, "multiprocessing": True, "handler_fully_utilized": handler_fully_utilized})
+        prompt = final_output.prompt
+        text_outputs = [prompt + output.text for output in final_output.outputs]
+        ret = {"outputs": text_outputs}
+        return ret
+
+    if streaming:
+        return await stream_output()
+    else:
+        return await submit_output()
+
+runpod.serverless.start({"handler": handler, "handler_fully_utilized": handler_fully_utilized})
