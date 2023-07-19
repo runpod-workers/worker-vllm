@@ -34,6 +34,7 @@ def handler_fully_utilized() -> bool:
     total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
     return total_pending_sequences > 10
 
+
 # Validation
 def validate_sampling_params(sampling_params):
     def validate_int(value, default):

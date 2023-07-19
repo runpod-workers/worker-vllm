@@ -30,6 +30,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ADD src .
 
 # Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@multijob2#egg=runpod    --compile
+RUN pip install git+https://github.com/runpod/runpod-python@multijob2#egg=runpod       --compile
 
 CMD python -u /handler.py
