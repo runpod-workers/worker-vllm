@@ -8,6 +8,7 @@ from typing import AsyncGenerator, Dict
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
 import runpod
+import asyncio
 
 # Prepare the model and tokenizer
 MODEL = 'facebook/opt-125m'
@@ -27,8 +28,6 @@ engine_args = AsyncEngineArgs(
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
-# Run the engine for one step without inputs to ensure it's ready for handling.
-llm.engine.step()
 
 def handler_fully_utilized() -> bool:
     # Compute pending sequences
@@ -96,7 +95,7 @@ async def handler(job):
     prompt = job_input['prompt']
 
     # Streaming
-    streaming = job_input['streaming'] or False
+    streaming = job_input.get('streaming', False)
 
     # Validate the inputs
     sampling_params = job_input.get('sampling_params', None)
