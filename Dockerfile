@@ -30,6 +30,17 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ADD src .
 
 # Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@multijob2#egg=runpod       --compile
+RUN pip install git+https://github.com/runpod/runpod-python@multijob2#egg=runpod --compile
 
+# Prepare the models inside the docker image
+ARG HUGGING_FACE_HUB_TOKEN=NONE
+ENV HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+ENV DOWNLOAD_7B_MODEL=YES
+# ENV DOWNLOAD_13B_MODEL=1
+
+# Download the models
+RUN mkdir -p /model
+RUN DOWNLOAD_7B_MODEL=$DOWNLOAD_7B_MODEL HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
+
+# Start the handler
 CMD python -u /handler.py

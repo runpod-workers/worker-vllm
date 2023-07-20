@@ -1,23 +1,19 @@
 #!/usr/bin/env python
 ''' Contains the handler function that will be called by the serverless. '''
-import json
-import types
-from typing import AsyncGenerator, Dict
 
 # Start the VLLM serving layer on our RunPod worker.
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
 import runpod
-import asyncio
 
 # Prepare the model and tokenizer
-MODEL = 'facebook/opt-125m'
-# TOKENIZER = 'hf-internal-testing/llama-tokenizer'
+MODEL = '/model/Llama-2-7b-chat-hf'
+TOKENIZER = 'hf-internal-testing/llama-tokenizer'
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=MODEL,
-    #tokenizer=TOKENIZER,
+    tokenizer=TOKENIZER,
     tokenizer_mode= "auto",
     tensor_parallel_size= 1,
     dtype = "auto",
@@ -27,7 +23,6 @@ engine_args = AsyncEngineArgs(
 
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
-
 
 def handler_fully_utilized() -> bool:
     # Compute pending sequences
@@ -108,6 +103,12 @@ async def handler(job):
         sampling_params = SamplingParams(**sampling_params)
     else:
         sampling_params = SamplingParams()
+
+    # Print the job input
+    print(job_input)
+
+    # Print the sampling params
+    print(sampling_params)
 
     # Send request to VLLM
     request_id = random_uuid()
