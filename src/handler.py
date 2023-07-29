@@ -24,7 +24,7 @@ engine_args = AsyncEngineArgs(
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
-def handler_fully_utilized() -> bool:
+def concurrency_controller() -> bool:
     # Compute pending sequences
     total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
     return total_pending_sequences > 10
@@ -88,7 +88,11 @@ async def handler(job):
     job_input = job['input']
 
     # Prompts
-    prompt = job_input['prompt']
+    template = """SYSTEM: You are a helpful assistant.
+USER: {}
+ASSISTANT: """
+
+    prompt = template.format(job_input['prompt'])
 
     # Streaming
     streaming = job_input.get('streaming', False)
@@ -142,4 +146,4 @@ async def handler(job):
     else:
         return await submit_output()
 
-runpod.serverless.start({"handler": handler, "handler_fully_utilized": handler_fully_utilized})
+runpod.serverless.start({"handler": handler, "concurrency_controller": concurrency_controller})

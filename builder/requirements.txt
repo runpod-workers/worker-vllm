@@ -7,4 +7,4 @@
 # runpod @ git+https://github.com/runpod/runpod-python@vllm#egg=runpod
 vllm==0.1.2
 huggingface-hub==0.16.4
-runpod @ git+https://github.com/runpod/runpod-python@multijob2#egg=runpod
+runpod @ git+https://github.com/runpod/runpod-python@main#egg=runpod

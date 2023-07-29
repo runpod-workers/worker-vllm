@@ -1,7 +1,5 @@
 # Base image
 # The following docker base image is recommended by VLLM: 
-# FROM runpod/pytorch:2.0.1-py3.10-cuda11.8.0-devel
-# FROM nvcr.io/nvidia/pytorch:22.12-py3
 FROM runpod/pytorch:2.0.1-py3.10-cuda11.8.0-devel
 
 # Use bash shell with pipefail option
@@ -19,6 +17,9 @@ RUN chmod +x /setup.sh && \
     /setup.sh && \
     rm /setup.sh
 
+# Install fast api
+RUN pip install fastapi==0.99.1
+
 # Install Python dependencies (Worker Template)
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -30,13 +31,17 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ADD src .
 
 # Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@multijob2#egg=runpod --compile
+RUN pip install git+https://github.com/runpod/runpod-python@main#egg=runpod --compile
 
 # Prepare the models inside the docker image
 ARG HUGGING_FACE_HUB_TOKEN=NONE
 ENV HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
-ENV DOWNLOAD_7B_MODEL=YES
-# ENV DOWNLOAD_13B_MODEL=1
+
+ARG DOWNLOAD_7B_MODEL=
+ENV DOWNLOAD_7B_MODEL=$DOWNLOAD_7B_MODEL
+
+#ARG DOWNLOAD_13B_MODEL=
+#ENV DOWNLOAD_13B_MODEL=$DOWNLOAD_13B_MODEL
 
 # Download the models
 RUN mkdir -p /model
