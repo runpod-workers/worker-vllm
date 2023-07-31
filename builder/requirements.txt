@@ -1,10 +1,5 @@
 # Required Python packages get listed here, one per line.
-# Reccomended to lock the version number to avoid unexpected changes.
-
-# Use the following additional index URL to get the latest PyTorch.
-# --extra-index-url https://download.pytorch.org/whl/cu118
-# vllm @ git+https://github.com/vllm-project/vllm.git@2b7d3aca2e1dd25fe26424f57c051af3b823cd71
-# runpod @ git+https://github.com/runpod/runpod-python@vllm#egg=runpod
+# Recomended to lock the version number to avoid unexpected changes.
 vllm==0.1.2
 huggingface-hub==0.16.4
 runpod @ git+https://github.com/runpod/runpod-python@main#egg=runpod

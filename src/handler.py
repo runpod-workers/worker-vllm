@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-''' Contains the handler function that will be called by the serverless. '''
+''' Contains the handler function that will be called by the serverless worker. '''
 
 # Start the VLLM serving layer on our RunPod worker.
 from templates import DEFAULT_TEMPLATE, LLAMA_TEMPLATE
@@ -9,8 +9,14 @@ import runpod
 import os
 
 # Prepare the model and tokenizer
-MODEL = os.environ['MODEL']
-TOKENIZER = os.environ['TOKENIZER']
+MODEL = os.environ.get('MODEL', None)
+TOKENIZER = os.environ.get('TOKENIZER', None)
+
+if not MODEL:
+    print("Error: The model has not been provided.")
+
+if not TOKENIZER:
+    print("Error: The tokenizer has not been provided.")
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
