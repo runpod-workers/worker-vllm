@@ -2,32 +2,36 @@
 ''' Contains the handler function that will be called by the serverless. '''
 
 # Start the VLLM serving layer on our RunPod worker.
+from templates import DEFAULT_TEMPLATE, LLAMA_TEMPLATE
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
 import runpod
+import os
 
 # Prepare the model and tokenizer
-MODEL = '/model/Llama-2-7b-chat-hf'
-TOKENIZER = 'hf-internal-testing/llama-tokenizer'
+MODEL = os.environ['MODEL']
+TOKENIZER = os.environ['TOKENIZER']
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
-    model=MODEL,
+    model="/model/{}".format(MODEL),
     tokenizer=TOKENIZER,
-    tokenizer_mode= "auto",
-    tensor_parallel_size= 1,
-    dtype = "auto",
-    seed = 0,
+    tokenizer_mode="auto",
+    tensor_parallel_size=1,
+    dtype="auto",
+    seed=0,
     worker_use_ray=False,
 )
 
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
+
 def concurrency_controller() -> bool:
     # Compute pending sequences
-    total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
-    return total_pending_sequences > 10
+    total_pending_sequences = len(
+        llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
+    return total_pending_sequences > 0
 
 
 # Validation
@@ -51,12 +55,15 @@ def validate_sampling_params(sampling_params):
 
     n = validate_int(sampling_params.get('n'), 1)
     best_of = validate_int(sampling_params.get('best_of'), None)
-    presence_penalty = validate_float(sampling_params.get('presence_penalty'), 0.0)
-    frequency_penalty = validate_float(sampling_params.get('frequency_penalty'), 0.0)
+    presence_penalty = validate_float(
+        sampling_params.get('presence_penalty'), 0.0)
+    frequency_penalty = validate_float(
+        sampling_params.get('frequency_penalty'), 0.0)
     temperature = validate_float(sampling_params.get('temperature'), 1.0)
     top_p = validate_float(sampling_params.get('top_p'), 1.0)
     top_k = validate_int(sampling_params.get('top_k'), -1)
-    use_beam_search = validate_bool(sampling_params.get('use_beam_search'), False)
+    use_beam_search = validate_bool(
+        sampling_params.get('use_beam_search'), False)
     stop = sampling_params.get('stop', None)
     ignore_eos = validate_bool(sampling_params.get('ignore_eos'), False)
     max_tokens = validate_int(sampling_params.get('max_tokens'), 16)
@@ -88,10 +95,12 @@ async def handler(job):
     job_input = job['input']
 
     # Prompts
-    template = """SYSTEM: You are a helpful assistant.
-USER: {}
-ASSISTANT: """
+    if MODEL == "Llama-2-7b-chat-hf" or MODEL == "Llama-2-13b-chat-hf":
+        template = LLAMA_TEMPLATE
+    else:
+        template = DEFAULT_TEMPLATE
 
+    # Use the template
     prompt = template.format(job_input['prompt'])
 
     # Streaming
@@ -137,7 +146,8 @@ ASSISTANT: """
             final_output = request_output
 
         prompt = final_output.prompt
-        text_outputs = [prompt + output.text for output in final_output.outputs]
+        text_outputs = [
+            prompt + output.text for output in final_output.outputs]
         ret = {"outputs": text_outputs}
         return ret
 
@@ -146,4 +156,5 @@ ASSISTANT: """
     else:
         return await submit_output()
 
-runpod.serverless.start({"handler": handler, "concurrency_controller": concurrency_controller})
+runpod.serverless.start(
+    {"handler": handler, "concurrency_controller": concurrency_controller})

@@ -37,15 +37,16 @@ RUN pip install git+https://github.com/runpod/runpod-python@main#egg=runpod --co
 ARG HUGGING_FACE_HUB_TOKEN=NONE
 ENV HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
 
-ARG DOWNLOAD_7B_MODEL=
-ENV DOWNLOAD_7B_MODEL=$DOWNLOAD_7B_MODEL
+# Prepare argument for the model and tokenizer
+ARG MODEL=
+ARG TOKENIZER=
 
-#ARG DOWNLOAD_13B_MODEL=
-#ENV DOWNLOAD_13B_MODEL=$DOWNLOAD_13B_MODEL
+ENV MODEL=$MODEL
+ENV TOKENIZER=$TOKENIZER
 
 # Download the models
 RUN mkdir -p /model
-RUN DOWNLOAD_7B_MODEL=$DOWNLOAD_7B_MODEL HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
+RUN MODEL=$MODEL HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
 
 # Start the handler
-CMD python -u /handler.py
+CMD MODEL=$MODEL TOKENIZER=$TOKENIZER python -u /handler.py
