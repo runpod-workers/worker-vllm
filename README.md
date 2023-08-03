@@ -27,8 +27,13 @@ Ensure that you have Docker installed and properly set up before running the doc
 
 ## Test Inputs
 The following inputs can be used for testing the model:
-`{
+```json
+{
     "input": {
-       "prompt": "Who is the president of the United States?"
+       "prompt": "Who is the president of the United States?",
+       "sampling_params": {
+           "max_tokens": 100
+       }
     }
-}`
+}
+```
