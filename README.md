@@ -24,3 +24,11 @@
 Please make sure to replace your_hugging_face_token_here with your actual Hugging Face token to enable model downloads that require it.
 
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand. For further inquiries or assistance, feel free to contact our support team.
+
+## Test Inputs
+The following inputs can be used for testing the model:
+`{
+    "input": {
+       "prompt": "Who is the president of the United States?"
+    }
+}`
