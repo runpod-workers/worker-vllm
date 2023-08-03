@@ -27,7 +27,7 @@ Ensure that you have Docker installed and properly set up before running the doc
 
 
 ## Model Inputs
-```json
+```
 | Argument           | Type            | Description                                                                                                                                                      |
 |--------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | n                  | int             | Number of output sequences to return for the given prompt.                                                                                                      |
