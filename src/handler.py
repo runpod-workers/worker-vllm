@@ -9,18 +9,17 @@ import runpod
 import os
 
 # Prepare the model and tokenizer
-MODEL = os.environ.get('MODEL', None)
+MODEL_NAME = os.environ.get('MODEL_NAME')
+MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
+STREAMING = os.environ.get('STREAMING', False)
 TOKENIZER = os.environ.get('TOKENIZER', None)
 
-if not MODEL:
+if not MODEL_NAME:
     print("Error: The model has not been provided.")
-
-if not TOKENIZER:
-    print("Error: The tokenizer has not been provided.")
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
-    model="/model/{}".format(MODEL),
+    model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
     tensor_parallel_size=1,
@@ -72,7 +71,7 @@ def validate_sampling_params(sampling_params):
         sampling_params.get('use_beam_search'), False)
     stop = sampling_params.get('stop', None)
     ignore_eos = validate_bool(sampling_params.get('ignore_eos'), False)
-    max_tokens = validate_int(sampling_params.get('max_tokens'), 16)
+    max_tokens = validate_int(sampling_params.get('max_tokens'), 256)
     logprobs = validate_float(sampling_params.get('logprobs'), None)
 
     return {
@@ -91,7 +90,7 @@ def validate_sampling_params(sampling_params):
     }
 
 
-async def handler(job):
+async def handler_streaming(job):
     '''
     This is the handler function that will be called by the serverless worker.
     '''
@@ -101,16 +100,13 @@ async def handler(job):
     job_input = job['input']
 
     # Prompts
-    if MODEL == "Llama-2-7b-chat-hf" or MODEL == "Llama-2-13b-chat-hf":
+    if MODEL_NAME.lower() == "llama-2-7b-chat-hf" or MODEL_NAME.lower() == "llama-2-13b-chat-hf":
         template = LLAMA_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
 
     # Use the template
-    prompt = template.format(job_input['prompt'])
-
-    # Streaming
-    streaming = job_input.get('streaming', False)
+    prompt = template(job_input['prompt'])
 
     # Validate the inputs
     sampling_params = job_input.get('sampling_params', None)
@@ -133,34 +129,72 @@ async def handler(job):
     request_id = random_uuid()
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
-    # Enable HTTP Streaming
-    async def stream_output():
-        # Streaming case
-        async for request_output in results_generator:
-            prompt = request_output.prompt
-            text_outputs = [
-                prompt + output.text for output in request_output.outputs
-            ]
-            ret = {"text": text_outputs}
-            yield ret
-
-    # Regular submission
-    async def submit_output():
-        # Non-streaming case
-        final_output = None
-        async for request_output in results_generator:
-            final_output = request_output
-
-        prompt = final_output.prompt
+    # Streaming case
+    async for request_output in results_generator:
+        prompt = request_output.prompt
         text_outputs = [
-            prompt + output.text for output in final_output.outputs]
-        ret = {"outputs": text_outputs}
-        return ret
+            prompt + output.text for output in request_output.outputs
+        ]
+        ret = {"text": text_outputs}
+        yield ret
 
-    if streaming:
-        return await stream_output()
+
+async def handler(job):
+    '''
+    This is the handler function that will be called by the serverless worker.
+    '''
+    print("Job received by handler: {}".format(job))
+
+    # Get job input
+    job_input = job['input']
+
+    # Prompts
+    if MODEL_NAME.lower() == "llama-2-7b-chat-hf" or MODEL_NAME.lower() == "llama-2-13b-chat-hf":
+        template = LLAMA_TEMPLATE
     else:
-        return await submit_output()
+        template = DEFAULT_TEMPLATE
 
-runpod.serverless.start(
-    {"handler": handler, "concurrency_controller": concurrency_controller})
+    # Use the template
+    prompt = template(job_input['prompt'])
+
+    # Validate the inputs
+    sampling_params = job_input.get('sampling_params', None)
+    if sampling_params:
+        sampling_params = validate_sampling_params(sampling_params)
+
+        # Sampling parameters
+        # https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py#L7
+        sampling_params = SamplingParams(**sampling_params)
+    else:
+        sampling_params = SamplingParams()
+
+    # Print the job input
+    print(job_input)
+
+    # Print the sampling params
+    print(sampling_params)
+
+    # Send request to VLLM
+    request_id = random_uuid()
+    results_generator = llm.generate(prompt, sampling_params, request_id)
+
+    # Non-streaming case
+    final_output = None
+    async for request_output in results_generator:
+        final_output = request_output
+
+    prompt = final_output.prompt
+    text_outputs = [
+        prompt + output.text for output in final_output.outputs]
+    ret = {"outputs": text_outputs}
+    return ret
+
+# Start the serverless worker
+if STREAMING:
+    print("Starting the vLLM serverless worker with streaming enabled.")
+    runpod.serverless.start(
+        {"handler": handler_streaming, "concurrency_controller": concurrency_controller})
+else:
+    print("Starting the vLLM serverless worker with streaming disabled.")
+    runpod.serverless.start(
+        {"handler": handler, "concurrency_controller": concurrency_controller})

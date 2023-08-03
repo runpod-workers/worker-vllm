@@ -31,22 +31,31 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ADD src .
 
 # Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@main#egg=runpod --compile
+RUN pip install git+https://github.com/runpod/runpod-python@async_gen_test#egg=runpod --compile
 
 # Prepare the models inside the docker image
-ARG HUGGING_FACE_HUB_TOKEN=NONE
+ARG HUGGING_FACE_HUB_TOKEN=
 ENV HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
 
 # Prepare argument for the model and tokenizer
-ARG MODEL=
+ARG MODEL_NAME=""
+ENV MODEL_NAME=$MODEL_NAME
+ARG MODEL_REVISION="main"
+ENV MODEL_REVISION=$MODEL_REVISION
+ARG MODEL_BASE_PATH="/runpod-volume/"
+ENV MODEL_BASE_PATH=$MODEL_BASE_PATH
 ARG TOKENIZER=
-
-ENV MODEL=$MODEL
 ENV TOKENIZER=$TOKENIZER
+ARG STREAMING=
+ENV STREAMING=$STREAMING
+
+ENV HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets"
+ENV HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub"
+ENV TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub"
 
 # Download the models
 RUN mkdir -p /model
-RUN MODEL=$MODEL HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
+RUN MODEL_NAME=$MODEL_NAME MODEL_REVISION=$MODEL_REVISION MODEL_BASE_PATH=$MODEL_BASE_PATH HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
 
 # Start the handler
-CMD MODEL=$MODEL TOKENIZER=$TOKENIZER python -u /handler.py
+CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER python -u /handler.py
