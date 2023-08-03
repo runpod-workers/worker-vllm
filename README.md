@@ -25,6 +25,25 @@ Please make sure to replace your_hugging_face_token_here with your actual Huggin
 
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand. For further inquiries or assistance, feel free to contact our support team.
 
+
+## Model Inputs
+```json
+| Argument           | Type            | Description                                                                                                                                                      |
+|--------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| n                  | int             | Number of output sequences to return for the given prompt.                                                                                                      |
+| best_of            | Optional[int]   | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This is treated as the beam width when `use_beam_search` is True. By default, `best_of` is set to `n`. |
+| presence_penalty   | float           | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                        |
+| frequency_penalty  | float           | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                          |
+| temperature        | float           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                        |
+| top_p              | float           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                            |
+| top_k              | int             | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                               |
+| use_beam_search    | bool            | Whether to use beam search instead of sampling.                                                                                                             |
+| stop               | Union[None, str, List[str]] | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.                       |
+| ignore_eos         | bool            | Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.                                                            |
+| max_tokens         | int             | Maximum number of tokens to generate per output sequence.                                                                                                   |
+| logprobs           | Optional[int]   | Number of log probabilities to return per output token.                                                                                                     |
+```
+
 ## Test Inputs
 The following inputs can be used for testing the model:
 ```json
