@@ -3,4 +3,4 @@
 fastapi==0.99.1
 vllm==0.1.2
 huggingface-hub==0.16.4
-runpod @ git+https://github.com/runpod/runpod-python@fix_scaling#egg=runpod 
+runpod @ git+https://github.com/runpod/runpod-python@main#egg=runpod 
