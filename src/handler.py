@@ -18,7 +18,11 @@ if not MODEL_NAME:
     print("Error: The model has not been provided.")
 
 # Tensor parallelism
-TENSOR_PARALLEL_SIZE = os.environ.get('TENSOR_PARALLEL_SIZE', 1)
+try:
+    TENSOR_PARALLEL_SIZE = int(os.environ.get('TENSOR_PARALLEL_SIZE', 1))
+except ValueError:
+    print("Error: TENSOR_PARALLEL_SIZE should be an integer. Using default value of 1.")
+    TENSOR_PARALLEL_SIZE = 1
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
