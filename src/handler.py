@@ -17,12 +17,15 @@ TOKENIZER = os.environ.get('TOKENIZER', None)
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
 
+# Tensor parallelism
+TENSOR_PARALLEL_SIZE = os.environ.get('TENSOR_PARALLEL_SIZE', 1)
+
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
-    tensor_parallel_size=1,
+    tensor_parallel_size=TENSOR_PARALLEL_SIZE,
     dtype="auto",
     seed=0,
     worker_use_ray=False,
