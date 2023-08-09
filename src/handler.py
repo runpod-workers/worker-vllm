@@ -19,17 +19,17 @@ if not MODEL_NAME:
 
 # Tensor parallelism
 try:
-    TENSOR_PARALLEL_SIZE = int(os.environ.get('TENSOR_PARALLEL_SIZE', 1))
+    NUM_GPU_SHARD = int(os.environ.get('NUM_GPU_SHARD', 1))
 except ValueError:
-    print("Error: TENSOR_PARALLEL_SIZE should be an integer. Using default value of 1.")
-    TENSOR_PARALLEL_SIZE = 1
+    print("Error: NUM_GPU_SHARD should be an integer. Using default value of 1.")
+    NUM_GPU_SHARD = 1
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
-    tensor_parallel_size=TENSOR_PARALLEL_SIZE,
+    tensor_parallel_size=NUM_GPU_SHARD,
     dtype="auto",
     seed=0,
     worker_use_ray=False,
