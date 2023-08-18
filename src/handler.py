@@ -14,6 +14,7 @@ MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
 
+
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
 
@@ -38,13 +39,16 @@ engine_args = AsyncEngineArgs(
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
-
 def concurrency_controller() -> bool:
     # Compute pending sequences
     total_pending_sequences = len(
         llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
-    return total_pending_sequences > 0
+    return total_pending_sequences > 30
 
+# Execute engine step indefinitely
+# async def engine_step():
+#    while True:
+#        await llm.engine_step()
 
 # Validation
 def validate_sampling_params(sampling_params):
@@ -200,7 +204,7 @@ async def handler(job):
 if STREAMING:
     print("Starting the vLLM serverless worker with streaming enabled.")
     runpod.serverless.start(
-        {"handler": handler_streaming, "concurrency_controller": concurrency_controller})
+        {"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": True})
 else:
     print("Starting the vLLM serverless worker with streaming disabled.")
     runpod.serverless.start(

@@ -28,10 +28,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     rm /requirements.txt
 
 # Add src files (Worker Template)
-ADD src .
+ADD src .  
 
 # Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@main#egg=runpod --compile
+RUN pip install git+https://github.com/runpod/runpod-python@experimental#egg=runpod --compile
 
 # Prepare the models inside the docker image
 ARG HUGGING_FACE_HUB_TOKEN=
@@ -58,4 +58,4 @@ RUN mkdir -p /model
 RUN MODEL_NAME=$MODEL_NAME MODEL_REVISION=$MODEL_REVISION MODEL_BASE_PATH=$MODEL_BASE_PATH HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
 
 # Start the handler
-CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER python -u /handler.py
+CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER python -u /handler.py 
