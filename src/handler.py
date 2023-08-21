@@ -2,6 +2,8 @@
 ''' Contains the handler function that will be called by the serverless worker. '''
 
 # Start the VLLM serving layer on our RunPod worker.
+from typing import Generator
+from metrics import vllm_log_system_stats
 from templates import DEFAULT_TEMPLATE, LLAMA_TEMPLATE
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
@@ -39,16 +41,22 @@ engine_args = AsyncEngineArgs(
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
+# Incorporate metrics tracking
+llm.engine._log_system_stats = vllm_log_system_stats
+
 def concurrency_controller() -> bool:
     # Compute pending sequences
-    total_pending_sequences = len(
-        llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
+    total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
+    print("vLLM has {total_pending_sequences} pending sequences in its internal queue.")
+
+    # If we have over 30 pending sequences, then we'll start auto-scaling.
     return total_pending_sequences > 30
 
-# Execute engine step indefinitely
-# async def engine_step():
-#    while True:
-#        await llm.engine_step()
+
+def prepare_metrics() -> dict:
+    # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
+    return llm.engine.metrics
+
 
 # Validation
 def validate_sampling_params(sampling_params):
@@ -101,7 +109,7 @@ def validate_sampling_params(sampling_params):
     }
 
 
-async def handler_streaming(job):
+async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]:
     '''
     This is the handler function that will be called by the serverless worker.
     '''
@@ -146,11 +154,23 @@ async def handler_streaming(job):
         text_outputs = [
             prompt + output.text for output in request_output.outputs
         ]
-        ret = {"text": text_outputs}
+
+        # Metrics for the vLLM serverless worker
+        metrics = prepare_metrics()
+        metrics['job_input'] = job_input
+        metrics['input_tokens'] = [len(request_output.prompt_token_ids)] * len(request_output.outputs)
+        metrics['output_tokens'] = [len(output.token_ids) for output in request_output.outputs]
+
+        ret = {
+            "text": text_outputs,
+            "runpod_internal": {
+                "metrics": metrics
+            }
+        }
         yield ret
 
 
-async def handler(job):
+async def handler(job: dict) -> dict[str, list]:
     '''
     This is the handler function that will be called by the serverless worker.
     '''
@@ -197,8 +217,21 @@ async def handler(job):
     prompt = final_output.prompt
     text_outputs = [
         prompt + output.text for output in final_output.outputs]
-    ret = {"outputs": text_outputs}
+
+    # Metrics for the vLLM serverless worker
+    metrics = prepare_metrics()
+    metrics['job_input'] = job_input
+    metrics['input_tokens'] = [len(final_output.prompt_token_ids)] * len(final_output.outputs)
+    metrics['output_tokens'] = [len(output.token_ids) for output in final_output.outputs]
+
+    ret = {
+        "outputs": text_outputs,
+        "runpod_internal": {
+            "metrics": metrics
+        }
+    }
     return ret
+
 
 # Start the serverless worker
 if STREAMING:
