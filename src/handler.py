@@ -37,7 +37,7 @@ engine_args = AsyncEngineArgs(
     seed=0,
     worker_use_ray=False,
     max_num_batched_tokens=10000,
-    max_num_seqs=1000
+    max_num_seqs=4096
 )
 
 # Create the vLLM asynchronous engine
