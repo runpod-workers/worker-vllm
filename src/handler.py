@@ -36,6 +36,7 @@ engine_args = AsyncEngineArgs(
     dtype="auto",
     seed=0,
     worker_use_ray=False,
+    max_num_batched_tokens=10000
 )
 
 # Create the vLLM asynchronous engine
@@ -152,7 +153,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
     async for request_output in results_generator:
         prompt = request_output.prompt
         text_outputs = [
-            prompt + output.text for output in request_output.outputs
+            output.text for output in request_output.outputs
         ]
 
         # Metrics for the vLLM serverless worker
@@ -216,7 +217,7 @@ async def handler(job: dict) -> dict[str, list]:
 
     prompt = final_output.prompt
     text_outputs = [
-        prompt + output.text for output in final_output.outputs]
+        output.text for output in final_output.outputs]
 
     # Metrics for the vLLM serverless worker
     metrics = prepare_metrics()
