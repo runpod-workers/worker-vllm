@@ -36,7 +36,7 @@ engine_args = AsyncEngineArgs(
     dtype="auto",
     seed=0,
     worker_use_ray=False,
-    max_num_batched_tokens=10000,
+    max_num_batched_tokens=8192,
     max_num_seqs=4096
 )
 
