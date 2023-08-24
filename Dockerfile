@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ADD src .  
 
 # Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@experimental_standard#egg=runpod --compile
+RUN pip install git+https://github.com/runpod/runpod-python@experimental#egg=runpod --compile
 
 # Prepare the models inside the docker image
 ARG HUGGING_FACE_HUB_TOKEN=
