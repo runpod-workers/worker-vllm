@@ -6,7 +6,7 @@ class Template():
         return self.template_method(prompt)
 
 
-LLAMA_TEMPLATE = Template(
+LLAMA2_TEMPLATE = Template(
     lambda prompt: """SYSTEM: You are a helpful assistant.
 USER: {}
 ASSISTANT: """.format(prompt)
