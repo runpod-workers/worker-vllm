@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 ''' Contains the handler function that will be called by the serverless worker. '''
 
-# Start the VLLM serving layer on our RunPod worker.
+# Start the vLLM serving layer on our RunPod worker.
 from typing import Generator
 from metrics import vllm_log_system_stats
-from templates import DEFAULT_TEMPLATE, LLAMA_TEMPLATE
+from templates import DEFAULT_TEMPLATE, LLAMA2_TEMPLATE
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.utils import random_uuid
 import runpod
@@ -15,7 +15,6 @@ MODEL_NAME = os.environ.get('MODEL_NAME')
 MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
-
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -37,7 +36,7 @@ engine_args = AsyncEngineArgs(
     seed=0,
     max_num_batched_tokens=8192,
     max_num_seqs=4096,
-    log_stats=True
+    disable_log_stats=False
 )
 
 # Create the vLLM asynchronous engine
@@ -125,7 +124,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
     # Prompts
     if MODEL_NAME.lower().find("llama-2-7b-chat-hf") > -1 or MODEL_NAME.lower().find("llama-2-13b-chat-hf") > -1 or MODEL_NAME.lower().find("elinas/chronos-13b-v2") > -1:
-        template = LLAMA_TEMPLATE
+        template = LLAMA2_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
 
@@ -170,7 +169,9 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
             text_pos = positions[idx]['text_pos']
 
             # Split into chunks
-            text_outputs.append(output.text.split(" ")[text_pos:])
+            if len(output.text) > 0:
+                text_chunk = " ".join(output.text.split(" ")[text_pos:])
+                text_outputs.append(text_chunk)
 
         # Metrics for the vLLM serverless worker
         runpod_metrics = prepare_metrics()
@@ -189,6 +190,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
             metrics['output_tokens'].append(num_output_tokens)
 
+        # Update positions
         for idx, output in enumerate(request_output.outputs):
             positions[idx] = {
                 'text_pos': len(output.text.split(" ")),
@@ -216,7 +218,7 @@ async def handler(job: dict) -> dict[str, list]:
 
     # Prompts
     if MODEL_NAME.lower().find("llama-2-7b-chat-hf") > -1 or MODEL_NAME.lower().find("llama-2-13b-chat-hf") > -1 or MODEL_NAME.lower().find("elinas/chronos-13b-v2") > -1:
-        template = LLAMA_TEMPLATE
+        template = LLAMA2_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
 
