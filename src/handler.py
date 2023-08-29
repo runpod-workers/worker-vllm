@@ -35,9 +35,9 @@ engine_args = AsyncEngineArgs(
     tensor_parallel_size=NUM_GPU_SHARD,
     dtype="auto",
     seed=0,
-    worker_use_ray=False,
     max_num_batched_tokens=8192,
-    max_num_seqs=4096
+    max_num_seqs=4096,
+    log_stats=True
 )
 
 # Create the vLLM asynchronous engine
@@ -57,7 +57,10 @@ def concurrency_controller() -> bool:
 
 def prepare_metrics() -> dict:
     # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
-    return llm.engine.metrics
+    if llm.engine.metrics:
+        return llm.engine.metrics
+    else:
+        return {}
 
 
 # Validation
@@ -121,7 +124,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
     job_input = job['input']
 
     # Prompts
-    if MODEL_NAME.lower() == "llama-2-7b-chat-hf" or MODEL_NAME.lower() == "llama-2-13b-chat-hf":
+    if MODEL_NAME.lower().find("llama-2-7b-chat-hf") > -1 or MODEL_NAME.lower().find("llama-2-13b-chat-hf") > -1 or MODEL_NAME.lower().find("elinas/chronos-13b-v2") > -1:
         template = LLAMA_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
@@ -151,22 +154,52 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
     # Streaming case
+    positions = None
     async for request_output in results_generator:
         prompt = request_output.prompt
-        text_outputs = [
-            output.text for output in request_output.outputs
-        ]
+        text_outputs = []
+
+        if positions is None:
+            positions = [{
+                'text_pos': 0,
+                'token_pos': 0
+            }] * len(request_output.outputs)
+
+        for idx, output in enumerate(request_output.outputs):
+            # Extract the chunk position
+            text_pos = positions[idx]['text_pos']
+
+            # Split into chunks
+            text_outputs.append(output.text.split(" ")[text_pos:])
 
         # Metrics for the vLLM serverless worker
-        metrics = prepare_metrics()
+        runpod_metrics = prepare_metrics()
+        metrics = {}
+
+        # The input job
         metrics['job_input'] = job_input
-        metrics['input_tokens'] = [len(request_output.prompt_token_ids)] * len(request_output.outputs)
-        metrics['output_tokens'] = [len(output.token_ids) for output in request_output.outputs]
+
+        # The input tokens is the prompt. For each 'num_seqs' we'll have that many of them.
+        metrics['input_tokens'] = len(request_output.prompt_token_ids)
+
+        metrics['output_tokens'] = []
+        for output in request_output.outputs:
+            token_pos = positions[idx]['token_pos']
+            num_output_tokens = len(output.token_ids[token_pos:])
+
+            metrics['output_tokens'].append(num_output_tokens)
+
+        for idx, output in enumerate(request_output.outputs):
+            positions[idx] = {
+                'text_pos': len(output.text.split(" ")),
+                'token_pos': len(output.token_ids)
+            }
 
         ret = {
             "text": text_outputs,
+            "metrics": metrics,
             "runpod_internal": {
-                "metrics": metrics
+                "metrics": runpod_metrics
             }
         }
         yield ret
@@ -182,7 +215,7 @@ async def handler(job: dict) -> dict[str, list]:
     job_input = job['input']
 
     # Prompts
-    if MODEL_NAME.lower() == "llama-2-7b-chat-hf" or MODEL_NAME.lower() == "llama-2-13b-chat-hf":
+    if MODEL_NAME.lower().find("llama-2-7b-chat-hf") > -1 or MODEL_NAME.lower().find("llama-2-13b-chat-hf") > -1 or MODEL_NAME.lower().find("elinas/chronos-13b-v2") > -1:
         template = LLAMA_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
@@ -218,18 +251,30 @@ async def handler(job: dict) -> dict[str, list]:
 
     prompt = final_output.prompt
     text_outputs = [
-        output.text for output in final_output.outputs]
+        output.text for output in final_output.outputs
+    ]
+
+    # Number of generated sequences
+    num_seqs = sampling_params.n
 
     # Metrics for the vLLM serverless worker
-    metrics = prepare_metrics()
+    runpod_metrics = prepare_metrics()
+    metrics = {}
+
+    # The input job
     metrics['job_input'] = job_input
-    metrics['input_tokens'] = [len(final_output.prompt_token_ids)] * len(final_output.outputs)
-    metrics['output_tokens'] = [len(output.token_ids) for output in final_output.outputs]
+
+    # The input tokens is the prompt. For each 'num_seqs' we'll have that many of them.
+    metrics['input_tokens'] = len(final_output.prompt_token_ids) * num_seqs
+
+    # Each output is a sequence, we'll have 'num_seqs' in total of them.
+    metrics['output_tokens'] = sum([len(output.token_ids) for output in final_output.outputs])
 
     ret = {
         "outputs": text_outputs,
+        "metrics": metrics,
         "runpod_internal": {
-            "metrics": metrics
+            "metrics": runpod_metrics
         }
     }
     return ret
@@ -239,7 +284,7 @@ async def handler(job: dict) -> dict[str, list]:
 if STREAMING:
     print("Starting the vLLM serverless worker with streaming enabled.")
     runpod.serverless.start(
-        {"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": True})
+        {"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": False })
 else:
     print("Starting the vLLM serverless worker with streaming disabled.")
     runpod.serverless.start(

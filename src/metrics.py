@@ -59,8 +59,8 @@ def vllm_log_system_stats(
         self.last_logging_time = now
 
         metrics = {
-            'avg_prompt_throughput': avg_prompt_throughput, #tokens / second
-            'avg_gen_throughput': avg_generation_throughput, #tokens / second
+            'avg_prompt_throughput': avg_prompt_throughput, # tokens / second
+            'avg_gen_throughput': avg_generation_throughput, # tokens / second
             'running': len(self.scheduler.running), # number of sequences
             'swapped': len(self.scheduler.swapped), # number of sequences
             'pending': len(self.scheduler.waiting),  # number of sequences
