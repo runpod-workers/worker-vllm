@@ -43,7 +43,7 @@ engine_args = AsyncEngineArgs(
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
 # Incorporate metrics tracking
-llm.engine._log_system_stats = vllm_log_system_stats
+llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(llm.engine, x, y)
 
 def concurrency_controller() -> bool:
     # Compute pending sequences
@@ -113,7 +113,6 @@ def validate_sampling_params(sampling_params):
         'max_tokens': max_tokens,
         'logprobs': logprobs,
     }
-
 
 async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]:
     '''
