@@ -35,11 +35,11 @@ def make_request(url, headers, payload):
     response = requests.post(url, headers=headers, json=payload)
     return response
 
-url = "https://api.runpod.ai/v2/4hlrhh430u5tz7/run"
+url = "https://api.runpod.ai/v2/4hlrhh430u5tz7/status/1a73bdc5-aede-4c0a-8fa2-2ac2fb3010dc"
 
 while True:
     # Number of concurrent requests to make
-    num_requests = 100
+    num_requests = 1
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_requests) as executor:
         futures = [executor.submit(make_request, url, headers, payload) for _ in range(num_requests)]
@@ -48,6 +48,7 @@ while True:
     for future in concurrent.futures.as_completed(futures):
         response = future.result()
         # Handle response as needed
+        print(response.json())
         print(response.status_code)
 
     # Sleep for 1 second before starting the next iteration

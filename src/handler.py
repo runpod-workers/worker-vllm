@@ -15,6 +15,7 @@ MODEL_NAME = os.environ.get('MODEL_NAME')
 MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
+USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', False)
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -173,7 +174,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
                 text_outputs.append((" " if text_pos > 0 else "") + text_chunk)
 
         # Metrics for the vLLM serverless worker
-        runpod_metrics = prepare_metrics()
+        runpod_metrics = prepare_metrics() if USE_FULL_METRICS else {}
 
         # The input job
         runpod_metrics['job_input'] = job_input
@@ -257,7 +258,7 @@ async def handler(job: dict) -> dict[str, list]:
     num_seqs = sampling_params.n
 
     # Metrics for the vLLM serverless worker
-    runpod_metrics = prepare_metrics()
+    runpod_metrics = prepare_metrics() if USE_FULL_METRICS else {}
 
     # The input job
     runpod_metrics['job_input'] = job_input
