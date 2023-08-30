@@ -57,6 +57,8 @@ def concurrency_controller() -> bool:
 def prepare_metrics() -> dict:
     # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
     if hasattr(llm.engine, 'metrics'):
+        print("Showing metrics")
+        print(llm.engine.metrics)
         return llm.engine.metrics
     else:
         return {}
