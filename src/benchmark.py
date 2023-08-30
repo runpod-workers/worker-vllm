@@ -1,15 +1,12 @@
-import concurrent.futures
 import requests
+import json
 import time
 import os
 
-RUNPOD_ENDPOINT = os.environ('RUNPOD_ENDPOINT')
-RUNPOD_API_KEY = os.environ('RUNPOD_API_KEY')
-
-url = "https://api.runpod.ai/v2/{RUNPOD_ENDPOINT}/run"
+url = "https://api.runpod.ai/v2/4hlrhh430u5tz7/runsync"
 
 headers = {
-    "Authorization": RUNPOD_API_KEY,
+    "Authorization":"UGXLPIBFYJXUCKOBNR8CCJ3KP8GWJNI97F91QT6Y",
     "Content-Type": "application/json"
 }
 
@@ -31,18 +28,21 @@ payload = {
     }
 }
 
+import concurrent.futures
+import time
 
 def make_request(url, headers, payload):
     response = requests.post(url, headers=headers, json=payload)
     return response
 
+url = "https://api.runpod.ai/v2/4hlrhh430u5tz7/run"
+
 while True:
-    # Number of concurrent requests to make per second.
+    # Number of concurrent requests to make
     num_requests = 100
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_requests) as executor:
-        futures = [executor.submit(make_request, url, headers, payload)
-                   for _ in range(num_requests)]
+        futures = [executor.submit(make_request, url, headers, payload) for _ in range(num_requests)]
 
     # Wait for all requests to complete
     for future in concurrent.futures.as_completed(futures):
@@ -52,3 +52,9 @@ while True:
 
     # Sleep for 1 second before starting the next iteration
     time.sleep(1)
+
+
+# response_json = json.loads(response.text)
+
+# get_status = requests.get(status_url, headers=headers)
+# print(get_status.text)
