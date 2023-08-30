@@ -43,7 +43,7 @@ engine_args = AsyncEngineArgs(
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
 # Incorporate metrics tracking
-# llm.engine._log_system_stats = vllm_log_system_stats
+llm.engine._log_system_stats = vllm_log_system_stats
 
 def concurrency_controller() -> bool:
     # Compute pending sequences
@@ -56,7 +56,7 @@ def concurrency_controller() -> bool:
 
 def prepare_metrics() -> dict:
     # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
-    if llm.engine.metrics:
+    if hasattr(llm.engine, 'metrics'):
         return llm.engine.metrics
     else:
         return {}
