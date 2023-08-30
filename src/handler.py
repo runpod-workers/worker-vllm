@@ -170,7 +170,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
             # Split into chunks
             if len(output.text) > 0:
                 text_chunk = " ".join(output.text.split(" ")[text_pos:])
-                text_outputs.append(text_chunk)
+                text_outputs.append((" " if text_pos > 0 else "") + text_chunk)
 
         # Metrics for the vLLM serverless worker
         runpod_metrics = prepare_metrics()
@@ -281,7 +281,7 @@ async def handler(job: dict) -> dict[str, list]:
 if STREAMING:
     print("Starting the vLLM serverless worker with streaming enabled.")
     runpod.serverless.start(
-        {"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": False })
+        {"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": True })
 else:
     print("Starting the vLLM serverless worker with streaming disabled.")
     runpod.serverless.start(
