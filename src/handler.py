@@ -174,20 +174,19 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         # Metrics for the vLLM serverless worker
         runpod_metrics = prepare_metrics()
-        metrics = {}
 
         # The input job
-        metrics['job_input'] = job_input
+        runpod_metrics['job_input'] = job_input
 
         # The input tokens is the prompt. For each 'num_seqs' we'll have that many of them.
-        metrics['input_tokens'] = len(request_output.prompt_token_ids)
+        runpod_metrics['input_tokens'] = len(request_output.prompt_token_ids)
 
-        metrics['output_tokens'] = []
+        runpod_metrics['output_tokens'] = []
         for output in request_output.outputs:
             token_pos = positions[idx]['token_pos']
             num_output_tokens = len(output.token_ids[token_pos:])
 
-            metrics['output_tokens'].append(num_output_tokens)
+            runpod_metrics['output_tokens'].append(num_output_tokens)
 
         # Update positions
         for idx, output in enumerate(request_output.outputs):
@@ -198,7 +197,6 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         ret = {
             "text": text_outputs,
-            "metrics": metrics,
             "runpod_internal": {
                 "metrics": runpod_metrics
             }
@@ -260,20 +258,18 @@ async def handler(job: dict) -> dict[str, list]:
 
     # Metrics for the vLLM serverless worker
     runpod_metrics = prepare_metrics()
-    metrics = {}
 
     # The input job
-    metrics['job_input'] = job_input
+    runpod_metrics['job_input'] = job_input
 
     # The input tokens is the prompt. For each 'num_seqs' we'll have that many of them.
-    metrics['input_tokens'] = len(final_output.prompt_token_ids) * num_seqs
+    runpod_metrics['input_tokens'] = len(final_output.prompt_token_ids) * num_seqs
 
     # Each output is a sequence, we'll have 'num_seqs' in total of them.
-    metrics['output_tokens'] = sum([len(output.token_ids) for output in final_output.outputs])
+    runpod_metrics['output_tokens'] = sum([len(output.token_ids) for output in final_output.outputs])
 
     ret = {
         "outputs": text_outputs,
-        "metrics": metrics,
         "runpod_internal": {
             "metrics": runpod_metrics
         }
