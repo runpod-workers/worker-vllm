@@ -155,6 +155,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
     # Streaming case
     positions = None
     async for request_output in results_generator:
+        final_output = request_output
         prompt = request_output.prompt
         text_outputs = []
 
@@ -196,11 +197,14 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
                 'token_pos': len(output.token_ids)
             }
 
+        wholesale_output = [
+            output.text for output in final_output.outputs
+        ]
+
         ret = {
-            "text": text_outputs,
-            "runpod_internal": {
-                "metrics": runpod_metrics
-            }
+            "outputs": text_outputs,
+            "metrics": runpod_metrics,
+            "final_output": wholesale_output
         }
         yield ret
 
@@ -271,9 +275,7 @@ async def handler(job: dict) -> dict[str, list]:
 
     ret = {
         "outputs": text_outputs,
-        "runpod_internal": {
-            "metrics": runpod_metrics
-        }
+        "metrics": runpod_metrics
     }
     return ret
 
