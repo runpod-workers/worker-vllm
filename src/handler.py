@@ -242,7 +242,10 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
         }
 
         # Include metrics for the job.
-        runpod.serverless.utils.rp_metrics.push_metrics_internal(job_id=job['id'], metrics=runpod_metrics)
+        runpod.serverless.modules.rp_metrics.metrics_collector.push_metrics_internal(
+            job_id=job['id'], 
+            metrics=runpod_metrics
+        )        
         yield ret
 
 
@@ -301,7 +304,10 @@ async def handler(job: dict) -> dict[str, list]:
     runpod_metrics['scenario'] = 'batch'
 
     # Include metrics for the job.
-    runpod.serverless.utils.rp_metrics.push_metrics_internal(job_id=job['id'], metrics=runpod_metrics)
+    runpod.serverless.modules.rp_metrics.metrics_collector.push_metrics_internal(
+        job_id=job['id'], 
+        metrics=runpod_metrics
+    )
 
     ret = {
         "text": text_outputs,
