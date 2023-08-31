@@ -55,7 +55,15 @@ ENV TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub"
 
 # Download the models
 RUN mkdir -p /model
-RUN MODEL_NAME=$MODEL_NAME MODEL_REVISION=$MODEL_REVISION MODEL_BASE_PATH=$MODEL_BASE_PATH HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN python -u /download_model.py
+
+# Set environment variables
+ENV MODEL_NAME=$MODEL_NAME \
+    MODEL_REVISION=$MODEL_REVISION \
+    MODEL_BASE_PATH=$MODEL_BASE_PATH \
+    HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+
+# Run the Python script to download the model
+RUN python -u /download_model.py
 
 # Start the handler
 CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER python -u /handler.py 
