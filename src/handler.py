@@ -222,14 +222,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         # Store the scenario type and stream index
         runpod_metrics['scenario'] = 'stream'
-        runpod_metrics['stream_index'] = tracker.positions['stream_index']
-
-        # Update positions and stream index
-        for idx, output in enumerate(request_output.outputs):
-            tracker.positions[idx] = {
-                'chunk_pos': len(output.text.split(" ")),
-                'token_pos': len(output.token_ids)
-            }
+        runpod_metrics['stream_index'] = tracker.stream_index
 
         # Increment the index within the stream
         tracker.inc_stream_idx()
