@@ -15,7 +15,7 @@ MODEL_NAME = os.environ.get('MODEL_NAME')
 MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
-USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', False)
+USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -230,7 +230,6 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
         ret = {
             "text": text_outputs,
             "metrics": runpod_metrics,
-            "final_output": [output.text for output in request_output.outputs] # Temporary, for debugging purposes.
         }
         yield ret
 
