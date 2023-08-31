@@ -37,23 +37,23 @@ engine_args = AsyncEngineArgs(
     seed=0,
     max_num_batched_tokens=8192,
     disable_log_stats=False,
-    #max_num_seqs=256,
+    # max_num_seqs=256,
 )
 
 # Create the vLLM asynchronous engine
 llm = AsyncLLMEngine.from_engine_args(engine_args)
 
 # Incorporate metrics tracking
-llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(llm.engine, x, y)
+llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(
+    llm.engine, x, y)
 
 def concurrency_controller() -> bool:
-    # Compute pending sequences
+    # Calculate pending sequences
     total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
-    print("vLLM has {} pending sequences in its internal queue.".format(total_pending_sequences))
+    print("Total pending sequences in vLLM queue: {}".format(total_pending_sequences))
 
-    # If we have pending sequences, then we'll start auto-scaling.
+    # Enable auto-scaling if pending sequences exist
     return total_pending_sequences > 0
-
 
 def prepare_metrics() -> dict:
     # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
@@ -61,7 +61,6 @@ def prepare_metrics() -> dict:
         return llm.engine.metrics
     else:
         return {}
-
 
 # Validation
 def validate_sampling_params(sampling_params):
@@ -113,98 +112,132 @@ def validate_sampling_params(sampling_params):
         'logprobs': logprobs,
     }
 
+
+def validate_and_set_sampling_params(sampling_params):
+    """
+    Validates the given sampling parameters and creates a SamplingParams object.
+    If no sampling parameters are provided, defaults are used.
+    """
+    if sampling_params:
+        validated_params = validate_sampling_params(sampling_params)
+        # https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py#L7
+        return SamplingParams(**validated_params)
+    return SamplingParams()
+
+
 async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]:
     '''
     This is the handler function that will be called by the serverless worker.
     '''
     print("Job received by handler: {}".format(job))
 
-    # Get job input
+    # Retrieve the job input.
     job_input = job['input']
 
-    # Prompts
-    if MODEL_NAME.lower().find("llama-2-7b-chat-hf") > -1 or MODEL_NAME.lower().find("llama-2-13b-chat-hf") > -1 or MODEL_NAME.lower().find("elinas/chronos-13b-v2") > -1:
+    # Utilize the built-in llama2 template if a llama2 base model is being employed.
+    llama_models = ["llama-2-7b-chat-hf", "llama-2-13b-chat-hf", "llama-2-70b-chat-hf", "elinas/chronos-13b-v2"]
+    if any(model_name.lower() in MODEL_NAME.lower() for model_name in llama_models):
         template = LLAMA2_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
 
-    # Use the template
+    # Create the prompt using the template.
     prompt = template(job_input['prompt'])
 
-    # Validate the inputs
-    sampling_params = job_input.get('sampling_params', None)
-    if sampling_params:
-        sampling_params = validate_sampling_params(sampling_params)
+    # Validate and set sampling parameters
+    sampling_params = validate_and_set_sampling_params(job_input.get('sampling_params', None))
 
-        # Sampling parameters
-        # https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py#L7
-        sampling_params = SamplingParams(**sampling_params)
-    else:
-        sampling_params = SamplingParams()
-
-    # Print the job input
-    print(job_input)
-
-    # Print the sampling params
-    print(sampling_params)
+    # Print job input and sampling parameters
+    print("Job Input:", job_input)
+    print("Sampling Parameters:", sampling_params)
 
     # Send request to VLLM
     request_id = random_uuid()
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
-    # Streaming case
-    positions = None
+    # Keep track of the stream's information to perform the appropriate chunking.
+    class Tracker():
+        def __init__(self):
+            self.positions = None
+            self.stream_index = 0
+
+        def inc_stream_idx(self):
+            self.stream_index +=1
+
+    tracker = Tracker()
+
+    def extract_next_chunk(request_output):
+        """
+        Extracts and processes generated chunks and token counts from the request output.
+
+        Args:
+            request_output (CompletionOutput): The output of a language model request.
+
+        Returns:
+            tuple: A tuple containing two lists - chunk_outputs (extracted chunks) and num_output_tokens (generated token counts).
+        """
+        chunk_outputs = []  # List to store extracted chunks
+        num_output_tokens = []  # List to store generated token counts
+
+        # Iterate over each completion in the request output
+        for idx, completion in enumerate(request_output.outputs):
+            # Extract the current chunk position from the tracker
+            chunk_pos = tracker.positions[idx]['chunk_pos']
+
+            # Append the chunk to the output
+            chunk_outputs.append(completion.text[chunk_pos:])
+
+            # Update the chunk position in the tracker
+            tracker.positions[idx]['chunk_pos'] = len(completion.text)
+
+            # Calculate the number of generated tokens in the current completion
+            num_generated_tokens = len(completion.token_ids) - tracker.positions[idx]['token_pos']
+
+            # Append the token count to the output
+            num_output_tokens.append(num_generated_tokens)
+
+            # Update the token position in the tracker
+            tracker.positions[idx]['token_pos'] = len(completion.token_ids)
+
+        return chunk_outputs, num_output_tokens
+
     async for request_output in results_generator:
-        final_output = request_output
-        prompt = request_output.prompt
-        text_outputs = []
-
-        if positions is None:
-            positions = [{
-                'text_pos': 0,
-                'token_pos': 0
-            }] * len(request_output.outputs)
-
-        for idx, output in enumerate(request_output.outputs):
-            # Extract the chunk position
-            text_pos = positions[idx]['text_pos']
-
-            # Split into chunks
-            if len(output.text) > 0:
-                text_chunk = " ".join(output.text.split(" ")[text_pos:])
-                text_outputs.append((" " if text_pos > 0 else "") + text_chunk)
+        # Initialize chunk positions if not already done
+        if tracker.positions is None:
+            tracker.positions = [{'chunk_pos': 0, 'token_pos': 0}] * len(request_output.outputs)
 
         # Metrics for the vLLM serverless worker
         runpod_metrics = prepare_metrics() if USE_FULL_METRICS else {}
 
-        # The input job
+        # Number of generated sequences
+        num_seqs = sampling_params.n
+
+        # Extract the next chunk from the output
+        text_outputs, output_tokens = extract_next_chunk(request_output)
+
+        # Record job input and token counts
         runpod_metrics['job_input'] = job_input
+        runpod_metrics['input_tokens'] = len(request_output.prompt_token_ids) * num_seqs
+        runpod_metrics['output_tokens'] = output_tokens
 
-        # The input tokens is the prompt. For each 'num_seqs' we'll have that many of them.
-        runpod_metrics['input_tokens'] = len(request_output.prompt_token_ids)
+        # Store the scenario type and stream index
+        runpod_metrics['scenario'] = 'stream'
+        runpod_metrics['stream_index'] = tracker.positions['stream_index']
 
-        runpod_metrics['output_tokens'] = []
-        for output in request_output.outputs:
-            token_pos = positions[idx]['token_pos']
-            num_output_tokens = len(output.token_ids[token_pos:])
-
-            runpod_metrics['output_tokens'].append(num_output_tokens)
-
-        # Update positions
+        # Update positions and stream index
         for idx, output in enumerate(request_output.outputs):
-            positions[idx] = {
-                'text_pos': len(output.text.split(" ")),
+            tracker.positions[idx] = {
+                'chunk_pos': len(output.text.split(" ")),
                 'token_pos': len(output.token_ids)
             }
 
-        wholesale_output = [
-            output.text for output in final_output.outputs
-        ]
+        # Increment the index within the stream
+        tracker.inc_stream_idx()
 
         ret = {
-            "outputs": text_outputs,
+            "text": text_outputs,
             "metrics": runpod_metrics,
-            "final_output": wholesale_output
+            "final_output": [output.text for output in request_output.outputs] # Temporary, for debugging purposes.
         }
         yield ret
 
@@ -215,77 +248,64 @@ async def handler(job: dict) -> dict[str, list]:
     '''
     print("Job received by handler: {}".format(job))
 
-    # Get job input
+    # Retrieve the job input.
     job_input = job['input']
 
-    # Prompts
-    if MODEL_NAME.lower().find("llama-2-7b-chat-hf") > -1 or MODEL_NAME.lower().find("llama-2-13b-chat-hf") > -1 or MODEL_NAME.lower().find("elinas/chronos-13b-v2") > -1:
+    # Utilize the built-in llama2 template if a llama2 base model is being employed.
+    llama_models = ["llama-2-7b-chat-hf", "llama-2-13b-chat-hf", "llama-2-70b-chat-hf", "elinas/chronos-13b-v2"]
+    if any(model_name.lower() in MODEL_NAME.lower() for model_name in llama_models):
         template = LLAMA2_TEMPLATE
     else:
         template = DEFAULT_TEMPLATE
 
-    # Use the template
+    # Create the prompt using the template.
     prompt = template(job_input['prompt'])
 
-    # Validate the inputs
-    sampling_params = job_input.get('sampling_params', None)
-    if sampling_params:
-        sampling_params = validate_sampling_params(sampling_params)
+    # Validate and set sampling parameters
+    sampling_params = validate_and_set_sampling_params(job_input.get('sampling_params', None))
 
-        # Sampling parameters
-        # https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py#L7
-        sampling_params = SamplingParams(**sampling_params)
-    else:
-        sampling_params = SamplingParams()
-
-    # Print the job input
-    print(job_input)
-
-    # Print the sampling params
-    print(sampling_params)
+    # Print job input and sampling parameters
+    print("Job Input:", job_input)
+    print("Sampling Parameters:", sampling_params)
 
     # Send request to VLLM
     request_id = random_uuid()
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
-    # Non-streaming case
+    # Get the final generated output
     final_output = None
     async for request_output in results_generator:
         final_output = request_output
 
+    # Extract prompt and text outputs
     prompt = final_output.prompt
-    text_outputs = [
-        output.text for output in final_output.outputs
-    ]
+    text_outputs = [output.text for output in final_output.outputs]
 
     # Number of generated sequences
     num_seqs = sampling_params.n
 
-    # Metrics for the vLLM serverless worker
+    # Prepare metrics if full metrics are enabled
     runpod_metrics = prepare_metrics() if USE_FULL_METRICS else {}
 
-    # The input job
+    # Record job input and token counts
     runpod_metrics['job_input'] = job_input
-
-    # The input tokens is the prompt. For each 'num_seqs' we'll have that many of them.
     runpod_metrics['input_tokens'] = len(final_output.prompt_token_ids) * num_seqs
-
-    # Each output is a sequence, we'll have 'num_seqs' in total of them.
     runpod_metrics['output_tokens'] = sum([len(output.token_ids) for output in final_output.outputs])
 
+    # Store the scenario type
+    runpod_metrics['scenario'] = 'batch'
+
     ret = {
-        "outputs": text_outputs,
+        "text": text_outputs,
         "metrics": runpod_metrics
     }
     return ret
 
 
-# Start the serverless worker
+# Start the serverless worker with appropriate settings
 if STREAMING:
     print("Starting the vLLM serverless worker with streaming enabled.")
-    runpod.serverless.start(
-        {"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": True })
+    runpod.serverless.start({"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": True})
 else:
     print("Starting the vLLM serverless worker with streaming disabled.")
-    runpod.serverless.start(
-        {"handler": handler, "concurrency_controller": concurrency_controller})
+    runpod.serverless.start({"handler": handler, "concurrency_controller": concurrency_controller})
