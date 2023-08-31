@@ -15,7 +15,7 @@ MODEL_NAME = os.environ.get('MODEL_NAME')
 MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
-USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
+USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', False)
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -216,17 +216,17 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
         text_outputs, output_tokens = extract_next_chunk(request_output)
 
         # Record job input and token counts
-        runpod_metrics['job_input'] = job_input
+        # runpod_metrics['job_input'] = job_input
 
         # Only include the input_tokens count for the very first stream response. This is to avoid duplicate counting.
         if tracker.stream_index == 0:
             input_tokens_count = len(request_output.prompt_token_ids)
-            runpod_metrics['input_tokens'] = [input_tokens_count] * num_seqs
+            runpod_metrics['input_tokens'] = sum([input_tokens_count] * num_seqs)
         else:
-            runpod_metrics['input_tokens'] = [0] * num_seqs
+            runpod_metrics['input_tokens'] = sum([0] * num_seqs)
 
         # Include the output tokens count [#, #, #, ...]
-        runpod_metrics['output_tokens'] = output_tokens
+        runpod_metrics['output_tokens'] = sum(output_tokens)
 
         # Store the scenario type and stream index
         runpod_metrics['scenario'] = 'stream'
@@ -237,10 +237,12 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         ret = {
             "text": text_outputs,
-            "input_tokens": runpod_metrics['input_tokens'],
-            "output_tokens": runpod_metrics['output_tokens'],
-            "metrics": runpod_metrics,
+            # "input_tokens": runpod_metrics['input_tokens'],
+            # "output_tokens": runpod_metrics['output_tokens']
         }
+
+        # Include metrics for the job.
+        runpod.serverless.utils.rp_metrics.push_metrics_internal(job_id=job['id'], metrics=runpod_metrics)
         yield ret
 
 
@@ -290,26 +292,36 @@ async def handler(job: dict) -> dict[str, list]:
     runpod_metrics = prepare_metrics() if USE_FULL_METRICS else {}
 
     # Record job input and token counts
-    runpod_metrics['job_input'] = job_input
+    # runpod_metrics['job_input'] = job_input
+
     runpod_metrics['input_tokens'] = len(final_output.prompt_token_ids) * num_seqs
     runpod_metrics['output_tokens'] = sum([len(output.token_ids) for output in final_output.outputs])
 
     # Store the scenario type
     runpod_metrics['scenario'] = 'batch'
 
+    # Include metrics for the job.
+    runpod.serverless.utils.rp_metrics.push_metrics_internal(job_id=job['id'], metrics=runpod_metrics)
+
     ret = {
         "text": text_outputs,
-        "input_tokens": runpod_metrics['input_tokens'],
-        "output_tokens": runpod_metrics['output_tokens'],
-        "metrics": runpod_metrics
+        # "input_tokens": runpod_metrics['input_tokens'],
+        # "output_tokens": runpod_metrics['output_tokens']
     }
     return ret
-
 
 # Start the serverless worker with appropriate settings
 if STREAMING:
     print("Starting the vLLM serverless worker with streaming enabled.")
-    runpod.serverless.start({"handler": handler_streaming, "concurrency_controller": concurrency_controller, "return_aggregate_stream": True})
+    runpod.serverless.start({
+        "handler": handler_streaming, 
+        "concurrency_controller": concurrency_controller, 
+        "return_aggregate_stream": True
+    })
 else:
     print("Starting the vLLM serverless worker with streaming disabled.")
-    runpod.serverless.start({"handler": handler, "concurrency_controller": concurrency_controller})
+    runpod.serverless.start({
+        "handler": handler, 
+        "concurrency_controller": 
+        concurrency_controller
+    })
