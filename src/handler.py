@@ -217,7 +217,15 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         # Record job input and token counts
         runpod_metrics['job_input'] = job_input
-        runpod_metrics['input_tokens'] = len(request_output.prompt_token_ids) * num_seqs
+
+        # Only include the input_tokens count for the very first stream response. This is to avoid duplicate counting.
+        if tracker.stream_index == 0:
+            input_tokens_count = len(request_output.prompt_token_ids)
+            runpod_metrics['input_tokens'] = [input_tokens_count] * num_seqs
+        else:
+            runpod_metrics['input_tokens'] = [0] * num_seqs
+
+        # Include the output tokens count [#, #, #, ...]
         runpod_metrics['output_tokens'] = output_tokens
 
         # Store the scenario type and stream index
@@ -229,6 +237,8 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         ret = {
             "text": text_outputs,
+            "input_tokens": runpod_metrics['input_tokens'],
+            "output_tokens": runpod_metrics['output_tokens'],
             "metrics": runpod_metrics,
         }
         yield ret
@@ -289,6 +299,8 @@ async def handler(job: dict) -> dict[str, list]:
 
     ret = {
         "text": text_outputs,
+        "input_tokens": runpod_metrics['input_tokens'],
+        "output_tokens": runpod_metrics['output_tokens'],
         "metrics": runpod_metrics
     }
     return ret
