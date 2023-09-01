@@ -68,4 +68,7 @@ def vllm_log_system_stats(
             'cpu_kv_cache_usage': cpu_cache_usage, # percentage
         }
 
+        # Print metrics
+        print(metrics)
+
         self.metrics = metrics
