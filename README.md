@@ -49,8 +49,9 @@ The following inputs can be used for testing the model:
 ```json
 {
     "input": {
-       "prompt": "Who is the president of the United States?",
-       "sampling_params": {
+        "sys_msg": "You are an helpful assistant",
+        "prompt": "Who is the president of the United States?",
+        "sampling_params": {
            "max_tokens": 100
        }
     }
