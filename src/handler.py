@@ -252,9 +252,10 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         # Include metrics in the highest level for the job output for aggregrate.
         def aggregate_function(streamed_outputs):
-            aggregate_output = ""
+            aggregate_output = [""] * len(streamed_outputs[0]['text'])
             for stream in streamed_outputs:
-                aggregate_output += stream['text']
+                for id, seq in enumerate(stream['text']):
+                    aggregate_output[id] += seq
 
             # Number of generated sequences
             num_seqs = sampling_params.n
