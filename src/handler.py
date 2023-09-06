@@ -142,7 +142,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
         template = DEFAULT_TEMPLATE
 
     # Create the prompt using the template.
-    prompt = template(job_input['prompt'])
+    prompt = template(job_input['prompt'],job_input['sys_msg'])
 
     # Validate and set sampling parameters
     sampling_params = validate_and_set_sampling_params(job_input.get('sampling_params', None))
