@@ -53,7 +53,7 @@ def concurrency_controller() -> bool:
     print("Total pending sequences in vLLM queue: {}".format(total_pending_sequences))
 
     # Enable auto-scaling if pending sequences exist
-    return total_pending_sequences > 0
+    return total_pending_sequences > 30
 
 def prepare_metrics() -> dict:
     # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
@@ -237,8 +237,8 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         ret = {
             "text": text_outputs,
-            # "input_tokens": runpod_metrics['input_tokens'],
-            # "output_tokens": runpod_metrics['output_tokens']
+            "input_tokens": runpod_metrics['input_tokens'],
+            "output_tokens": runpod_metrics['output_tokens']
         }
 
         # Include metrics for the job.
@@ -246,6 +246,36 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
             job_id=job['id'], 
             metrics=runpod_metrics
         )        
+
+        # Keep track of the final output
+        final_output = request_output
+
+        # Include metrics in the highest level for the job output for aggregrate.
+        def aggregate_function(streamed_outputs):
+            aggregate_output = ""
+            for stream in streamed_outputs:
+                aggregate_output += stream['text']
+
+            # Number of generated sequences
+            num_seqs = sampling_params.n
+
+            # Aggregate metrics to expose to the user
+            input_tokens = len(final_output.prompt_token_ids) * num_seqs
+            output_tokens = sum([len(output.token_ids) for output in final_output.outputs])
+
+            return {
+                "text": aggregate_output,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+            }
+    
+        # Update the aggregate transformation function
+        runpod.serverless.modules.rp_metrics.metrics_collector.update_stream_aggregate(
+            job_id=job['id'], 
+            aggregate_function=aggregate_function
+        )
+
+        # Yield the output
         yield ret
 
 
@@ -311,8 +341,8 @@ async def handler(job: dict) -> dict[str, list]:
 
     ret = {
         "text": text_outputs,
-        # "input_tokens": runpod_metrics['input_tokens'],
-        # "output_tokens": runpod_metrics['output_tokens']
+        "input_tokens": runpod_metrics['input_tokens'],
+        "output_tokens": runpod_metrics['output_tokens']
     }
     return ret
 
