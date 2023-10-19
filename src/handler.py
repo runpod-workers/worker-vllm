@@ -16,6 +16,7 @@ MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
 USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
+QUANTIZATION = os.environ.get("QUANTIZATION", None)
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -30,12 +31,13 @@ except ValueError:
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
+    quantization=QUANTIZATION,
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
     tensor_parallel_size=NUM_GPU_SHARD,
     dtype="auto",
     seed=0,
-    max_num_batched_tokens=8192,
+    max_num_batched_tokens=4096, # set higher if needed
     disable_log_stats=False,
     # max_num_seqs=256,
 )
