@@ -16,6 +16,7 @@ MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
 USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
+QUANTIZATION = os.environ.get('QUANTIZATION', None)
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -27,17 +28,21 @@ except ValueError:
     print("Error: NUM_GPU_SHARD should be an integer. Using default value of 1.")
     NUM_GPU_SHARD = 1
 
+# Setup quantization parameter
+if type(QUANTIZATION) is str and QUANTIZATION.lower() != "awq":
+    QUANTIZATION = None
+    print("Invalid quantization parameter. Using default value of None.")
+
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
     tensor_parallel_size=NUM_GPU_SHARD,
-    dtype="auto",
+    dtype="auto" if QUANTIZATION is None else "half",
     seed=0,
-    max_num_batched_tokens=8192,
     disable_log_stats=False,
-    # max_num_seqs=256,
+    quantization=QUANTIZATION,
 )
 
 # Create the vLLM asynchronous engine
@@ -47,6 +52,7 @@ llm = AsyncLLMEngine.from_engine_args(engine_args)
 llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(
     llm.engine, x, y)
 
+
 def concurrency_controller() -> bool:
     # Calculate pending sequences
     total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
@@ -55,12 +61,14 @@ def concurrency_controller() -> bool:
     # Enable auto-scaling if pending sequences exist
     return total_pending_sequences > 30
 
+
 def prepare_metrics() -> dict:
     # The vLLM metrics are updated every 5 seconds, see metrics.py for the _LOGGING_INTERVAL_SEC field.
     if hasattr(llm.engine, 'metrics'):
         return llm.engine.metrics
     else:
         return {}
+
 
 # Validation
 def validate_sampling_params(sampling_params):
@@ -162,7 +170,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
             self.stream_index = 0
 
         def inc_stream_idx(self):
-            self.stream_index +=1
+            self.stream_index += 1
 
     tracker = Tracker()
 
@@ -243,9 +251,9 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
         # Include metrics for the job.
         runpod.serverless.modules.rp_metrics.metrics_collector.push_metrics_internal(
-            job_id=job['id'], 
+            job_id=job['id'],
             metrics=runpod_metrics
-        )        
+        )
 
         # Keep track of the final output
         final_output = request_output
@@ -269,10 +277,10 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
             }
-    
+
         # Update the aggregate transformation function
         runpod.serverless.modules.rp_metrics.metrics_collector.update_stream_aggregate(
-            job_id=job['id'], 
+            job_id=job['id'],
             aggregate_function=aggregate_function
         )
 
@@ -336,7 +344,7 @@ async def handler(job: dict) -> dict[str, list]:
 
     # Include metrics for the job.
     runpod.serverless.modules.rp_metrics.metrics_collector.push_metrics_internal(
-        job_id=job['id'], 
+        job_id=job['id'],
         metrics=runpod_metrics
     )
 
@@ -347,18 +355,19 @@ async def handler(job: dict) -> dict[str, list]:
     }
     return ret
 
+
 # Start the serverless worker with appropriate settings
 if STREAMING:
     print("Starting the vLLM serverless worker with streaming enabled.")
     runpod.serverless.start({
-        "handler": handler_streaming, 
-        "concurrency_controller": concurrency_controller, 
+        "handler": handler_streaming,
+        "concurrency_controller": concurrency_controller,
         "return_aggregate_stream": True
     })
 else:
     print("Starting the vLLM serverless worker with streaming disabled.")
     runpod.serverless.start({
-        "handler": handler, 
-        "concurrency_controller": 
-        concurrency_controller
+        "handler": handler,
+        "concurrency_controller":
+            concurrency_controller
     })
