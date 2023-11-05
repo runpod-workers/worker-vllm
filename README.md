@@ -14,12 +14,17 @@
 2. `MODEL_NAME`: The Hugging Face model to use. Please ensure that the chosen model is supported by vLLM. Refer to the list of supported models for compatibility.
 3. `TOKENIZER`: (Optional) The specified tokenizer to use. If you want to use the default tokenizer for the model, do not provide this docker argument at all.
 4. `STREAMING`: Whether to use HTTP Streaming or not. Specify True if you want to enable HTTP Streaming; otherwise, omit this argument.
+5. `QUANTIZATION`: (Optional) provide value `awq` if model uses AWQ-Quantization. Leave empty if using non-quantizated model.
 
 #### llama2 7B Chat:
 `docker build . --platform linux/amd64 --build-arg HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here --build-arg MODEL_NAME=meta-llama/Llama-2-7b-chat-hf --build-arg TOKENIZER=hf-internal-testing/llama-tokenizer --build-arg STREAMING=True`
 
 #### llama2 13B Chat:
 `docker build . --platform linux/amd64 --build-arg HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here --build-arg MODEL_NAME=meta-llama/Llama-2-13b-chat-hf --build-arg TOKENIZER=hf-internal-testing/llama-tokenizer --build-arg STREAMING=True`
+
+#### llama2 7B Chat AWQ:
+
+`docker build . --platform linux/amd64 --build-arg HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here --build-arg MODEL_NAME=meta-llama/Llama-2-7b-chat-hf --build-arg TOKENIZER=hf-internal-testing/llama-tokenizer --build-arg QUANTIZATION=awq`
 
 Please make sure to replace your_hugging_face_token_here with your actual Hugging Face token to enable model downloads that require it.
 
