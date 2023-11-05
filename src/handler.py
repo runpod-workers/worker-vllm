@@ -16,6 +16,7 @@ MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
 USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
+QUANTIZATION = os.environ.get("QUANTIZATION", None)
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
@@ -27,16 +28,26 @@ except ValueError:
     print("Error: NUM_GPU_SHARD should be an integer. Using default value of 1.")
     NUM_GPU_SHARD = 1
 
+# Validate Quantization parameter
+if QUANTIZATION is not None and QUANTIZATION in ["awq", "AWQ"]:
+    print("Set to use AWQ quantitized model.")
+    QUANTIZATION = "awq"
+else:
+    print("QUANTIZATION not set or invalid value. Using default unquantitized model.")
+    QUANTIZATION = None
+
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
     model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
     tensor_parallel_size=NUM_GPU_SHARD,
-    dtype="auto",
+    # dtype="auto" if QUANTIZATION is None else "half",
+    dtype="auto"",
     seed=0,
     max_num_batched_tokens=8192,
     disable_log_stats=False,
+    quantization=QUANTIZATION,
     # max_num_seqs=256,
 )
 
