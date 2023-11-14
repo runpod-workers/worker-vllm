@@ -2,5 +2,5 @@
 # Recomended to lock the version number to avoid unexpected changes.
 fastapi==0.99.1
 vllm==0.2.1.post1
-huggingface-hub==0.16.4
+huggingface-hub==0.17.3
 runpod @ git+https://github.com/runpod/runpod-python@main#egg=runpod 
