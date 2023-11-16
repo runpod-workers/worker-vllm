@@ -9,20 +9,44 @@
 🚀 | This serverless worker utilizes vLLM (very Large Language Model) behind the scenes and is integrated into RunPod's serverless environment. It supports dynamic auto-scaling using the built-in RunPod autoscaling feature.
 </div>
 
-#### Docker Arguments:
-1. `HUGGING_FACE_HUB_TOKEN`: Your private Hugging Face token. This token is required for downloading models that necessitate agreement to an End User License Agreement (EULA), such as the llama2 family of models.
-2. `MODEL_NAME`: The Hugging Face model to use. Please ensure that the chosen model is supported by vLLM. Refer to the list of supported models for compatibility.
-3. `TOKENIZER`: (Optional) The specified tokenizer to use. If you want to use the default tokenizer for the model, do not provide this docker argument at all.
-4. `STREAMING`: Whether to use HTTP Streaming or not. Specify True if you want to enable HTTP Streaming; otherwise, omit this argument.
-5. `QUANTIZATION`: (Optional) `awq` to use AWQ Quantization. Base model must be in AWQ format.
+## Setting up the Serverless Worker
+### Docker Arguments
+#### Required:
+- `MODEL_NAME`: The Hugging Face model to use.
+- `STREAMING`: Whether to use HTTP Streaming or not.
+More information on receiving streaming responses from Serverless Endpoints can be found at [Endpoint URLs](https://docs.runpod.io/docs/serverless-endpoint-urls#streamjob_id), and a detailed example at [Llama2 7B Chat | Streaming Token Outputs](https://docs.runpod.io/reference/llama2-7b-chat#streaming-token-outputs). 
+#### Optional:
+- `HUGGING_FACE_HUB_TOKEN`: Your Hugging Face token to access private or gated models. You can get your token [here](https://huggingface.co/settings/token).
+- `TOKENIZER`: The specified tokenizer to use. If you want to use the default tokenizer for the model, do not provide this docker argument at all.
+- `QUANTIZATION`: `awq` to use AWQ Quantization. Base model must be in AWQ format.
 
-#### llama2 7B Chat:
-`docker build . --platform linux/amd64 --build-arg HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here --build-arg MODEL_NAME=meta-llama/Llama-2-7b-chat-hf --build-arg TOKENIZER=hf-internal-testing/llama-tokenizer --build-arg STREAMING=True`
+### Compatible Models
+- LLaMA & LLaMA-2 
+- Mistral 
+- MPT 
+- OPT 
+- Qwen 
+- Aquila & Aquila2 
+- Baichuan
+- BLOOM 
+- Falcon 
+- GPT-2
+- GPT BigCode
+- GPT-J
+- GPT-NeoX
+- InternLM
 
-#### llama2 13B Chat:
-`docker build . --platform linux/amd64 --build-arg HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here --build-arg MODEL_NAME=meta-llama/Llama-2-13b-chat-hf --build-arg TOKENIZER=hf-internal-testing/llama-tokenizer --build-arg STREAMING=True`
+> [!IMPORTANT]
+> If you are using private models or ones that are gated, such as Llama 2, you must provide your Hugging Face token as a docker argument. 
 
-Please make sure to replace your_hugging_face_token_here with your actual Hugging Face token to enable model downloads that require it.
+
+### Examples
+#### llama2 2.7B Chat:
+```bash
+docker build . --platform linux/amd64 --build-arg --build-arg MODEL_NAME=meta-llama/Llama-2-7b-chat-hf --build-arg STREAMING=True  HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here
+```
+#### 
+
 
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand. For further inquiries or assistance, feel free to contact our support team.
 

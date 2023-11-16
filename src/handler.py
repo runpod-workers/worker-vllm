@@ -12,14 +12,27 @@ import os
 
 # Prepare the model and tokenizer
 MODEL_NAME = os.environ.get('MODEL_NAME')
-MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
+MODEL_BASE_PATH = os.environ.get('MODEfL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
 USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
+DTYPE = "auto"
+USE_HF_CHAT_TEMPLATE = os.environ.get('USE_HF_CHAT_TEMPLATE', False) == 'True'
+
+# Set up quantization-related parameters
 QUANTIZATION = os.environ.get('QUANTIZATION', None)
+
+if type(QUANTIZATION) is str and QUANTIZATION.lower() != "awq":
+    QUANTIZATION = None
+    print("Invalid quantization parameter. Using default value of None.")
+else:
+    DTYPE = "half"
 
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
+
+if len(TOKENIZER) == 0:
+    print("Error: The tokenizer has not been provided. Defaulting to MODEL_NAME.")
 
 # Tensor parallelism
 try:
@@ -28,10 +41,6 @@ except ValueError:
     print("Error: NUM_GPU_SHARD should be an integer. Using default value of 1.")
     NUM_GPU_SHARD = 1
 
-# Setup quantization parameter
-if type(QUANTIZATION) is str and QUANTIZATION.lower() != "awq":
-    QUANTIZATION = None
-    print("Invalid quantization parameter. Using default value of None.")
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
@@ -39,8 +48,7 @@ engine_args = AsyncEngineArgs(
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
     tensor_parallel_size=NUM_GPU_SHARD,
-    dtype="auto" if QUANTIZATION is None else "half",
-    seed=0,
+    dtype=DTYPE,
     disable_log_stats=False,
     quantization=QUANTIZATION,
 )
@@ -55,11 +63,8 @@ llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(
 
 def concurrency_controller() -> bool:
     # Calculate pending sequences
-    total_pending_sequences = len(llm.engine.scheduler.waiting) + len(llm.engine.scheduler.swapped)
-    print("Total pending sequences in vLLM queue: {}".format(total_pending_sequences))
-
-    # Enable auto-scaling if pending sequences exist
-    return total_pending_sequences > 30
+    total_queued_sequences = len(llm.engine.scheduler.waiting)
+    return total_queued_sequences > 0
 
 
 def prepare_metrics() -> dict:
@@ -144,13 +149,9 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
     # Utilize the built-in llama2 template if a llama2 base model is being employed.
     llama_models = ["llama-2-7b-chat-hf", "llama-2-13b-chat-hf", "llama-2-70b-chat-hf", "elinas/chronos-13b-v2"]
-    if any(model_name.lower() in MODEL_NAME.lower() for model_name in llama_models):
-        template = LLAMA2_TEMPLATE
-    else:
-        template = DEFAULT_TEMPLATE
 
     # Create the prompt using the template.
-    prompt = template(job_input['prompt'])
+    prompt = job_input['prompt']
 
     # Validate and set sampling parameters
     sampling_params = validate_and_set_sampling_params(job_input.get('sampling_params', None))
@@ -296,16 +297,8 @@ async def handler(job: dict) -> dict[str, list]:
 
     # Retrieve the job input.
     job_input = job['input']
-
-    # Utilize the built-in llama2 template if a llama2 base model is being employed.
-    llama_models = ["llama-2-7b-chat-hf", "llama-2-13b-chat-hf", "llama-2-70b-chat-hf", "elinas/chronos-13b-v2"]
-    if any(model_name.lower() in MODEL_NAME.lower() for model_name in llama_models):
-        template = LLAMA2_TEMPLATE
-    else:
-        template = DEFAULT_TEMPLATE
-
     # Create the prompt using the template.
-    prompt = template(job_input['prompt'])
+    prompt = job_input['prompt']
 
     # Validate and set sampling parameters
     sampling_params = validate_and_set_sampling_params(job_input.get('sampling_params', None))
