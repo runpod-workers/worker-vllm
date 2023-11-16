@@ -12,13 +12,6 @@ WORKDIR /
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN pip install torch==2.0.1 -f https://download.pytorch.org/whl/cu118
-COPY builder/setup.sh /setup.sh
-RUN chmod +x /setup.sh && \
-    /setup.sh && \
-    rm /setup.sh
-
-# Install fast api
-RUN pip install fastapi==0.99.1
 
 # Install Python dependencies (Worker Template)
 COPY builder/requirements.txt /requirements.txt
