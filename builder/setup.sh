@@ -1,5 +1,5 @@
 #!/bin/bash
-
+##fixed ^M
 apt-get update
 apt-get upgrade -y
 
