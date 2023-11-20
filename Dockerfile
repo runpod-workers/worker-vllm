@@ -57,6 +57,9 @@ ENV MODEL_NAME=$MODEL_NAME \
     MODEL_BASE_PATH=$MODEL_BASE_PATH \
     HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
 
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Run the Python script to download the model
 RUN python -u /download_model.py
 
