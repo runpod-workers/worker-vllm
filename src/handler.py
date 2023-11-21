@@ -21,6 +21,11 @@ QUANTIZATION = os.environ.get('QUANTIZATION', None)
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
 
+# If not provided, the value is an empty string instead of None
+# which causes issues with repo_id (https://github.com/runpod-workers/worker-vllm/issues/14)
+if not TOKENIZER:
+    TOKENIZER = None
+
 # Tensor parallelism
 try:
     NUM_GPU_SHARD = int(os.environ.get('NUM_GPU_SHARD', 1))
