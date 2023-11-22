@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_name', type=str, default=MODEL_NAME)
     parser.add_argument('--model_revision', type=str, default=MODEL_REVISION)
     parser.add_argument('--model_base_path', type=str, default=MODEL_BASE_PATH)
-    parser.add_argument('--hugging_face_hub_token', type=str, default=HUGGING_FACE_HUB_TOKEN)
+    parser.add_argument('--hugging_face_hub_token', type=str)
 
     args = parser.parse_args()
 
