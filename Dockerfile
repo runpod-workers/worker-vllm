@@ -1,6 +1,8 @@
 # Base image
 FROM runpod/base:0.4.2-cuda11.8.0
 
+ARG HUGGING_FACE_HUB_TOKEN
+
 # Install Python dependencies (Worker Template)
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -11,8 +13,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Add src files (Worker Template)
 ADD src .
 
-# Prepare the models inside the docker image
-ARG HUGGING_FACE_HUB_TOKEN
+
 
 # Prepare argument for the model and tokenizer
 ARG MODEL_NAME=""
