@@ -4,8 +4,8 @@ FROM runpod/base:0.4.2-cuda11.8.0
 # Install Python dependencies (Worker Template)
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install --upgrade -r /requirements.txt --no-cache-dir && \
+    python3.11 -m pip install --upgrade pip && \
+    python3.11 -m pip install --upgrade -r /requirements.txt --no-cache-dir && \
     rm /requirements.txt
 
 # Add src files (Worker Template)
@@ -45,7 +45,7 @@ ENV MODEL_NAME=$MODEL_NAME \
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Run the Python script to download the model
-RUN python -u /download_model.py --model_name $MODEL_NAME --model_revision $MODEL_REVISION --model_base_path $MODEL_BASE_PATH --hugging_face_hub_token $HUGGING_FACE_HUB_TOKEN
+RUN python3.11 -u /download_model.py --model_name $MODEL_NAME --model_revision $MODEL_REVISION --model_base_path $MODEL_BASE_PATH --hugging_face_hub_token $HUGGING_FACE_HUB_TOKEN
 
 # Start the handler
-CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION python -u /handler.py
+CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION python3.11 /handler.py
