@@ -1,17 +1,5 @@
 # Base image
-# The following docker base image is recommended by VLLM: 
-FROM runpod/base:0.4.1-cuda11.8.0
-
-# Use bash shell with pipefail option
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# Set the working directory
-WORKDIR /
-
-# Update and upgrade the system packages (Worker Template)
-ARG DEBIAN_FRONTEND=noninteractive
-
-RUN pip install torch==2.0.1 -f https://download.pytorch.org/whl/cu118
+FROM runpod/base:0.4.2-cuda11.8.0
 
 # Install Python dependencies (Worker Template)
 COPY builder/requirements.txt /requirements.txt
@@ -21,14 +9,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     rm /requirements.txt
 
 # Add src files (Worker Template)
-ADD src .  
-
-# Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@a1#egg=runpod --compile
+ADD src .
 
 # Prepare the models inside the docker image
-ARG HUGGING_FACE_HUB_TOKEN=
-ENV HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+ARG HUGGING_FACE_HUB_TOKEN
 
 # Prepare argument for the model and tokenizer
 ARG MODEL_NAME=""
@@ -61,7 +45,7 @@ ENV MODEL_NAME=$MODEL_NAME \
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Run the Python script to download the model
-RUN python -u /download_model.py
+RUN python -u /download_model.py --model_name $MODEL_NAME --model_revision $MODEL_REVISION --model_base_path $MODEL_BASE_PATH --hugging_face_hub_token $HUGGING_FACE_HUB_TOKEN
 
 # Start the handler
-CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION python -u /handler.py 
+CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION python -u /handler.py
