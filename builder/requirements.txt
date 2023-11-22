@@ -1,5 +1,5 @@
 git+https://github.com/runpod/runpod-python.git@concurrency-optimization
-torch==2.0.1 -f https://download.pytorch.org/whl/cu118
+# torch==2.0.1 -f https://download.pytorch.org/whl/cu118
 
 vllm==0.2.2
 huggingface-hub==0.19.4
