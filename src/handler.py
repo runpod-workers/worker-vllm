@@ -12,6 +12,7 @@ import os
 
 # Prepare the model and tokenizer
 MODEL_NAME = os.environ.get('MODEL_NAME')
+MODEL_NAME = MODEL_NAME.replace(".", "_")
 MODEL_BASE_PATH = os.environ.get('MODEfL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)

@@ -3,4 +3,5 @@
 fastapi==0.99.1
 vllm==0.2.1.post1
 huggingface-hub==0.17.3
+hf_transfer
 runpod @ git+https://github.com/runpod/runpod-python@main#egg=runpod 
