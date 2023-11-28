@@ -65,7 +65,7 @@ llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(
 
 def concurrency_controller() -> int:
     global TOTAL_RUNNING_JOBS
-    return MAX_CONCURRENCY - TOTAL_RUNNING_JOBS
+    return min(0, MAX_CONCURRENCY - TOTAL_RUNNING_JOBS)
 
 
 def prepare_metrics() -> dict:
