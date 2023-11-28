@@ -18,11 +18,14 @@ More information on receiving streaming responses from Serverless Endpoints can 
 #### Optional:
 - `HUGGING_FACE_HUB_TOKEN`: Your Hugging Face token to access private or gated models. You can get your token [here](https://huggingface.co/settings/token).
 - `TOKENIZER`: The specified tokenizer to use. If you want to use the default tokenizer for the model, do not provide this docker argument at all.
-- `QUANTIZATION`: `awq` to use AWQ Quantization. Base model must be in AWQ format.
+- `QUANTIZATION`: `awq` to use AWQ Quantization (Base model must be in AWQ format). `squeezellm` for SqueezeLLM quantization - preliminary support.
 
 ### Compatible Models
 - LLaMA & LLaMA-2 
 - Mistral 
+- Yi
+- ChatGLM
+- Phi
 - MPT 
 - OPT 
 - Qwen 

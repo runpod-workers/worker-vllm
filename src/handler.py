@@ -18,12 +18,13 @@ STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
 USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
 DTYPE = "auto"
-USE_HF_CHAT_TEMPLATE = os.environ.get('USE_HF_CHAT_TEMPLATE', False) == 'True'
+MAX_CONCURRENCY = os.environ.get('MAX_CONCURRENCY', 200)
+TOTAL_RUNNING_JOBS = 0
 
 # Set up quantization-related parameters
 QUANTIZATION = os.environ.get('QUANTIZATION', None)
 
-if type(QUANTIZATION) is str and QUANTIZATION.lower() != "awq":
+if type(QUANTIZATION) is str and QUANTIZATION.lower() in ["awq", "squeezellm"]:
     QUANTIZATION = None
     print("Invalid quantization parameter. Using default value of None.")
 else:
@@ -32,7 +33,7 @@ else:
 if not MODEL_NAME:
     print("Error: The model has not been provided.")
 
-if len(TOKENIZER) == 0:
+if not TOKENIZER or len(TOKENIZER) == 0:
     print("Error: The tokenizer has not been provided. Defaulting to MODEL_NAME.")
 
 # Tensor parallelism
@@ -62,10 +63,9 @@ llm.engine._log_system_stats = lambda x, y: vllm_log_system_stats(
     llm.engine, x, y)
 
 
-def concurrency_controller() -> bool:
-    # Calculate pending sequences
-    total_queued_sequences = len(llm.engine.scheduler.waiting)
-    return total_queued_sequences > 0
+def concurrency_controller() -> int:
+    global TOTAL_RUNNING_JOBS
+    return MAX_CONCURRENCY - TOTAL_RUNNING_JOBS
 
 
 def prepare_metrics() -> dict:
@@ -144,7 +144,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
     This is the handler function that will be called by the serverless worker.
     '''
     print("Job received by handler: {}".format(job))
-
+    global TOTAL_RUNNING_JOBS
     # Retrieve the job input.
     job_input = job['input']
 
@@ -163,6 +163,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
     # Send request to VLLM
     request_id = random_uuid()
+    TOTAL_RUNNING_JOBS += 1
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
     # Keep track of the stream's information to perform the appropriate chunking.
@@ -289,13 +290,15 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
         # Yield the output
         yield ret
 
+        TOTAL_RUNNING_JOBS -= 1
+
 
 async def handler(job: dict) -> dict[str, list]:
     '''
     This is the handler function that will be called by the serverless worker.
     '''
     print("Job received by handler: {}".format(job))
-
+    global TOTAL_RUNNING_JOBS
     # Retrieve the job input.
     job_input = job['input']
     # Create the prompt using the template.
@@ -310,6 +313,7 @@ async def handler(job: dict) -> dict[str, list]:
 
     # Send request to VLLM
     request_id = random_uuid()
+    TOTAL_RUNNING_JOBS += 1
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
     # Get the final generated output
@@ -347,6 +351,9 @@ async def handler(job: dict) -> dict[str, list]:
         "input_tokens": runpod_metrics['input_tokens'],
         "output_tokens": runpod_metrics['output_tokens']
     }
+
+    TOTAL_RUNNING_JOBS -= 1
+
     return ret
 
 

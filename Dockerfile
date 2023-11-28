@@ -1,5 +1,5 @@
 # Base image
-FROM runpod/base:0.4.2-cuda11.8.0
+FROM runpod/base:0.4.2-cuda12.1.0
 
 ARG HUGGING_FACE_HUB_TOKEN
 
@@ -12,8 +12,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Add src files (Worker Template)
 ADD src .
-
-
 
 # Prepare argument for the model and tokenizer
 ARG MODEL_NAME=""
@@ -28,6 +26,8 @@ ARG STREAMING=
 ENV STREAMING=$STREAMING
 ARG QUANTIZATION=
 ENV QUANTIZATION=$QUANTIZATION
+ARG MAX_CONCURRENCY=
+ENV MAX_CONCURRENCY=$MAX_CONCURRENCY
 
 ENV HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets"
 ENV HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub"
@@ -46,7 +46,7 @@ ENV MODEL_NAME=$MODEL_NAME \
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Run the Python script to download the model
-RUN python3.11 -u /download_model.py --model_name $MODEL_NAME --model_revision $MODEL_REVISION --model_base_path $MODEL_BASE_PATH --hugging_face_hub_token $HUGGING_FACE_HUB_TOKEN
+RUN python3.11 -u /download_model.py --model_name $MODEL_NAME --model_revision $MODEL_REVISION --model_base_path $MODEL_BASE_PATH
 
 # Start the handler
-CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION python3.11 /handler.py
+CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION  python3.11 /handler.py
