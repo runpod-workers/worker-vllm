@@ -12,12 +12,15 @@ import os
 
 # Prepare the model and tokenizer
 MODEL_NAME = os.environ.get('MODEL_NAME')
-MODEL_NAME = MODEL_NAME.replace(".", "_")
-MODEL_BASE_PATH = os.environ.get('MODEfL_BASE_PATH', '/runpod-volume/')
 STREAMING = os.environ.get('STREAMING', False) == 'True'
 TOKENIZER = os.environ.get('TOKENIZER', None)
-USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
 DTYPE = "auto"
+
+MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH')
+if not os.path.exists(BASE_VOLUME):
+    os.makedirs(BASE_VOLUME)
+
+USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)
 MAX_CONCURRENCY = os.environ.get('MAX_CONCURRENCY', 200)
 TOTAL_RUNNING_JOBS = 0
 
@@ -46,7 +49,8 @@ except ValueError:
 
 # Prepare the engine's arguments
 engine_args = AsyncEngineArgs(
-    model=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
+    model=MODEL_NAME,
+    download_dir=MODEL_BASE_PATH,
     tokenizer=TOKENIZER,
     tokenizer_mode="auto",
     tensor_parallel_size=NUM_GPU_SHARD,

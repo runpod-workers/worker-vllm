@@ -16,10 +16,11 @@
 - `STREAMING`: Whether to use HTTP Streaming or not.
 More information on receiving streaming responses from Serverless Endpoints can be found at [Endpoint URLs](https://docs.runpod.io/docs/serverless-endpoint-urls#streamjob_id), and a detailed example at [Llama2 7B Chat | Streaming Token Outputs](https://docs.runpod.io/reference/llama2-7b-chat#streaming-token-outputs). 
 #### Optional:
-- `HUGGING_FACE_HUB_TOKEN`: Your Hugging Face token to access private or gated models. You can get your token [here](https://huggingface.co/settings/token).
 - `TOKENIZER`: The specified tokenizer to use. If you want to use the default tokenizer for the model, do not provide this docker argument at all.
 - `QUANTIZATION`: `awq` to use AWQ Quantization (Base model must be in AWQ format). `squeezellm` for SqueezeLLM quantization - preliminary support.
-
+### Environment Variables:
+#### Optional:
+- `HUGGING_FACE_HUB_TOKEN`: Your Hugging Face token to access private or gated models. You can get your token [here](https://huggingface.co/settings/token).
 ### Compatible Models
 - LLaMA & LLaMA-2 
 - Mistral 

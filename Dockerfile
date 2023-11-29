@@ -45,8 +45,5 @@ ENV MODEL_NAME=$MODEL_NAME \
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
 
-# Run the Python script to download the model
-RUN python3.11 -u /download_model.py --model_name $MODEL_NAME --model_revision $MODEL_REVISION --model_base_path $MODEL_BASE_PATH
-
 # Start the handler
 CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION  python3.11 /handler.py
