@@ -189,7 +189,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
 
 def concurrency_modifier() -> int:
-    return 100
+    return os.environ.get('CONCURRENCY_MODIFIER', 100)
 
 
 # Start the serverless worker with appropriate settings
