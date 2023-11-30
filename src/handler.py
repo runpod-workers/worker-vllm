@@ -5,7 +5,6 @@ import os
 from typing import Generator
 
 import runpod
-
 from metrics import vllm_log_system_stats
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs, utils
 
@@ -18,8 +17,7 @@ TOKENIZER = os.environ.get('TOKENIZER', MODEL_NAME)
 
 
 MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', "/runpod-volume/")
-if not os.path.exists(MODEL_BASE_PATH):
-    os.makedirs(MODEL_BASE_PATH)
+os.makedirs(MODEL_BASE_PATH, exist_ok=True)
 
 USE_FULL_METRICS = os.environ.get('USE_FULL_METRICS', True)  # From the SDK, need to review later.
 
@@ -128,74 +126,21 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
     job_input = job['input']
     prompt = job_input['prompt']
-    sampling_params = job_input.get('sampling_params', None)
+    sampling_params = validate_and_set_sampling_params(job_input.get('sampling_params', None))
 
-    # Might be able to remove this later
-    sampling_params = validate_and_set_sampling_params(sampling_params)
-
-    # Send request to VLLM
     request_id = utils.random_uuid()
     results_generator = llm.generate(prompt, sampling_params, request_id)
 
-    stream_index = 0
-    chunk_positions = None
-    aggregate_text = []
-    aggregate_metrics = {'input_tokens': 0, 'output_tokens': 0}
-
+    last_output_text = ""
     async for request_output in results_generator:
-        if chunk_positions is None:
-            chunk_positions = [0] * len(request_output.outputs)
-
-        text_outputs, output_tokens = [], []
-        for idx, output in enumerate(request_output.outputs):
-            chunk_pos = chunk_positions[idx]
-            text_outputs.append(output.text[chunk_pos:])
-            chunk_positions[idx] = len(output.text)
-            output_tokens.append(len(output.token_ids) - chunk_pos)
-
-        runpod_metrics = prepare_metrics() if USE_FULL_METRICS else {}
-        if stream_index == 0:
-            input_tokens_count = len(request_output.prompt_token_ids)
-        else:
-            input_tokens_count = 0
-
-        runpod_metrics.update({
-            "input_tokens": input_tokens_count,
-            "output_tokens": sum(output_tokens),
-            "scenario": 'stream',
-            "stream_index": stream_index
-        })
-
-        stream_index += 1
-
-        yield {
-            "text": text_outputs,
-            "input_tokens": runpod_metrics['input_tokens'],
-            "output_tokens": runpod_metrics['output_tokens']
-        }
-
-        # Aggregate text and metrics
-        if not aggregate_text:
-            aggregate_text = [""] * len(text_outputs)
-        for idx, text in enumerate(text_outputs):
-            aggregate_text[idx] += text
-        aggregate_metrics['input_tokens'] += runpod_metrics['input_tokens']
-        aggregate_metrics['output_tokens'] += runpod_metrics['output_tokens']
-
-    yield {
-        "text": aggregate_text,
-        "input_tokens": aggregate_metrics['input_tokens'],
-        "output_tokens": aggregate_metrics['output_tokens']
-    }
+        for output in request_output.outputs:
+            if output.text:
+                yield {"text": output.text[len(last_output_text):]}
+                last_output_text = output.text
 
 
-def concurrency_modifier(current_concurrency) -> int:
-    return os.environ.get('CONCURRENCY_MODIFIER', 100)
-
-
-# Start the serverless worker with appropriate settings
 runpod.serverless.start({
     "handler": handler_streaming,
-    "concurrency_modifier": concurrency_modifier,
+    "concurrency_modifier": lambda _: int(os.environ.get('CONCURRENCY_MODIFIER', 100)),
     "return_aggregate_stream": True
 })
