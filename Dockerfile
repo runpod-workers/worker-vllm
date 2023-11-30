@@ -12,10 +12,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python3.11 -m pip install --upgrade -r /requirements.txt --no-cache-dir && \
     rm /requirements.txt
 
-# Prepare argument for the model and tokenizer
-ARG MODEL_NAME=""
-ENV MODEL_NAME=$MODEL_NAME
-
 # Add source files
 ADD src .
 
