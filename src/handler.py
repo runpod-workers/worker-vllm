@@ -188,7 +188,7 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
     }
 
 
-def concurrency_modifier() -> int:
+def concurrency_modifier(current_concurrency) -> int:
     return os.environ.get('CONCURRENCY_MODIFIER', 100)
 
 
