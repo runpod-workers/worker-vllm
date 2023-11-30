@@ -16,14 +16,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ARG MODEL_NAME=""
 ENV MODEL_NAME=$MODEL_NAME
 
-# Tokenizer is a path ot a huggingface repo
-ARG TOKENIZER=
-ENV TOKENIZER=$TOKENIZER
-
-# A string awq or squeezellm
-ARG QUANTIZATION=
-ENV QUANTIZATION=$QUANTIZATION
-
 # Add source files
 ADD src .
 
