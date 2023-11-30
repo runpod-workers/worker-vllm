@@ -58,40 +58,40 @@ def prepare_metrics() -> dict:
 
 # Validation
 def validate_sampling_params(sampling_params):
-    def validate_int(value, default):
+    def validate_int(value):
         try:
             return int(value)
         except (TypeError, ValueError):
-            return default
+            return None
 
-    def validate_float(value, default):
+    def validate_float(value):
         try:
             return float(value)
         except (TypeError, ValueError):
-            return default
+            return None
 
-    def validate_bool(value, default):
+    def validate_bool(value):
         if isinstance(value, bool):
             return value
-        return default
+        return None
 
-    n = validate_int(sampling_params.get('n'), 1)
-    best_of = validate_int(sampling_params.get('best_of'), None)
+    n = validate_int(sampling_params.get('n'))
+    best_of = validate_int(sampling_params.get('best_of'))
     presence_penalty = validate_float(
-        sampling_params.get('presence_penalty'), 0.0)
+        sampling_params.get('presence_penalty'))
     frequency_penalty = validate_float(
-        sampling_params.get('frequency_penalty'), 0.0)
-    temperature = validate_float(sampling_params.get('temperature'), 1.0)
-    top_p = validate_float(sampling_params.get('top_p'), 1.0)
-    top_k = validate_int(sampling_params.get('top_k'), -1)
+        sampling_params.get('frequency_penalty'))
+    temperature = validate_float(sampling_params.get('temperature'))
+    top_p = validate_float(sampling_params.get('top_p'))
+    top_k = validate_int(sampling_params.get('top_k'))
     use_beam_search = validate_bool(
-        sampling_params.get('use_beam_search'), False)
-    stop = sampling_params.get('stop', None)
-    ignore_eos = validate_bool(sampling_params.get('ignore_eos'), False)
-    max_tokens = validate_int(sampling_params.get('max_tokens'), 256)
-    logprobs = validate_float(sampling_params.get('logprobs'), None)
+        sampling_params.get('use_beam_search'))
+    stop = sampling_params.get('stop')
+    ignore_eos = validate_bool(sampling_params.get('ignore_eos'))
+    max_tokens = validate_int(sampling_params.get('max_tokens'))
+    logprobs = validate_float(sampling_params.get('logprobs'))
 
-    return {
+    params = {
         'n': n,
         'best_of': best_of,
         'presence_penalty': presence_penalty,
@@ -105,6 +105,7 @@ def validate_sampling_params(sampling_params):
         'max_tokens': max_tokens,
         'logprobs': logprobs,
     }
+    return {k: v for k, v in params.items() if v is not None}
 
 
 def validate_and_set_sampling_params(sampling_params):
