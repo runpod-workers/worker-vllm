@@ -20,7 +20,7 @@ engine_args = AsyncEngineArgs(
     tokenizer=config.tokenizer,
     tensor_parallel_size=config.num_gpu_shard,
     dtype=config.dtype,
-    disable_log_stats=True,
+    disable_log_stats=config.disable_log_stats,
     quantization=config.quantization,
     gpu_memory_utilization=0.97,
 )

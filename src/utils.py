@@ -9,6 +9,7 @@ class EngineConfig:
         self.use_full_metrics = os.getenv('USE_FULL_METRICS', 'True') == 'True'
         self.quantization = os.getenv('QUANTIZATION', None)
         self.dtype = "auto" if str(self.quantization).lower() not in ['squeezellm', 'awq'] else "half"
+        self.disable_log_stats = os.getenv('DISABLE_LOG_STATS', 'False') == 'True'
         if make_dirs and not os.path.exists(self.model_base_path):
             os.makedirs(self.model_base_path)
 
