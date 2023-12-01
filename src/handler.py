@@ -130,13 +130,15 @@ async def handler_streaming(job: dict) -> Generator[dict[str, list], None, None]
 
     request_id = utils.random_uuid()
     results_generator = llm.generate(prompt, sampling_params, request_id)
-
+    aggregate_text = ""
     last_output_text = ""
     async for request_output in results_generator:
         for output in request_output.outputs:
             if output.text:
                 yield {"text": output.text[len(last_output_text):]}
                 last_output_text = output.text
+                aggregate_text += output.text
+    yield {"aggregate_text": aggregate_text}
 
 
 runpod.serverless.start({
