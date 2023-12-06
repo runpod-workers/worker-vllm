@@ -16,12 +16,13 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ADD src .
 
 ARG MODEL_NAME=""
+ENV MODEL_NAME=$MODEL_NAME
 ARG MODEL_BASE_PATH=""
-ARG TOKENIZER=""
+ENV MODEL_BASE_PATH=$MODEL_BASE_PATH
 
 # Conditionally run download_model.py
-RUN if [ -n "$MODEL_NAME" ] && [ -n "$MODEL_BASE_PATH"]; then \
-        python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH --tokenizer $TOKENIZER; \
+RUN if [ -n "$MODEL_NAME" ] && [ -n "$MODEL_BASE_PATH" ]; then \
+        python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \
     fi
 
 # Start the handler
