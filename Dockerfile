@@ -20,6 +20,10 @@ ENV MODEL_NAME=$MODEL_NAME
 ARG MODEL_BASE_PATH=""
 ENV MODEL_BASE_PATH=$MODEL_BASE_PATH
 
+# Set the environment variables conditionally
+RUN if [ -n "$MODEL_NAME" ]; then export MODEL_NAME=$MODEL_NAME; fi
+RUN if [ -n "$MODEL_BASE_PATH" ]; then export MODEL_BASE_PATH=$MODEL_BASE_PATH; fi
+
 # Conditionally run download_model.py
 RUN if [ -n "$MODEL_NAME" ] && [ -n "$MODEL_BASE_PATH" ]; then \
         python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \

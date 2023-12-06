@@ -1,5 +1,4 @@
-git+https://github.com/runpod/runpod-python.git@concurrency-optimization
-
 hf_transfer
+runpod==1.4.0
 huggingface-hub==0.19.4
-vllm==0.2.2
+vllm==0.2.3
