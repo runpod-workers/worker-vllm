@@ -41,6 +41,7 @@ async def handler(job: dict) -> Generator[str, None, None]:
     streaming = job_input.get("streaming", False)
     batch_size = job_input.get("batch_size", DEFAULT_BATCH_SIZE)
     sampling_params = job_input.get("sampling_params", {})
+    return_token_counts = job_input.get("count_tokens", False)
     
     # Validate and convert sampling parameters
     validated_params = validate_and_convert_sampling_params(sampling_params)
@@ -69,6 +70,10 @@ async def handler(job: dict) -> Generator[str, None, None]:
 
     if batch and streaming:
         yield batch
+    
+    if return_token_counts:
+        yield {"input_tokens": len(output.prompt_token_ids),
+               "output_tokens": len(output.outputs[-1].token_ids)}
 
 # Start the serverless worker
 runpod.serverless.start({
