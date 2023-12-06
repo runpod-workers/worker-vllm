@@ -1,4 +1,5 @@
 import os
+from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 
 class EngineConfig:
     """
@@ -17,8 +18,34 @@ class EngineConfig:
         self.quantization = self.quantization if self.quantization in ['squeezellm', 'awq'] else None
         self.dtype = "auto" if self.quantization is None else "half"
         self.disable_log_stats = os.getenv('DISABLE_LOG_STATS', 'True') == 'True'
+        self.gpu_memory_utilization = float(os.getenv('GPU_MEMORY_UTILIZATION', 0.98))
         if make_dirs and not os.path.exists(self.model_base_path):
             os.makedirs(self.model_base_path)
+
+def intialize_llm_engine():
+    """
+    Initialize the vLLM engine.
+
+    Returns:
+        AsyncLLMEngine: vLLM AsyncLLMEngine
+    """
+    # Load the configuration for the vLLM engine
+    config = EngineConfig()
+
+    engine_args = AsyncEngineArgs(
+        model=config.model_name,
+        download_dir=config.model_base_path,
+        tokenizer=config.tokenizer,
+        tensor_parallel_size=config.num_gpu_shard,
+        dtype=config.dtype,
+        disable_log_stats=config.disable_log_stats,
+        quantization=config.quantization,
+        gpu_memory_utilization=config.gpu_memory_utilization,
+    )
+
+    # Create the asynchronous vLLM engine
+    return AsyncLLMEngine.from_engine_args(engine_args)
+
 
 # Map of parameter names to their expected types
 sampling_param_types = {
@@ -69,4 +96,4 @@ def validate_and_convert_sampling_params(sampling_params):
         param_value = sampling_params.get(param_name)
         if param_value is not None:
             validated_params[param_name] = cast_sampling_param(param_value, param_type)
-    return validated_params
+    return SamplingParams(**validated_params)

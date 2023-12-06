@@ -3,27 +3,14 @@
 import os
 from typing import Generator
 import runpod
-from utils import EngineConfig, validate_and_convert_sampling_params
-from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs, utils
+from utils import validate_and_convert_sampling_params, intialize_llm_engine
+from vllm.utils import random_uuid
 
 # Default batch size, configurable via environment variable set in the Endpoint Template
 DEFAULT_BATCH_SIZE = int(os.environ.get('DEFAULT_BATCH_SIZE', 10))
 
-# Load the configuration for the vLLM engine
-config = EngineConfig()
-engine_args = AsyncEngineArgs(
-    model=config.model_name,
-    download_dir=config.model_base_path,
-    tokenizer=config.tokenizer,
-    tensor_parallel_size=config.num_gpu_shard,
-    dtype=config.dtype,
-    disable_log_stats=config.disable_log_stats,
-    quantization=config.quantization,
-    gpu_memory_utilization=0.98,
-)
-
-# Create the asynchronous vLLM engine
-llm = AsyncLLMEngine.from_engine_args(engine_args)
+# Initialize the vLLM engine
+llm = intialize_llm_engine()
 
 async def handler(job: dict) -> Generator[str, None, None]:
     """
@@ -45,13 +32,12 @@ async def handler(job: dict) -> Generator[str, None, None]:
     
     # Validate and convert sampling parameters
     validated_params = validate_and_convert_sampling_params(sampling_params)
-    sampling_params_obj = SamplingParams(**validated_params)
 
     # Generate a unique request ID
-    request_id = utils.random_uuid()
+    request_id = random_uuid()
 
     # Initialize the vLLM generator
-    results_generator = llm.generate(prompt, sampling_params_obj, request_id)
+    results_generator = llm.generate(prompt, validated_params, request_id)
     last_output_text = ""
     batch = []
 
