@@ -45,21 +45,22 @@ async def handler(job: dict) -> Generator[str, None, None]:
     async for request_output in results_generator:
         for output in request_output.outputs:
             if streaming:
-                batch.append(output.text[len(last_output_text):])
+                batch.append({"text": output.text[len(last_output_text):]})
                 if len(batch) >= batch_size:
                     yield batch
                     batch = []
             last_output_text = output.text
 
     if not streaming:
-        yield [last_output_text]
+        yield [{"text":last_output_text}]
 
     if batch and streaming:
         yield batch
     
-    if return_token_counts:
-        yield {"input_tokens": len(output.prompt_token_ids),
-               "output_tokens": len(output.outputs[-1].token_ids)}
+    if return_token_counts and request_output is not None:
+        token_counts = {"token_counts":{"input": len(request_output.prompt_token_ids),
+               "output": len(output.outputs[-1].token_ids)}}
+        yield token_counts
 
 # Start the serverless worker
 runpod.serverless.start({
