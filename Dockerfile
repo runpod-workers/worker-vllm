@@ -28,7 +28,7 @@ ADD src .
 
 ARG MODEL_NAME=""
 ARG MODEL_BASE_PATH=""
-ARG HUGGING_FACE_HUB_TOKEN=""
+ARG HF_TOKEN=""
 ENV HF_TOKEN=$HF_TOKEN
 
 # Conditionally run download_model.py
