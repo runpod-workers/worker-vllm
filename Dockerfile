@@ -17,9 +17,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Install specific packages based on CUDA version
 RUN if [ "$CUDA_VERSION" == "12.1.0" ]; then \
-        python3.11 -m pip install vllm==0.2.3; \
+    python3.11 -m pip install vllm==0.2.3; \
     else \
-        python3.11 -m pip install https://github.com/vllm-project/vllm/releases/download/v0.2.3/vllm-0.2.3+cu118-cp311-cp311-manylinux1_x86_64.whl; \
+    python3.11 -m pip install https://github.com/vllm-project/vllm/releases/download/v0.2.3/vllm-0.2.3+cu118-cp311-cp311-manylinux1_x86_64.whl; \
     fi
 
 
@@ -28,12 +28,13 @@ ADD src .
 
 ARG MODEL_NAME=""
 ARG MODEL_BASE_PATH=""
+ARG HUGGING_FACE_HUB_TOKEN=""
 
 # Conditionally run download_model.py
 RUN if [ -n "$MODEL_NAME" ] && [ -n "$MODEL_BASE_PATH" ]; then \
-        python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \
-        export MODEL_NAME=$MODEL_NAME; \
-        export MODEL_BASE_PATH=$MODEL_BASE_PATH; \
+    python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \
+    export MODEL_NAME=$MODEL_NAME; \
+    export MODEL_BASE_PATH=$MODEL_BASE_PATH; \
     fi
 
 # Start the handler
