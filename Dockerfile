@@ -27,16 +27,23 @@ RUN if [ "$CUDA_VERSION" == "12.1.0" ]; then \
 ADD src .
 
 ARG MODEL_NAME=""
-ARG MODEL_BASE_PATH=""
+ARG MODEL_BASE_PATH="/runpod-volume/"
 ARG HF_TOKEN=""
-ENV HF_TOKEN=$HF_TOKEN
+ARG QUANTIZATION=""
 
 # Conditionally run download_model.py
-RUN if [ -n "$MODEL_NAME" ] && [ -n "$MODEL_BASE_PATH" ]; then \
+RUN if [ -n "$MODEL_NAME" ]; then \
+    export HF_TOKEN=$HF_TOKEN; \
     python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \
     export MODEL_NAME=$MODEL_NAME; \
     export MODEL_BASE_PATH=$MODEL_BASE_PATH; \
     fi
+
+RUN if [ -n "$QUANTIZATION" ]; then \
+        export QUANTIZATION=$QUANTIZATION; \
+    fi
+
+RUN python3.11 -m pip install pydantic==1.10.13
 
 # Start the handler
 CMD ["python3.11", "/handler.py"]
