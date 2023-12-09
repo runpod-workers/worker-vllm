@@ -42,16 +42,12 @@ RUN if [ -n "$QUANTIZATION" ]; then \
         export QUANTIZATION=$QUANTIZATION; \
     fi
 
-RUN git clone https://github.com/alpayariyak/vllm.git && \
+RUN mkdir inference_engine && \
+    cd inference_engine && \
+    git clone https://github.com/alpayariyak/vllm.git && \
     cd vllm && \
     python3.11 -m pip install -e . && \
-    cd ..
-
-RUN mkdir inference && \
-    mv vllm inference/ && \
-    cd inference/vllm && \
-    python3.11 -m pip install -e . && \
-    cd ../..
+    cd ../.. && \
 
 # Start the handler
 CMD ["python3.11", "/handler.py"]
