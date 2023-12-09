@@ -47,7 +47,7 @@ RUN mkdir inference_engine && \
     git clone https://github.com/alpayariyak/vllm.git && \
     cd vllm && \
     python3.11 -m pip install -e . && \
-    cd ../.. && \
+    cd ../.. 
 
 # Start the handler
 CMD ["python3.11", "/handler.py"]
