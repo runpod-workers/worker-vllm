@@ -16,12 +16,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     rm /requirements.txt
 
 # Install specific packages based on CUDA version
-RUN if [ "$CUDA_VERSION" == "12.1.0" ]; then \
-    python3.11 -m pip install vllm==0.2.3; \
-    else \
-    python3.11 -m pip install https://github.com/vllm-project/vllm/releases/download/v0.2.3/vllm-0.2.3+cu118-cp311-cp311-manylinux1_x86_64.whl; \
-    fi
-
+# RUN if [ "$CUDA_VERSION" == "12.1.0" ]; then \
+#     python3.11 -m pip install vllm==0.2.3; \
+#     else \
+#     python3.11 -m pip install https://github.com/vllm-project/vllm/releases/download/v0.2.3/vllm-0.2.3+cu118-cp311-cp311-manylinux1_x86_64.whl; \
+#     fi
 
 # Add source files
 ADD src .
@@ -43,7 +42,16 @@ RUN if [ -n "$QUANTIZATION" ]; then \
         export QUANTIZATION=$QUANTIZATION; \
     fi
 
-RUN python3.11 -m pip install pydantic==1.10.13
+RUN git clone https://github.com/alpayariyak/vllm.git && \
+    cd vllm && \
+    python3.11 -m pip install -e . && \
+    cd ..
+
+RUN mkdir inference && \
+    mv vllm inference/ && \
+    cd inference/vllm && \
+    python3.11 -m pip install -e . && \
+    cd ../..
 
 # Start the handler
 CMD ["python3.11", "/handler.py"]
