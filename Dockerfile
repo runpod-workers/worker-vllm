@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # RUN if [ "$CUDA_VERSION" == "12.1.0" ]; then \
 #     python3.11 -m pip install vllm==0.2.3; \
 #     else \
-#     python3.11 -m pip install https://github.com/vllm-project/vllm/releases/download/v0.2.3/vllm-0.2.3+cu118-cp311-cp311-manylinux1_x86_64.whl; \
+#     python3.11 -m pip install https://github.com/vllm-project/vllm/releases/download/v0.2.4/vllm-0.2.4+cu118-cp311-cp311-manylinux1_x86_64.whl; \
 #     fi
 
 # Add source files
