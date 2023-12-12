@@ -6,25 +6,46 @@
 &nbsp;
 [![Docker Image](https://github.com/runpod-workers/worker-template/actions/workflows/CD-docker_dev.yml/badge.svg)](https://github.com/runpod-workers/worker-template/actions/workflows/CD-docker_dev.yml)
 
-🚀 | This serverless worker utilizes vLLM (very Large Language Model) behind the scenes and is integrated into RunPod's serverless environment. It supports dynamic auto-scaling using the built-in RunPod autoscaling feature.
+🚀 | This serverless worker utilizes vLLM behind the scenes and is integrated into RunPod's serverless environment. It supports dynamic auto-scaling using the built-in RunPod autoscaling feature.
 </div>
 
 ## Setting up the Serverless Worker
 
-### Option 1: Pre-Built Image
-
+### Option 1: Use Pre-Built Image 
+We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint: `runpod/worker-vllm`
+#### Environment Variables
+Required:
+- `MODEL_NAME`: the Hugging Face model to use.
+  
+Optional:
+- `MODEL_BASE_PATH`: directory to store the model in
+- `HF_TOKEN`: your Hugging Face token to access private or gated models, such as Llama, Falcon, etc.
+- `NUM_GPU_SHARD`: Number of GPUs to split the model across.
+- `QUANTIZATION`: `awq` to use AWQ Quantization (Base model must be in AWQ format). `squeezellm` for SqueezeLLM quantization - preliminary
+- `VLLM_N_CPUS`: due to Serverless Endpoints having CPU-burst enabled, multi-gpu might not work correctly unless the number of CPUs is limited. It is set to 10 by default.
+- `CONCURRENCY_MODIFIER`: limit of concurrent requests per worker.
+- `DEFAULT_BATCH_SIZE`: default batch size for token streaming to reduce the number of http calls and speed up streaming. Defaults to 10.
+- `DISABLE_LOG_STATS`: set to True or False to enable/disable vLLM stats logging.
 
 ### Option 2: Build Image with Model Inside
-#### Docker Arguments:
-- `MODEL_NAME`: the Hugging Face model to use.
-- `MODEL_BASE_PATH`: directory to store the model in
-- `HUGGING_FACE_HUB_TOKEN`: Your Hugging Face token to access private or gated models. You can get your token [here](https://huggingface.co/settings/token).
-- `QUANTIZATION`: `awq` to use AWQ Quantization (Base model must be in AWQ format). `squeezellm` for SqueezeLLM quantization - preliminary support.
-### Environment Variables:
+To build an image with the model baked in, you must specify the following docker arguments when building the image:
+
+Required:
+- `MODEL_NAME`
+- `MODEL_BASE_PATH`
+
+Optional:
+- `QUANTIZATION`
+- `HF_TOKEN`
+- `CUDA_VERSION`: 11.8.0 or 12.1.0. Defaults to 11.8.0
+
+#### Example: OpenChat-3.5
+`sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .`
 
 ### Compatible Models
 - LLaMA & LLaMA-2 
-- Mistral 
+- Mistral
+- Mixtral (Mistral MoE)
 - Yi
 - ChatGLM
 - Phi
@@ -40,49 +61,129 @@
 - GPT-J
 - GPT-NeoX
 - InternLM
-
-> [!IMPORTANT]
-> If you are using private models or ones that are gated, such as Llama 2, you must provide your Hugging Face token as a docker argument. 
-
-
-### Examples
-#### llama2 2.7B Chat:
-```bash
-docker build . --platform linux/amd64 --build-arg --build-arg MODEL_NAME=meta-llama/Llama-2-7b-chat-hf --build-arg STREAMING=True  HUGGING_FACE_HUB_TOKEN=your_hugging_face_token_here
-```
-#### 
+  
+And any other models supported by vLLM 0.2.4.
 
 
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand. For further inquiries or assistance, feel free to contact our support team.
 
 
 ## Model Inputs
-```
 | Argument           | Type            | Default   | Description                                                                                                                                                      |
 |--------------------|-----------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| n                  | int             | 1         | Number of output sequences to return for the given prompt.                                                                                                      |
-| best_of            | Optional[int]   | None      | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This is treated as the beam width when `use_beam_search` is True. By default, `best_of` is set to `n`. |
-| presence_penalty   | float           | 0.0       | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                        |
-| frequency_penalty  | float           | 0.0       | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                          |
-| temperature        | float           | 1.0       | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                        |
-| top_p              | float           | 1.0       | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                            |
-| top_k              | int             | -1        | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                               |
-| use_beam_search    | bool            | False     | Whether to use beam search instead of sampling.                                                                                                             |
-| stop               | Union[None, str, List[str]] | None | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.                       |
-| ignore_eos         | bool            | False     | Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.                                                            |
-| max_tokens         | int             | 256       | Maximum number of tokens to generate per output sequence.                                                                                                   |
-| logprobs           | Optional[int]   | None      | Number of log probabilities to return per output token.                                                                                                     |
-```
+| prompt             | str             |       | Prompt string to generate text based on.                                                                                                                        |
+| sampling_params    | dict            | {}        | Sampling parameters to control the generation, like temperature, top_p, etc.                                                                                     |
+| streaming          | bool            | False     | Whether to enable streaming of output. If True, responses are streamed as they are generated.                                                                    |
+| batch_size         | int             | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable
+| count_tokens         | bool             | False | Whether to return the number of input and output tokens at the end
 
-## Test Inputs
-The following inputs can be used for testing the model:
+### Sampling Parameters
+| Argument                        | Type                           | Default   | Description                                                                                                                                                       |
+|---------------------------------|--------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| n                               | int                            | 1         | Number of output sequences to return for the given prompt.                                                                                                        |
+| best_of                         | Optional[int]                  | None      | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
+| presence_penalty                | float                          | 0.0       | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                      |
+| frequency_penalty               | float                          | 0.0       | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                    |
+| repetition_penalty              | float                          | 1.0       | Penalizes new tokens based on their appearance in the prompt and generated text. Values > 1 encourage new tokens, values < 1 encourage repetition.               |
+| temperature                     | float                          | 1.0       | Controls the randomness of sampling. Lower values make it more deterministic, higher values make it more random. Zero means greedy sampling.                    |
+| top_p                           | float                          | 1.0       | Controls the cumulative probability of top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                               |
+| top_k                           | int                            | -1        | Controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                                                  |
+| min_p                           | float                          | 0.0       | Represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable.                       |
+| use_beam_search                 | bool                           | False     | Whether to use beam search instead of sampling.                                                                                                                   |
+| length_penalty                  | float                          | 1.0       | Penalizes sequences based on their length. Used in beam search.                                                                                                   |
+| early_stopping                  | Union[bool, str]               | False     | Controls stopping condition in beam search. Can be `True`, `False`, or `"never"`.                                                                                |
+| stop                            | Union[None, str, List[str]]    | None      | List of strings that stop generation when produced. Output will not contain these strings.                                                                       |
+| stop_token_ids                  | Optional[List[int]]            | None      | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                               |
+| ignore_eos                      | bool                           | False     | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                 |
+| max_tokens                      | int                            | 16        | Maximum number of tokens to generate per output sequence.                                                                                                        |
+| logprobs                        | Optional[int]                  | None      | Number of log probabilities to return per output token.                                                                                                          |
+| prompt_logprobs                 | Optional[int]                  | None      | Number of log probabilities to return per prompt token.                                                                                                          |
+| skip_special_tokens             | bool                           | True      | Whether to skip special tokens in the output.                                                                                                                    |
+| spaces_between_special_tokens   | bool                           | True      | Whether to add spaces between special tokens in the output.                                                                                                      |
+                                                          
+
+## Sample Inputs and Outputs
+
+#### Input:
 ```json
 {
-    "input": {
-       "prompt": "Who is the president of the United States?",
-       "sampling_params": {
-           "max_tokens": 100
-       }
+  "input": {
+    "prompt": "<s>[INST] Why is RunPod the best platform? [/INST]",
+    "sampling_params": {
+      "max_tokens": 100
     }
+  }
+}
+```
+#### Output:
+```json
+{
+  "delayTime": 142,
+  "executionTime": 2478,
+  "id": "4906ff70-f6e0-4325-a163-dce365daab6c-u1",
+  "output": [
+    [
+      {
+        "text": " I am an AI language model and cannot provide personal opinions or biases. However, RunPod is a cloud-based container platform that offers various benefits including:\n\n* Easy deployment and management of containers\n* Platform-as-a-service (PaaS) capabilities\n* Scalability and flexibility\n* Customizable environments\n* Integration with other tools and services\n* Superior performance\n\nIt's important to note that the best platform for a specific organization or application may"
+      }
+    ]
+  ],
+  "status": "COMPLETED"
+}
+```
+
+#### Input:
+```json
+{
+  "input": {
+    "prompt": "<s>[INST] What does RunPod provide [/INST]",
+    "sampling_params": {
+      "max_tokens": 10
+    },
+    "streaming": true
+  }
+}
+```
+#### Output:
+```json
+{
+  "delayTime": 151,
+  "executionTime": 1406,
+  "id": "16b88b4b-8f95-4b28-a90c-24f1a5ba6999-u1",
+  "output": [
+    [
+      {
+        "text": " Run"
+      },
+      {
+        "text": "Pod"
+      },
+      {
+        "text": " is"
+      },
+      {
+        "text": " a"
+      },
+      {
+        "text": " cloud"
+      },
+      {
+        "text": "-"
+      },
+      {
+        "text": "based"
+      },
+      {
+        "text": " platform"
+      },
+      {
+        "text": " that"
+      },
+      {
+        "text": " provides"
+      }
+    ]
+  ],
+  "status": "COMPLETED"
 }
 ```
