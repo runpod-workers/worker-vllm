@@ -39,6 +39,9 @@ Optional:
 - `HF_TOKEN`
 - `CUDA_VERSION`: 11.8.0 or 12.1.0. Defaults to 11.8.0
 
+#### Example: OpenChat-3.5
+`sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .`
+
 ### Compatible Models
 - LLaMA & LLaMA-2 
 - Mistral
@@ -72,6 +75,7 @@ Ensure that you have Docker installed and properly set up before running the doc
 | sampling_params    | dict            | {}        | Sampling parameters to control the generation, like temperature, top_p, etc.                                                                                     |
 | streaming          | bool            | False     | Whether to enable streaming of output. If True, responses are streamed as they are generated.                                                                    |
 | batch_size         | int             | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable
+| count_tokens         | bool             | False | Whether to return the number of input and output tokens at the end
 
 ### Sampling Parameters
 | Argument                        | Type                           | Default   | Description                                                                                                                                                       |
@@ -98,8 +102,9 @@ Ensure that you have Docker installed and properly set up before running the doc
 | spaces_between_special_tokens   | bool                           | True      | Whether to add spaces between special tokens in the output.                                                                                                      |
                                                           
 
-## Test Inputs
-The following inputs can be used for testing the model:
+## Sample Inputs and Outputs
+
+#### Input:
 ```json
 {
     "input": {
@@ -110,3 +115,6 @@ The following inputs can be used for testing the model:
     }
 }
 ```
+#### Output:
+To be added
+
