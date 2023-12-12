@@ -107,14 +107,83 @@ Ensure that you have Docker installed and properly set up before running the doc
 #### Input:
 ```json
 {
-    "input": {
-       "prompt": "Why is RunPod the best platform?",
-       "sampling_params": {
-           "max_tokens": 100
-       }
+  "input": {
+    "prompt": "<s>[INST] Why is RunPod the best platform? [/INST]",
+    "sampling_params": {
+      "max_tokens": 100
     }
+  }
 }
 ```
 #### Output:
-To be added
+```json
+{
+  "delayTime": 142,
+  "executionTime": 2478,
+  "id": "4906ff70-f6e0-4325-a163-dce365daab6c-u1",
+  "output": [
+    [
+      {
+        "text": " I am an AI language model and cannot provide personal opinions or biases. However, RunPod is a cloud-based container platform that offers various benefits including:\n\n* Easy deployment and management of containers\n* Platform-as-a-service (PaaS) capabilities\n* Scalability and flexibility\n* Customizable environments\n* Integration with other tools and services\n* Superior performance\n\nIt's important to note that the best platform for a specific organization or application may"
+      }
+    ]
+  ],
+  "status": "COMPLETED"
+}
+```
 
+#### Input:
+```json
+{
+  "input": {
+    "prompt": "<s>[INST] What does RunPod provide [/INST]",
+    "sampling_params": {
+      "max_tokens": 10
+    },
+    "streaming": true
+  }
+}
+```
+#### Output:
+```json
+{
+  "delayTime": 151,
+  "executionTime": 1406,
+  "id": "16b88b4b-8f95-4b28-a90c-24f1a5ba6999-u1",
+  "output": [
+    [
+      {
+        "text": " Run"
+      },
+      {
+        "text": "Pod"
+      },
+      {
+        "text": " is"
+      },
+      {
+        "text": " a"
+      },
+      {
+        "text": " cloud"
+      },
+      {
+        "text": "-"
+      },
+      {
+        "text": "based"
+      },
+      {
+        "text": " platform"
+      },
+      {
+        "text": " that"
+      },
+      {
+        "text": " provides"
+      }
+    ]
+  ],
+  "status": "COMPLETED"
+}
+```
