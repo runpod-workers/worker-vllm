@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 from typing import Generator
 import runpod
-from utils import validate_and_convert_sampling_params, initialize_llm_engine, JobManager, ServerlessConfig
+from utils import validate_and_convert_sampling_params, initialize_llm_engine, ServerlessConfig
 from vllm.utils import random_uuid
 
 serverless_config = ServerlessConfig()
-job_manager = JobManager()
 llm = initialize_llm_engine()
 
 def concurrency_modifier(current_concurrency) -> int:
