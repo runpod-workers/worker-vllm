@@ -51,15 +51,6 @@ def initialize_llm_engine() -> AsyncLLMEngine:
         logging.error(f"Error initializing vLLM engine: {e}")
         raise
 
-class JobManager:
-    def __init__(self):
-        self.total_running_jobs = 0
-
-    def increment_job_count(self):
-        self.total_running_jobs += 1
-
-    def decrement_job_count(self):
-        self.total_running_jobs -= 1
 
 def validate_and_convert_sampling_params(params: Dict[str, Any]) -> SamplingParams:
     validated_params = {}

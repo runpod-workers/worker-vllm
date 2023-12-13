@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from typing import Generator
 import runpod
 from utils import validate_and_convert_sampling_params, initialize_llm_engine, JobManager, ServerlessConfig
@@ -9,8 +8,8 @@ serverless_config = ServerlessConfig()
 job_manager = JobManager()
 llm = initialize_llm_engine()
 
-def concurrency_modifier() -> int:
-    return max(0, serverless_config.max_concurrency - job_manager.total_running_jobs)
+def concurrency_modifier(current_concurrency) -> int:
+    return max(0, serverless_config.max_concurrency - current_concurrency)
 
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
@@ -22,7 +21,6 @@ async def handler(job: dict) -> Generator[dict, None, None]:
     validated_params = validate_and_convert_sampling_params(sampling_params)
     request_id = random_uuid()
     results_generator = llm.generate(prompt, validated_params, request_id)
-    job_manager.increment_job_count()
 
     batch, last_output_text = [], ""
     async for request_output in results_generator:
@@ -41,9 +39,7 @@ async def handler(job: dict) -> Generator[dict, None, None]:
 
     if batch:
         yield batch
-
-    job_manager.decrement_job_count()
-
+        
 runpod.serverless.start({
     "handler": handler,
     "concurrency_modifier": concurrency_modifier,
