@@ -11,35 +11,40 @@
 
 ## Setting up the Serverless Worker
 
-### Option 1: Use Pre-Built Image 
-We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint: `runpod/worker-vllm`
-#### Environment Variables
-Required:
-- `MODEL_NAME`: the Hugging Face model to use.
-  
-Optional:
-- `MODEL_BASE_PATH`: directory to store the model in
-- `HF_TOKEN`: your Hugging Face token to access private or gated models, such as Llama, Falcon, etc.
-- `NUM_GPU_SHARD`: Number of GPUs to split the model across.
-- `QUANTIZATION`: `awq` to use AWQ Quantization (Base model must be in AWQ format). `squeezellm` for SqueezeLLM quantization - preliminary
-- `VLLM_N_CPUS`: due to Serverless Endpoints having CPU-burst enabled, multi-gpu might not work correctly unless the number of CPUs is limited. It is set to 10 by default.
-- `CONCURRENCY_MODIFIER`: limit of concurrent requests per worker.
-- `DEFAULT_BATCH_SIZE`: default batch size for token streaming to reduce the number of http calls and speed up streaming. Defaults to 10.
-- `DISABLE_LOG_STATS`: set to True or False to enable/disable vLLM stats logging.
+### Option 1:Deploy Any Model Using Pre-Built Docker Image
+We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint: 
 
-### Option 2: Build Image with Model Inside
+<div align="center">
+
+```runpod/worker-vllm```
+
+</div>
+
+#### Environment Variables
+- **Required**:
+   - `MODEL_NAME`: Hugging Face Model Repository (e.g., `openchat/openchat_3.5`).
+  
+- **Optional**:
+  - `MODEL_BASE_PATH`: Model storage directory (default: `/runpod-volume`).
+  - `HF_TOKEN`: Hugging Face token for private and gated models (e.g., Llama, Falcon).
+  - `NUM_GPU_SHARD`: Number of GPUs to split the model across (default: `1`).
+  - `QUANTIZATION`: AWQ (`awq`) or SqueezeLLM (`squeezellm`) quantization.
+  - `MAX_CONCURRENCY`: Max concurrent requests (default: `100`).
+  - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `10`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
+  - `DISABLE_LOG_STATS`: Enable (`False`) or disable (`True`) vLLM stats logging.
+
+### Option 2: Build Docker Image with Model Inside
 To build an image with the model baked in, you must specify the following docker arguments when building the image:
 
-Required:
-- `MODEL_NAME`
-- `MODEL_BASE_PATH`
+- **Required**
+  - `MODEL_NAME`
+- **Optional**
+  - `MODEL_BASE_PATH`: Defaults to `/runpod-volume` for network storage. Use `/models` or for local container storage.
+  - `QUANTIZATION`
+  - `HF_TOKEN`
+  - `WORKER_CUDA_VERSION`: `11.8` or `12.1` (default: `11.8` due to a small amount of workers not having CUDA 12.1 support yet. `12.1` is recommended for optimal performance).
 
-Optional:
-- `QUANTIZATION`
-- `HF_TOKEN`
-- `CUDA_VERSION`: 11.8.0 or 12.1.0. Defaults to 11.8.0
-
-#### Example: OpenChat-3.5
+#### Example: Building an image with OpenChat-3.5
 `sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .`
 
 ### Compatible Models
@@ -75,7 +80,6 @@ Ensure that you have Docker installed and properly set up before running the doc
 | sampling_params    | dict            | {}        | Sampling parameters to control the generation, like temperature, top_p, etc.                                                                                     |
 | streaming          | bool            | False     | Whether to enable streaming of output. If True, responses are streamed as they are generated.                                                                    |
 | batch_size         | int             | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable
-| count_tokens         | bool             | False | Whether to return the number of input and output tokens at the end
 
 ### Sampling Parameters
 | Argument                        | Type                           | Default   | Description                                                                                                                                                       |

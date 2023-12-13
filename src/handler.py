@@ -1,70 +1,51 @@
 #!/usr/bin/env python
 
-import os
 from typing import Generator
 import runpod
-from utils import validate_and_convert_sampling_params, intialize_llm_engine
+from utils import validate_and_convert_sampling_params, initialize_llm_engine, JobManager, ServerlessConfig
 from vllm.utils import random_uuid
 
-# Default batch size, configurable via environment variable set in the Endpoint Template
-DEFAULT_BATCH_SIZE = int(os.environ.get('DEFAULT_BATCH_SIZE', 10))
+serverless_config = ServerlessConfig()
+job_manager = JobManager()
+llm = initialize_llm_engine()
 
-# Initialize the vLLM engine
-llm = intialize_llm_engine()
+def concurrency_modifier() -> int:
+    return max(0, serverless_config.max_concurrency - job_manager.total_running_jobs)
 
-async def handler(job: dict) -> Generator[str, None, None]:
-    """
-    Asynchronous Generator Handler for the vLLM worker.
-
-    Args:
-        job (dict): A dictionary containing job details, including the prompt and other parameters.
-
-    Yields:
-        Generator[str, None, None]: A generator that yields generated text outputs. Format: List[str]
-    """
-    # Extract the job inputs
+async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
     prompt = job_input["prompt"]
     streaming = job_input.get("streaming", False)
-    batch_size = job_input.get("batch_size", DEFAULT_BATCH_SIZE)
+    batch_size = job_input.get("batch_size", serverless_config.default_batch_size)
     sampling_params = job_input.get("sampling_params", {})
-    return_token_counts = job_input.get("count_tokens", False)
-    
-    # Validate and convert sampling parameters
+
     validated_params = validate_and_convert_sampling_params(sampling_params)
-
-    # Generate a unique request ID
     request_id = random_uuid()
-
-    # Initialize the vLLM generator
     results_generator = llm.generate(prompt, validated_params, request_id)
-    last_output_text = ""
-    batch = []
+    job_manager.increment_job_count()
 
-    # Process and yield the generated text
+    batch, last_output_text = [], ""
     async for request_output in results_generator:
         for output in request_output.outputs:
+            usage = {"input": len(request_output.prompt_token_ids), "output": len(output.token_ids)}
+            
             if streaming:
-                batch.append({"text": output.text[len(last_output_text):]})
+                batch.append({"text": output.text[len(last_output_text):], "usage": usage})
                 if len(batch) >= batch_size:
                     yield batch
                     batch = []
             last_output_text = output.text
 
     if not streaming:
-        yield [{"text":last_output_text}]
+        yield [{"text": last_output_text, "usage": usage}]
 
-    if batch and streaming:
+    if batch:
         yield batch
-    
-    if return_token_counts and request_output is not None:
-        token_counts = {"token_counts":{"input": len(request_output.prompt_token_ids),
-               "output": len(output.outputs[-1].token_ids)}}
-        yield token_counts
 
-# Start the serverless worker
+    job_manager.decrement_job_count()
+
 runpod.serverless.start({
     "handler": handler,
-    "concurrency_modifier": lambda _: int(os.environ.get('CONCURRENCY_MODIFIER', 100)),
+    "concurrency_modifier": concurrency_modifier,
     "return_aggregate_stream": True
 })

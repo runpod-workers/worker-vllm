@@ -1,99 +1,87 @@
 import os
+from typing import Any, Dict, Optional, Union
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
+from constants import sampling_param_types, DEFAULT_BATCH_SIZE, MAX_CONCURRENCY
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+class ServerlessConfig:
+    def __init__(self):
+        self._max_concurrency = int(os.environ.get('MAX_CONCURRENCY', DEFAULT_BATCH_SIZE))
+        self._default_batch_size = int(os.environ.get('DEFAULT_BATCH_SIZE', MAX_CONCURRENCY))
+
+    @property
+    def max_concurrency(self):
+        return self._max_concurrency
+
+    @property
+    def default_batch_size(self):
+        return self._default_batch_size
 
 class EngineConfig:
-    """
-    Configuration for the vLLM engine.
-    """
-    def __init__(self, make_dirs=True):
-        self.model_name = os.getenv('MODEL_NAME')
-        if self.model_name is None:
-            raise ValueError("MODEL_NAME environment variable is not set")
-        
+    def __init__(self):
+        self.model_name = os.getenv('MODEL_NAME', 'default_model')
         self.tokenizer = os.getenv('TOKENIZER', self.model_name)
         self.model_base_path = os.getenv('MODEL_BASE_PATH', "/runpod-volume/")
         self.num_gpu_shard = int(os.getenv('NUM_GPU_SHARD', 1))
         self.use_full_metrics = os.getenv('USE_FULL_METRICS', 'True') == 'True'
-        self.quantization = str(os.getenv('QUANTIZATION', None)).lower()
-        self.quantization = self.quantization if self.quantization in ['squeezellm', 'awq'] else None
+        self.quantization = os.getenv('QUANTIZATION', None)
         self.dtype = "auto" if self.quantization is None else "half"
         self.disable_log_stats = os.getenv('DISABLE_LOG_STATS', 'True') == 'True'
         self.gpu_memory_utilization = float(os.getenv('GPU_MEMORY_UTILIZATION', 0.98))
-        if make_dirs and not os.path.exists(self.model_base_path):
-            os.makedirs(self.model_base_path)
-
-def intialize_llm_engine():
-    """
-    Initialize the vLLM engine.
-
-    Returns:
-        AsyncLLMEngine: vLLM AsyncLLMEngine
-    """
-    # Load the configuration for the vLLM engine
-    config = EngineConfig()
-
-    engine_args = AsyncEngineArgs(
-        model=config.model_name,
-        download_dir=config.model_base_path,
-        tokenizer=config.tokenizer,
-        tensor_parallel_size=config.num_gpu_shard,
-        dtype=config.dtype,
-        disable_log_stats=config.disable_log_stats,
-        quantization=config.quantization,
-        gpu_memory_utilization=config.gpu_memory_utilization,
-    )
-
-    # Create the asynchronous vLLM engine
-    return AsyncLLMEngine.from_engine_args(engine_args)
+        os.makedirs(self.model_base_path, exist_ok=True)
 
 
-# Map of parameter names to their expected types
-sampling_param_types = {
-    'n': int,
-    'best_of': int,
-    'presence_penalty': float,
-    'frequency_penalty': float,
-    'temperature': float,
-    'top_p': float,
-    'top_k': int,
-    'use_beam_search': bool,
-    'stop': str,
-    'ignore_eos': bool,
-    'max_tokens': int,
-    'logprobs': float,
-}
-
-
-# Function to convert sampling parameters to the right types
-def cast_sampling_param(value, target_type):
-    """
-    Args:
-        value: The value to cast
-        target_type: The target type to cast to
-
-    Returns: 
-        The casted value if it can be casted, otherwise None
-    """
-    if value is None:
-        return None
+def initialize_llm_engine() -> AsyncLLMEngine:
     try:
-        return target_type(value)
-    except (TypeError, ValueError):
-        return None
+        config = EngineConfig()
+        engine_args = AsyncEngineArgs(
+            model=config.model_name,
+            download_dir=config.model_base_path,
+            tokenizer=config.tokenizer,
+            tensor_parallel_size=config.num_gpu_shard,
+            dtype=config.dtype,
+            disable_log_stats=config.disable_log_stats,
+            quantization=config.quantization,
+            gpu_memory_utilization=config.gpu_memory_utilization,
+        )
+        return AsyncLLMEngine.from_engine_args(engine_args)
+    except Exception as e:
+        logging.error(f"Error initializing vLLM engine: {e}")
+        raise
 
+class JobManager:
+    def __init__(self):
+        self.total_running_jobs = 0
 
-# Function to validate and convert sampling parameters
-def validate_and_convert_sampling_params(sampling_params):
-    """
-    Args:
-        sampling_params: The sampling parameters to validate and convert
+    def increment_job_count(self):
+        self.total_running_jobs += 1
 
-    Returns:
-        The validated and converted sampling parameters
-    """
+    def decrement_job_count(self):
+        self.total_running_jobs -= 1
+
+def validate_and_convert_sampling_params(params: Dict[str, Any]) -> SamplingParams:
     validated_params = {}
-    for param_name, param_type in sampling_param_types.items():
-        param_value = sampling_params.get(param_name)
-        if param_value is not None:
-            validated_params[param_name] = cast_sampling_param(param_value, param_type)
+
+    for key, value in params.items():
+        expected_type = sampling_param_types.get(key)
+        if value is None:
+            validated_params[key] = None
+            continue
+        
+        if expected_type is None:
+            continue
+
+        if not isinstance(expected_type, tuple):
+            expected_type = (expected_type,)
+
+        try:
+            validated_params[key] = next(
+                casted_value for t in expected_type 
+                if (casted_value := t(value)) or True
+            )
+        except (TypeError, ValueError):
+            continue
+
     return SamplingParams(**validated_params)
