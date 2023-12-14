@@ -1,71 +1,54 @@
-# Base image
-# The following docker base image is recommended by VLLM: 
-FROM runpod/pytorch:2.0.1-py3.10-cuda11.8.0-devel
+# Base image - Set default to CUDA 11.8
+ARG WORKER_CUDA_VERSION=11.8
+FROM runpod/base:0.4.2-cuda${WORKER_CUDA_VERSION}.0 as builder
 
-# Use bash shell with pipefail option
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG WORKER_CUDA_VERSION=11.8 # Required duplicate to keep in scope
 
-# Set the working directory
-WORKDIR /
+# Set Environment Variables
+ENV WORKER_CUDA_VERSION=${WORKER_CUDA_VERSION} \
+    HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets" \
+    HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub" \
+    TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub" 
 
-# Update and upgrade the system packages (Worker Template)
-ARG DEBIAN_FRONTEND=noninteractive
-RUN pip uninstall torch -y
-RUN pip install torch==2.0.1 -f https://download.pytorch.org/whl/cu118
-COPY builder/setup.sh /setup.sh
-RUN chmod +x /setup.sh && \
-    /setup.sh && \
-    rm /setup.sh
 
-# Install fast api
-RUN pip install fastapi==0.99.1
-
-# Install Python dependencies (Worker Template)
+# Install Python dependencies
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install --upgrade -r /requirements.txt --no-cache-dir && \
+    python3.11 -m pip install --upgrade pip && \
+    python3.11 -m pip install --upgrade -r /requirements.txt && \
     rm /requirements.txt
 
-# Add src files (Worker Template)
-ADD src .  
+# Install torch and vllm based on CUDA version
+RUN if [[ "${WORKER_CUDA_VERSION}" == 11.8* ]]; then \
+        wget https://github.com/alpayariyak/vllm/releases/download/0.2.4-runpod-11.8/vllm-0.2.4+cu118-cp311-cp311-linux_x86_64.whl && \
+        python3.11 -m pip install vllm-0.2.4+cu118-cp311-cp311-linux_x86_64.whl && \
+        rm vllm-0.2.4+cu118-cp311-cp311-linux_x86_64.whl; \
+        python3.11 -m pip uninstall torch -y; \
+        python3.11 -m pip install torch --upgrade --index-url https://download.pytorch.org/whl/cu118; \
+        python3.11 -m pip uninstall xformers -y; \
+        python3.11 -m pip install --upgrade xformers --index-url https://download.pytorch.org/whl/cu118; \
+    else \
+        python3.11 -m pip install -e git+https://github.com/alpayariyak/vllm.git#egg=vllm; \
+    fi && \
+    rm -rf /root/.cache/pip
 
-# Quick temporary updates
-RUN pip install git+https://github.com/runpod/runpod-python@a1#egg=runpod --compile
 
-# Prepare the models inside the docker image
-ARG HUGGING_FACE_HUB_TOKEN=
-ENV HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+# Add source files
+COPY src .
 
-# Prepare argument for the model and tokenizer
+# Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
-ENV MODEL_NAME=$MODEL_NAME
-ARG MODEL_REVISION="main"
-ENV MODEL_REVISION=$MODEL_REVISION
 ARG MODEL_BASE_PATH="/runpod-volume/"
-ENV MODEL_BASE_PATH=$MODEL_BASE_PATH
-ARG TOKENIZER=
-ENV TOKENIZER=$TOKENIZER
-ARG STREAMING=
-ENV STREAMING=$STREAMING
-ARG QUANTIZATION=
-ENV QUANTIZATION=$QUANTIZATION
-
-ENV HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets"
-ENV HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub"
-ENV TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub"
-
-# Download the models
-RUN mkdir -p /model
-
-# Set environment variables
-ENV MODEL_NAME=$MODEL_NAME \
-    MODEL_REVISION=$MODEL_REVISION \
-    MODEL_BASE_PATH=$MODEL_BASE_PATH \
-    HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
-
-# Run the Python script to download the model
-RUN python -u /download_model.py
+ARG HF_TOKEN=""
+ARG QUANTIZATION=""
+RUN if [ -n "$MODEL_NAME" ]; then \
+        python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \
+        export MODEL_BASE_PATH=$MODEL_BASE_PATH; \
+        export MODEL_NAME=$MODEL_NAME; \
+    fi && \
+    if [ -n "$QUANTIZATION" ]; then \
+        export QUANTIZATION=$QUANTIZATION; \
+    fi
 
 # Start the handler
-CMD STREAMING=$STREAMING MODEL_NAME=$MODEL_NAME MODEL_BASE_PATH=$MODEL_BASE_PATH TOKENIZER=$TOKENIZER QUANTIZATION=$QUANTIZATION python -u /handler.py 
+CMD ["python3.11", "/handler.py"]

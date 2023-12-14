@@ -1,21 +1,20 @@
+import argparse
 import os
-from huggingface_hub import snapshot_download
+from vllm.model_executor.weight_utils import prepare_hf_model_weights
 
-# Get the hugging face token
-HUGGING_FACE_HUB_TOKEN = os.environ.get('HUGGING_FACE_HUB_TOKEN', None)
-MODEL_NAME = os.environ.get('MODEL_NAME')
-MODEL_REVISION = os.environ.get('MODEL_REVISION', "main")
-MODEL_BASE_PATH = os.environ.get('MODEL_BASE_PATH', '/runpod-volume/')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str)
+    parser.add_argument("--download_dir", type=str)
 
-# Download the model from hugging face
-download_kwargs = {}
+    args = parser.parse_args()
+    if not args.model or not args.download_dir:
+        raise ValueError("Must specify model and download_dir")
 
-if HUGGING_FACE_HUB_TOKEN:
-    download_kwargs["token"] = HUGGING_FACE_HUB_TOKEN
+    if not os.path.exists(args.download_dir):
+        os.makedirs(args.download_dir)
 
-snapshot_download(
-    MODEL_NAME,
-    revision=MODEL_REVISION,
-    local_dir=f"{MODEL_BASE_PATH}{MODEL_NAME.split('/')[1]}",
-    **download_kwargs
-)
+    prepare_hf_model_weights(
+        model_name_or_path = args.model,
+        cache_dir=args.download_dir,
+    )
