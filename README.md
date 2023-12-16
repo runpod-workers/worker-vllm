@@ -14,7 +14,7 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
 
 <div align="center">
 
-```runpod/worker-vllm```
+```runpod/worker-vllm:dev```
 
 </div>
 
