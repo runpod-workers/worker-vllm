@@ -1,6 +1,5 @@
 DEFAULT_BATCH_SIZE = 10
-
-MAX_CONCURRENCY = 100
+DEFAULT_MAX_CONCURRENCY = 100
 
 sampling_param_types = {
     'n': int,

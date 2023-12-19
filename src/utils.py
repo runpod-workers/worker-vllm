@@ -1,15 +1,15 @@
 import os
 from typing import Any, Dict, Optional, Union
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
-from constants import sampling_param_types, DEFAULT_BATCH_SIZE, MAX_CONCURRENCY
+from constants import sampling_param_types, DEFAULT_BATCH_SIZE, DEFAULT_MAX_CONCURRENCY
 import logging
 
 logging.basicConfig(level=logging.INFO)
 
 class ServerlessConfig:
     def __init__(self):
-        self._max_concurrency = int(os.environ.get('MAX_CONCURRENCY', DEFAULT_BATCH_SIZE))
-        self._default_batch_size = int(os.environ.get('DEFAULT_BATCH_SIZE', MAX_CONCURRENCY))
+        self._max_concurrency = int(os.environ.get('MAX_CONCURRENCY', DEFAULT_MAX_CONCURRENCY))
+        self._default_batch_size = int(os.environ.get('DEFAULT_BATCH_SIZE', DEFAULT_BATCH_SIZE))
 
     @property
     def max_concurrency(self):
