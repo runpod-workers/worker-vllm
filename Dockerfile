@@ -21,10 +21,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Install torch and vllm based on CUDA version
 RUN if [[ "${WORKER_CUDA_VERSION}" == 11.8* ]]; then \
-        python3.11 -m pip install -e git+https://github.com/alpayariyak/vllm.git@cuda-11.8#egg=vllm; \
+        python3.11 -m pip install -e git+https://github.com/runpod/vllm-fork-for-sls-worker.git@cuda-11.8#egg=vllm; \
         python3.11 -m pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
     else \
-        python3.11 -m pip install -e git+https://github.com/alpayariyak/vllm.git#egg=vllm; \
+        python3.11 -m pip install -e git+https://github.com/runpod/vllm-fork-for-sls-worker.git#egg=vllm; \
     fi && \
     rm -rf /root/.cache/pip
 
