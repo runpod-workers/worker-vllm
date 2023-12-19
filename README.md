@@ -20,7 +20,7 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
 
 #### Environment Variables
 - **Required**:
-   - `MODEL_NAME`: Hugging Face Model Repository (e.g., `openchat/openchat_3.5`).
+   - `MODEL_NAME`: Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`).
 
 - **Optional**:
   - `MODEL_BASE_PATH`: Model storage directory (default: `/runpod-volume`).
