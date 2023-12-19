@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>vLLM Endpoint | Serverless Worker </h1>
+<h1>vLLM 0.2.6 Endpoint | Serverless Worker </h1>
 
 [![CD | Docker-Build-Release](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml/badge.svg)](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml)
 
