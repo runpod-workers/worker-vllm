@@ -51,8 +51,7 @@ def initialize_llm_engine() -> AsyncLLMEngine:
         logging.error(f"Error initializing vLLM engine: {e}")
         raise
 
-
-def validate_and_convert_sampling_params(params: Dict[str, Any]) -> SamplingParams:
+def validate_and_convert_sampling_params(params: Dict[str, Any]) -> Dict[str, Any]:
     validated_params = {}
 
     for key, value in params.items():
@@ -60,19 +59,23 @@ def validate_and_convert_sampling_params(params: Dict[str, Any]) -> SamplingPara
         if value is None:
             validated_params[key] = None
             continue
-        
+
         if expected_type is None:
             continue
 
         if not isinstance(expected_type, tuple):
             expected_type = (expected_type,)
 
-        try:
-            validated_params[key] = next(
-                casted_value for t in expected_type 
-                if (casted_value := t(value)) or True
-            )
-        except (TypeError, ValueError):
-            continue
+        if any(isinstance(value, t) for t in expected_type):
+            validated_params[key] = value
+        else:
+            try:
+                casted_value = next(
+                    t(value) for t in expected_type
+                    if isinstance(value, t)
+                )
+                validated_params[key] = casted_value
+            except (TypeError, ValueError, StopIteration):
+                continue
 
-    return SamplingParams(**validated_params)
+    return validated_params

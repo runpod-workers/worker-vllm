@@ -8,7 +8,8 @@ ARG WORKER_CUDA_VERSION=11.8 # Required duplicate to keep in scope
 ENV WORKER_CUDA_VERSION=${WORKER_CUDA_VERSION} \
     HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets" \
     HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub" \
-    TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub" 
+    TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub" \
+    HF_TRANSFER=1
 
 
 # Install Python dependencies
@@ -20,13 +21,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Install torch and vllm based on CUDA version
 RUN if [[ "${WORKER_CUDA_VERSION}" == 11.8* ]]; then \
-        wget https://github.com/alpayariyak/vllm/releases/download/0.2.4-runpod-11.8/vllm-0.2.4+cu118-cp311-cp311-linux_x86_64.whl && \
-        python3.11 -m pip install vllm-0.2.4+cu118-cp311-cp311-linux_x86_64.whl && \
-        rm vllm-0.2.4+cu118-cp311-cp311-linux_x86_64.whl; \
-        python3.11 -m pip uninstall torch -y; \
-        python3.11 -m pip install torch --upgrade --index-url https://download.pytorch.org/whl/cu118; \
-        python3.11 -m pip uninstall xformers -y; \
-        python3.11 -m pip install --upgrade xformers --index-url https://download.pytorch.org/whl/cu118; \
+        python3.11 -m pip install -e git+https://github.com/alpayariyak/vllm.git@cuda-11.8#egg=vllm; \
+        python3.11 -m pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
     else \
         python3.11 -m pip install -e git+https://github.com/alpayariyak/vllm.git#egg=vllm; \
     fi && \
@@ -42,9 +38,9 @@ ARG MODEL_BASE_PATH="/runpod-volume/"
 ARG HF_TOKEN=""
 ARG QUANTIZATION=""
 RUN if [ -n "$MODEL_NAME" ]; then \
-        python3.11 /download_model.py --model $MODEL_NAME --download_dir $MODEL_BASE_PATH; \
-        export MODEL_BASE_PATH=$MODEL_BASE_PATH; \
-        export MODEL_NAME=$MODEL_NAME; \
+        export MODEL_BASE_PATH=$MODEL_BASE_PATH && \
+        export MODEL_NAME=$MODEL_NAME && \
+        python3.11 /download_model.py --model $MODEL_NAME; \
     fi && \
     if [ -n "$QUANTIZATION" ]; then \
         export QUANTIZATION=$QUANTIZATION; \

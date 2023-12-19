@@ -46,26 +46,26 @@ To build an image with the model baked in, you must specify the following docker
 `sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .`
 
 ### Compatible Models
-- LLaMA & LLaMA-2
-- Mistral
-- Mixtral (Mistral MoE)
-- Yi
-- ChatGLM
-- Phi
-- MPT
-- OPT
-- Qwen
-- Aquila & Aquila2
-- Baichuan
-- BLOOM
-- Falcon
-- GPT-2
-- GPT BigCode
-- GPT-J
-- GPT-NeoX
-- InternLM
-
-And any other models supported by vLLM 0.2.4.
+- LLaMA & LLaMA-2 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
+- Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
+- Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, etc.)
+- Aquila & Aquila2 (`BAAI/AquilaChat2-7B`, `BAAI/AquilaChat2-34B`, `BAAI/Aquila-7B`, `BAAI/AquilaChat-7B`, etc.)
+- Baichuan & Baichuan2 (`baichuan-inc/Baichuan2-13B-Chat`, `baichuan-inc/Baichuan-7B`, etc.)
+- BLOOM (`bigscience/bloom`, `bigscience/bloomz`, etc.)
+- ChatGLM (`THUDM/chatglm2-6b`, `THUDM/chatglm3-6b`, etc.)
+- Falcon (`tiiuae/falcon-7b`, `tiiuae/falcon-40b`, `tiiuae/falcon-rw-7b`, etc.)
+- GPT-2 (`gpt2`, `gpt2-xl`, etc.)
+- GPT BigCode (`bigcode/starcoder`, `bigcode/gpt_bigcode-santacoder`, etc.)
+- GPT-J (`EleutherAI/gpt-j-6b`, `nomic-ai/gpt4all-j`, etc.)
+- GPT-NeoX (`EleutherAI/gpt-neox-20b`, `databricks/dolly-v2-12b`, `stabilityai/stablelm-tuned-alpha-7b`, etc.)
+- InternLM (`internlm/internlm-7b`, `internlm/internlm-chat-7b`, etc.)
+- MPT (`mosaicml/mpt-7b`, `mosaicml/mpt-30b`, etc.)
+- OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
+- Phi (`microsoft/phi-1_5`, `microsoft/phi-2`, etc.)
+- Qwen (`Qwen/Qwen-7B`, `Qwen/Qwen-7B-Chat`, etc.)
+- Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
+  
+And any other models supported by vLLM 0.2.6.
 
 
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand. For further inquiries or assistance, feel free to contact our support team.
