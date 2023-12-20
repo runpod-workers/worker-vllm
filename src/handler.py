@@ -18,8 +18,10 @@ async def handler(job: dict) -> Generator[dict, None, None]:
     
     if messages:
         prompt = tokenizer.apply_chat_template(messages)
-    elif apply_chat_template:
+    elif prompt and apply_chat_template:
         prompt = tokenizer.apply_chat_template(prompt)
+    elif not prompt:
+        raise ValueError("Must specify prompt or messages")
         
     streaming = job_input.get("streaming", False)
     batch_size = job_input.get("batch_size", serverless_config.default_batch_size)
