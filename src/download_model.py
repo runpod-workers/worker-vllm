@@ -5,7 +5,7 @@ from vllm.model_executor.weight_utils import prepare_hf_model_weights
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str)
-    parser.add_argument("--download_dir", type=str)
+    parser.add_argument("--download_dir", type=str, default=os.environ.get("MODEL_BASE_PATH"))
 
     args = parser.parse_args()
     if not args.model or not args.download_dir:
