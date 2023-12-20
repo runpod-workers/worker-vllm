@@ -2,3 +2,5 @@ hf_transfer
 runpod==1.4.2
 huggingface-hub
 packaging
+typing-extensions==4.7.1
+pydantic

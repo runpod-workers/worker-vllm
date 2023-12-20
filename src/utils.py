@@ -78,4 +78,4 @@ def validate_and_convert_sampling_params(params: Dict[str, Any]) -> Dict[str, An
             except (TypeError, ValueError, StopIteration):
                 continue
 
-    return validated_params
+    return SamplingParams(**validated_params)
