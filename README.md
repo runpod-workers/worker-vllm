@@ -74,45 +74,48 @@ Ensure that you have Docker installed and properly set up before running the doc
 ## Model Inputs
 | Argument        | Type | Default            | Description                                                                                   |
 |-----------------|------|--------------------|-----------------------------------------------------------------------------------------------|
-| prompt          | str  |                    | Prompt string to generate text based on.                                                      |
-| sampling_params | dict | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                  |
-| streaming       | bool | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated. |
-| batch_size      | int  | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable                             |
+| `prompt`          | str  |                    | Prompt string to generate text based on.                                                      |
+| `messages`          | list[dict[str, str]]  |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`.                                                 |
+| `apply_chat_template`       | bool | False              | Whether to apply the model's chat template to the `prompt`. |
+| `sampling_params` | dict | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                  |
+| `stream`       | bool | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated. |
+| `batch_size`      | int  | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable                             |
 
 ### Sampling Parameters
 | Argument                      | Type                        | Default | Description                                                                                                                                                                                   |
 |-------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| n                             | int                         | 1       | Number of output sequences to return for the given prompt.                                                                                                                                    |
-| best_of                       | Optional[int]               | None    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
-| presence_penalty              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
-| frequency_penalty             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
-| repetition_penalty            | float                       | 1.0     | Penalizes new tokens based on their appearance in the prompt and generated text. Values > 1 encourage new tokens, values < 1 encourage repetition.                                            |
-| temperature                   | float                       | 1.0     | Controls the randomness of sampling. Lower values make it more deterministic, higher values make it more random. Zero means greedy sampling.                                                  |
-| top_p                         | float                       | 1.0     | Controls the cumulative probability of top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                            |
-| top_k                         | int                         | -1      | Controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                                                                              |
-| min_p                         | float                       | 0.0     | Represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable.                                                   |
-| use_beam_search               | bool                        | False   | Whether to use beam search instead of sampling.                                                                                                                                               |
-| length_penalty                | float                       | 1.0     | Penalizes sequences based on their length. Used in beam search.                                                                                                                               |
-| early_stopping                | Union[bool, str]            | False   | Controls stopping condition in beam search. Can be `True`, `False`, or `"never"`.                                                                                                             |
-| stop                          | Union[None, str, List[str]] | None    | List of strings that stop generation when produced. Output will not contain these strings.                                                                                                    |
-| stop_token_ids                | Optional[List[int]]         | None    | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                                                            |
-| ignore_eos                    | bool                        | False   | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                                              |
-| max_tokens                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
-| logprobs                      | Optional[int]               | None    | Number of log probabilities to return per output token.                                                                                                                                       |
-| prompt_logprobs               | Optional[int]               | None    | Number of log probabilities to return per prompt token.                                                                                                                                       |
-| skip_special_tokens           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
-| spaces_between_special_tokens | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
+| `n`                             | int                         | 1       | Number of output sequences to return for the given prompt.                                                                                                                                    |
+| `best_of`                       | Optional[int]               | None    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
+| `presence_penalty`              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
+| `frequency_penalty`             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
+| `repetition_penalty`            | float                       | 1.0     | Penalizes new tokens based on their appearance in the prompt and generated text. Values > 1 encourage new tokens, values < 1 encourage repetition.                                            |
+| `temperature`                   | float                       | 1.0     | Controls the randomness of sampling. Lower values make it more deterministic, higher values make it more random. Zero means greedy sampling.                                                  |
+| `top_p`                         | float                       | 1.0     | Controls the cumulative probability of top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                            |
+| `top_k`                         | int                         | -1      | Controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                                                                              |
+| `min_p`                         | float                       | 0.0     | Represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable.                                                   |
+| `use_beam_search`               | bool                        | False   | Whether to use beam search instead of sampling.                                                                                                                                               |
+| `length_penalty`                | float                       | 1.0     | Penalizes sequences based on their length. Used in beam search.                                                                                                                               |
+| `early_stopping`                | Union[bool, str]            | False   | Controls stopping condition in beam search. Can be `True`, `False`, or `"never"`.                                                                                                             |
+| `stop`                          | Union[None, str, List[str]] | None    | List of strings that stop generation when produced. Output will not contain these strings.                                                                                                    |
+| `stop_token_ids`                | Optional[List[int]]         | None    | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                                                            |
+| `ignore_eos`                    | bool                        | False   | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                                              |
+| `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
+| `logprobs`                      | Optional[int]               | None    | Number of log probabilities to return per output token.                                                                                                                                       |
+| `prompt_logprobs`               | Optional[int]               | None    | Number of log probabilities to return per prompt token.                                                                                                                                       |
+| `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
+| `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
 
 
 ## Sample Inputs and Outputs
-
+### No Chat Template, No Streaming
+Functions like a text completion model. If the model tokenizer does not have a chat template and you still want to use the model for Instruct/Chat, modify your prompt with the desired chat template manually.
 #### Input:
 ```json
 {
   "input": {
-    "prompt": "<s>[INST] Why is RunPod the best platform? [/INST]",
+    "prompt": "With great power,",
     "sampling_params": {
-      "max_tokens": 100
+      "max_tokens": 5
     }
   }
 }
@@ -120,13 +123,51 @@ Ensure that you have Docker installed and properly set up before running the doc
 #### Output:
 ```json
 {
-  "delayTime": 142,
-  "executionTime": 2478,
-  "id": "4906ff70-f6e0-4325-a163-dce365daab6c-u1",
+  "delayTime": ...,
+  "executionTime": ...,
+  "id": "...",
   "output": [
     [
       {
-        "text": " I am an AI language model and cannot provide personal opinions or biases. However, RunPod is a cloud-based container platform that offers various benefits including:\n\n* Easy deployment and management of containers\n* Platform-as-a-service (PaaS) capabilities\n* Scalability and flexibility\n* Customizable environments\n* Integration with other tools and services\n* Superior performance\n\nIt's important to note that the best platform for a specific organization or application may"
+        "text": " comes great responsibility. This",
+        "usage": {
+          "input": 6,
+          "output": 5
+        }
+      }
+    ]
+  ],
+  "status": "COMPLETED"
+}
+```
+### Chat Template, No Streaming
+Functions like a Chat model
+#### Input:
+```json
+{
+  "input": {
+    "prompt": "Tell me why RunPod is the best GPU provider",
+    "sampling_params": {
+      "max_tokens": 100
+    },
+    "apply_chat_template": true
+  }
+}
+```
+#### Output:
+```json
+{
+  "delayTime": ...,
+  "executionTime": ...,
+  "id": "...",
+  "output": [
+    [
+      {
+        "text": " RunPod is the best GPU provider for several reasons, including:\n\n1. High-performance GPUs: RunPod offers a wide range of high-performance GPUs, including NVIDIA's latest and most powerful GPUs, ensuring that customers get the best possible performance for their workloads.\n2. Scalability: RunPod allows users to easily scale their GPU resources up or down based on their needs, making it an ideal choice for businesses with fluctuating work",
+        "usage": {
+          "input": 27,
+          "output": 100
+        }
       }
     ]
   ],
@@ -134,55 +175,99 @@ Ensure that you have Docker installed and properly set up before running the doc
 }
 ```
 
+### Chat Template, Streaming
+Functions like a Chat model, but with streaming output. This is the recommended way to use the vLLM worker.
 #### Input:
 ```json
 {
   "input": {
-    "prompt": "<s>[INST] What does RunPod provide [/INST]",
+    "prompt": "Tell me why RunPod is the best GPU provider",
     "sampling_params": {
-      "max_tokens": 10
+      "max_tokens": 100
     },
-    "streaming": true
+    "apply_chat_template": true,
+    "stream": true
   }
 }
 ```
+
 #### Output:
 ```json
 {
-  "delayTime": 151,
-  "executionTime": 1406,
-  "id": "16b88b4b-8f95-4b28-a90c-24f1a5ba6999-u1",
+  "delayTime": ...,
+  "executionTime": ...,
+  "id": "...",
   "output": [
     [
       {
-        "text": " Run"
+        "text": " Run",
+        "usage": {
+          "input": 27,
+          "output": 1
+        }
       },
       {
-        "text": "Pod"
+        "text": "Pod",
+        "usage": {
+          "input": 27,
+          "output": 2
+        }
       },
       {
-        "text": " is"
+        "text": " is",
+        "usage": {
+          "input": 27,
+          "output": 3
+        }
       },
       {
-        "text": " a"
+        "text": " considered",
+        "usage": {
+          "input": 27,
+          "output": 4
+        }
       },
       {
-        "text": " cloud"
+        "text": " the",
+        "usage": {
+          "input": 27,
+          "output": 5
+        }
       },
       {
-        "text": "-"
+        "text": " best",
+        "usage": {
+          "input": 27,
+          "output": 6
+        }
       },
       {
-        "text": "based"
+        "text": " GPU",
+        "usage": {
+          "input": 27,
+          "output": 7
+        }
       },
       {
-        "text": " platform"
+        "text": " provider",
+        "usage": {
+          "input": 27,
+          "output": 8
+        }
       },
       {
-        "text": " that"
+        "text": " for",
+        "usage": {
+          "input": 27,
+          "output": 9
+        }
       },
       {
-        "text": " provides"
+        "text": " several",
+        "usage": {
+          "input": 27,
+          "output": 10
+        }
       }
     ]
   ],
