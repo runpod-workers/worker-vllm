@@ -72,6 +72,7 @@ Ensure that you have Docker installed and properly set up before running the doc
 
 
 ## Model Inputs
+You may either use a `prompt` or a list of `messages` as input. If you use `messages`, the model's chat template will be applied to the messages automatically, so the model must have one. If you use `prompt`, you may optionally apply the model's chat template to the prompt by setting `apply_chat_template` to `true`.
 | Argument        | Type | Default            | Description                                                                                   |
 |-----------------|------|--------------------|-----------------------------------------------------------------------------------------------|
 | `prompt`          | str  |                    | Prompt string to generate text based on.                                                      |
@@ -80,6 +81,32 @@ Ensure that you have Docker installed and properly set up before running the doc
 | `sampling_params` | dict | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                  |
 | `stream`       | bool | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated. |
 | `batch_size`      | int  | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable                             |
+
+### Messages Format
+Your list can contain any number of messages, and each message can have any role from the following list:
+- `user`
+- `assistant`
+- `system`
+
+The model's chat template will be applied to the messages automatically. 
+
+Example:
+```json
+[
+  {
+    "role": "system",
+    "content": "..."
+  },
+  {
+    "role": "user",
+    "content": "..."
+  },
+  {
+    "role": "assistant",
+    "content": "..."
+  }
+]
+```
 
 ### Sampling Parameters
 | Argument                      | Type                        | Default | Description                                                                                                                                                                                   |
@@ -123,8 +150,8 @@ Functions like a text completion model. If the model tokenizer does not have a c
 #### Output:
 ```json
 {
-  "delayTime": ...,
-  "executionTime": ...,
+  "delayTime": 1234,
+  "executionTime": 1234,
   "id": "...",
   "output": [
     [
@@ -157,8 +184,8 @@ Functions like a Chat model
 #### Output:
 ```json
 {
-  "delayTime": ...,
-  "executionTime": ...,
+  "delayTime": 1234,
+  "executionTime": 1234,
   "id": "...",
   "output": [
     [
@@ -166,6 +193,53 @@ Functions like a Chat model
         "text": " RunPod is the best GPU provider for several reasons, including:\n\n1. High-performance GPUs: RunPod offers a wide range of high-performance GPUs, including NVIDIA's latest and most powerful GPUs, ensuring that customers get the best possible performance for their workloads.\n2. Scalability: RunPod allows users to easily scale their GPU resources up or down based on their needs, making it an ideal choice for businesses with fluctuating work",
         "usage": {
           "input": 27,
+          "output": 100
+        }
+      }
+    ]
+  ],
+  "status": "COMPLETED"
+}
+```
+
+### List of Messages (Chat Template applied by default), No Streaming
+Functions like a Chat model with a list of messages, to which the model's chat template is applied. You may also use a "system" role and message.
+#### Input:
+```json
+{
+  "input": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Tell me why RunPod is the best GPU provider"
+      },
+      {
+        "role": "assistant",
+        "content": "RunPod is the best GPU provider for several reasons."
+      },
+      {
+        "role": "user",
+        "content": "Name 3 resons"
+      }
+    ],
+    "sampling_params": {
+      "max_tokens": 100
+    }
+  }
+}
+```
+#### Output:
+```json
+{
+  "delayTime": 1234,
+  "executionTime": 1234,
+  "id": "...",
+  "output": [
+    [
+      {
+        "text": " 1. Cutting-edge hardware: RunPod offers state-of-the-art GPUs from industry-leading manufacturers, ensuring that users have access to the latest technology for their GPU needs.\n\n2. Scalability and flexibility: RunPod provides a wide range of GPU options, allowing users to easily scale their resources up or down depending on their specific requirements, and pay only for what they use.\n\n3. Exceptional customer support: RunPod is dedicated to providing outstanding",
+        "usage": {
+          "input": 59,
           "output": 100
         }
       }
@@ -194,8 +268,8 @@ Functions like a Chat model, but with streaming output. This is the recommended 
 #### Output:
 ```json
 {
-  "delayTime": ...,
-  "executionTime": ...,
+  "delayTime": 1234,
+  "executionTime": 1234,
   "id": "...",
   "output": [
     [
