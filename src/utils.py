@@ -1,10 +1,13 @@
 import os
-from typing import Any, Dict, Optional, Union
+import logging
+from typing import Any, Dict, Optional, Union, Tuple
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 from constants import sampling_param_types, DEFAULT_BATCH_SIZE, DEFAULT_MAX_CONCURRENCY
-import logging
+from transformers import AutoTokenizer
 
 logging.basicConfig(level=logging.INFO)
+
+ 
 
 class ServerlessConfig:
     def __init__(self):
@@ -32,8 +35,15 @@ class EngineConfig:
         self.gpu_memory_utilization = float(os.getenv('GPU_MEMORY_UTILIZATION', 0.98))
         os.makedirs(self.model_base_path, exist_ok=True)
 
+class Tokenizer:
+    def __init__(self, tokenizer_name: str):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    
+    def apply_chat_template(self, input: Union[str, list[dict[str, str]]]) -> str:
+        messages = input if isinstance(input, list) else [{"role": "user", "content": input}]
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
-def initialize_llm_engine() -> AsyncLLMEngine:
+def initialize_llm_engine() -> Tuple[AsyncLLMEngine, Tokenizer]:
     try:
         config = EngineConfig()
         engine_args = AsyncEngineArgs(
@@ -46,10 +56,11 @@ def initialize_llm_engine() -> AsyncLLMEngine:
             quantization=config.quantization,
             gpu_memory_utilization=config.gpu_memory_utilization,
         )
-        return AsyncLLMEngine.from_engine_args(engine_args)
+        return AsyncLLMEngine.from_engine_args(engine_args), Tokenizer(config.tokenizer)
     except Exception as e:
         logging.error(f"Error initializing vLLM engine: {e}")
         raise
+    
 
 def validate_and_convert_sampling_params(params: Dict[str, Any]) -> Dict[str, Any]:
     validated_params = {}
