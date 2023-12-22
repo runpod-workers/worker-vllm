@@ -34,6 +34,7 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
 ### Option 2: Build Docker Image with Model Inside
 To build an image with the model baked in, you must specify the following docker arguments when building the image:
 
+#### Arguments:
 - **Required**
   - `MODEL_NAME`
 - **Optional**
