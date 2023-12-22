@@ -8,7 +8,7 @@ ARG WORKER_CUDA_VERSION=11.8 # Required duplicate to keep in scope
 ENV WORKER_CUDA_VERSION=${WORKER_CUDA_VERSION} \
     HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets" \
     HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub" \
-    TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub" \
+    HF_HOME="/runpod-volume/huggingface-cache/hub" \
     HF_TRANSFER=1
 
 
