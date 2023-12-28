@@ -4,6 +4,7 @@ from typing import Union
 import torch
 from vllm import AsyncLLMEngine, AsyncEngineArgs
 from transformers import AutoTokenizer
+from utils import ServerlessConfig
 
 
 class Tokenizer:
@@ -28,6 +29,7 @@ class Tokenizer:
 class VLLMEngine:
     def __init__(self):
         self.config = self._initialize_config()
+        self.serverless_config = ServerlessConfig()
         self.tokenizer = Tokenizer(self.config["model"])
         self.llm = self._initialize_llm()
 
@@ -58,6 +60,13 @@ class VLLMEngine:
             logging.info("Using %s GPU shards", final_num_gpu_shard)
         return final_num_gpu_shard
     
-    def get_n_current_jobs(self):
+    def _get_n_current_jobs(self):
         total_sequences = len(self.llm.engine.scheduler.waiting) + len(self.llm.engine.scheduler.swapped) + len(self.llm.engine.scheduler.running)
         return total_sequences
+    
+    def concurrency_modifier(self, current_concurrency):
+        requested_concurrency = max(0, self.serverless_config.max_concurrency - self._get_n_current_jobs())
+        if not self.config["disable_log_stats"]:
+            logging.info("Concurrency Modifier Requested Jobs: %s", requested_concurrency)
+        return requested_concurrency
+

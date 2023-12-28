@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 from typing import Generator
 import runpod
-from utils import validate_sampling_params, ServerlessConfig, random_uuid
+from utils import validate_sampling_params, random_uuid
 from engine import VLLMEngine
 
-
-serverless_config = ServerlessConfig()
 vllm_engine = VLLMEngine()
-
-
-def concurrency_modifier(current_concurrency) -> int:
-    return max(0, serverless_config.max_concurrency - vllm_engine.get_n_current_jobs)
 
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
@@ -22,7 +16,7 @@ async def handler(job: dict) -> Generator[dict, None, None]:
         llm_input = vllm_engine.tokenizer.apply_chat_template(llm_input)
 
     stream = job_input.get("stream", False)
-    batch_size = job_input.get("batch_size", serverless_config.default_batch_size)
+    batch_size = job_input.get("batch_size", vllm_engine.serverless_config.default_batch_size)
     sampling_params = job_input.get("sampling_params", {})
 
     validated_params = validate_sampling_params(sampling_params)
@@ -58,7 +52,7 @@ async def handler(job: dict) -> Generator[dict, None, None]:
 runpod.serverless.start(
     {
         "handler": handler,
-        "concurrency_modifier": concurrency_modifier,
+        "concurrency_modifier": vllm_engine.concurrency_modifier,
         "return_aggregate_stream": True,
     }
 )
