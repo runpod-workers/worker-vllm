@@ -10,8 +10,7 @@ vllm_engine = VLLMEngine()
 
 
 def concurrency_modifier(current_concurrency) -> int:
-    return max(0, serverless_config.max_concurrency - current_concurrency)
-
+    return max(0, serverless_config.max_concurrency - vllm_engine.get_n_current_jobs)
 
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]

@@ -48,7 +48,7 @@ class VLLMEngine:
         except Exception as e:
             logging.error("Error initializing vLLM engine: %s", e)
             raise e
-
+        
     def _get_num_gpu_shard(self):
         final_num_gpu_shard = 1
         if bool(int(os.getenv("USE_TENSOR_PARALLEL", 0))):
@@ -57,3 +57,7 @@ class VLLMEngine:
             final_num_gpu_shard = min(env_num_gpu_shard, num_gpu_available)
             logging.info("Using %s GPU shards", final_num_gpu_shard)
         return final_num_gpu_shard
+    
+    def get_n_current_jobs(self):
+        total_sequences = len(self.llm.engine.scheduler.waiting) + len(self.llm.engine.scheduler.swapped) + len(self.llm.engine.scheduler.running)
+        return total_sequences
