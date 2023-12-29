@@ -5,6 +5,7 @@ import torch
 from vllm import AsyncLLMEngine, AsyncEngineArgs
 from transformers import AutoTokenizer
 from utils import ServerlessConfig
+from dotenv import load_dotenv
 
 
 class Tokenizer:
@@ -30,6 +31,7 @@ class Tokenizer:
 
 class VLLMEngine:
     def __init__(self):
+        load_dotenv() # For local development
         self.config = self._initialize_config()
         self.serverless_config = ServerlessConfig()
         self.tokenizer = Tokenizer(self.config["model"])
@@ -37,11 +39,12 @@ class VLLMEngine:
 
     def _initialize_config(self):
         return {
-            "model": os.getenv("MODEL_NAME", "default_model"),
+            "model": os.getenv("MODEL_NAME"),
             "download_dir": os.getenv("MODEL_BASE_PATH", "/runpod-volume/"),
             "quantization": os.getenv("QUANTIZATION"),
             "dtype": "auto" if os.getenv("QUANTIZATION") is None else "half",
-            "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 0))),
+            "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
+            "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
             "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.98)),
             "tensor_parallel_size": self._get_num_gpu_shard(),
         }

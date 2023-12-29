@@ -9,7 +9,7 @@ vllm_engine = VLLMEngine()
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
     llm_input, apply_chat_template = job_input.get(
-        "prompt", job_input["messages"]
+        "messages", job_input.get("prompt")
     ), job_input.get("apply_chat_template", False)
 
     if apply_chat_template or isinstance(llm_input, list):

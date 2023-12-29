@@ -29,7 +29,8 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
   - `QUANTIZATION`: AWQ (`awq`) or SqueezeLLM (`squeezellm`) quantization.
   - `MAX_CONCURRENCY`: Max concurrent requests (default: `100`).
   - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `10`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
-  - `DISABLE_LOG_STATS`: Enable (`False`) or disable (`True`) vLLM stats logging.
+  - `DISABLE_LOG_STATS`: Enable (`0`) or disable (`1`) vLLM stats logging.
+  - `DISABLE_LOG_REQUESTS`: Enable (`0`) or disable (`1`) request logging.
 
 ### Option 2: Build Docker Image with Model Inside
 To build an image with the model baked in, you must specify the following docker arguments when building the image:
