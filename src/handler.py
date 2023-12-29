@@ -52,7 +52,8 @@ async def handler(job: dict) -> Generator[dict, None, None]:
 runpod.serverless.start(
     {
         "handler": handler,
-        "concurrency_modifier": vllm_engine.concurrency_modifier,
+        # "concurrency_modifier": vllm_engine.concurrency_modifier,
+        "concurrency_modifier": lambda x: vllm_engine.serverless_config.max_concurrency,
         "return_aggregate_stream": True,
     }
 )
