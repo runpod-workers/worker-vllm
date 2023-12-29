@@ -8,7 +8,7 @@ serverless_config = ServerlessConfig()
 llm, tokenizer = initialize_llm_engine()
 
 def concurrency_modifier(current_concurrency) -> int:
-    return max(0, serverless_config.max_concurrency - current_concurrency)
+    return serverless_config.max_concurrency
 
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
