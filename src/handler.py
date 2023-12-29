@@ -29,7 +29,7 @@ async def handler(job: dict) -> Generator[dict, None, None]:
     
     async for request_output in results_generator:
         if is_first_output: # Count input tokens only once
-            n_input_tokens = len(request_output.prompt_token_ids) 
+            n_input_tokens = len(request_output.prompt_token_ids)
             is_first_output = False
             
         for output in request_output.outputs:
@@ -38,12 +38,13 @@ async def handler(job: dict) -> Generator[dict, None, None]:
                 batch["tokens"].append(
                     output.text[len(last_output_text):]
                 )
-                
-                if len(batch["tokens"]) >= batch_size or request_output.finished:
+                finished = request_output.finished
+                if len(batch["tokens"]) >= batch_size or finished:
                     batch["usage"] = {
                         "input": n_input_tokens,
                         "output": len(output.token_ids),
                     }
+                    batch["finished"] = finished
                     yield batch
                     batch = {"tokens": []}
                     
@@ -54,7 +55,8 @@ async def handler(job: dict) -> Generator[dict, None, None]:
                 "usage": {
                         "input": n_input_tokens,
                         "output": len(output.token_ids),
-                    }}
+                    },
+                "finished": True}
 
 runpod.serverless.start(
     {
