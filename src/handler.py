@@ -45,14 +45,16 @@ async def handler(job: dict) -> Generator[dict, None, None]:
                         "output": len(output.token_ids),
                     }
                     yield batch
-                    last_usage = batch["usage"]
                     batch = {"tokens": []}
                     
             last_output_text = output.text
     
     if not stream:
         yield {"tokens": [last_output_text], 
-                "usage": last_usage}
+                "usage": {
+                        "input": n_input_tokens,
+                        "output": len(output.token_ids),
+                    }}
 
 runpod.serverless.start(
     {
