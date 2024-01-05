@@ -1,56 +1,67 @@
 #!/usr/bin/env python
 from typing import Generator
 import runpod
-from utils import validate_and_convert_sampling_params, initialize_llm_engine, ServerlessConfig
-from vllm.utils import random_uuid
+from utils import validate_sampling_params, random_uuid
+from engine import VLLMEngine
 
-serverless_config = ServerlessConfig()
-llm, tokenizer = initialize_llm_engine()
-
-def concurrency_modifier(current_concurrency) -> int:
-    return serverless_config.max_concurrency
-
+vllm_engine = VLLMEngine()
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
-    prompt = job_input.get("prompt")
+    llm_input = job_input.get("messages", job_input.get("prompt"))
     apply_chat_template = job_input.get("apply_chat_template", False)
-    messages = job_input.get("messages")
-    
-    if messages:
-        prompt = tokenizer.apply_chat_template(messages)
-    elif prompt and apply_chat_template:
-        prompt = tokenizer.apply_chat_template(prompt)
-    elif not prompt:
-        raise ValueError("Must specify prompt or messages")
-        
+
+    if apply_chat_template or isinstance(llm_input, list):
+        llm_input = vllm_engine.tokenizer.apply_chat_template(llm_input)
+
     stream = job_input.get("stream", False)
-    batch_size = job_input.get("batch_size", serverless_config.default_batch_size)
+    batch_size = job_input.get("batch_size", vllm_engine.serverless_config.default_batch_size)
     sampling_params = job_input.get("sampling_params", {})
 
-    validated_params = validate_and_convert_sampling_params(sampling_params)
+    validated_params = validate_sampling_params(sampling_params)
     request_id = random_uuid()
-    results_generator = llm.generate(prompt, validated_params, request_id)
+    results_generator = vllm_engine.llm.generate(
+        llm_input, validated_params, request_id
+    )
 
-    batch, last_output_text = [], ""
+    batch = {"tokens": []}
+    last_output_text = ""
+    n_input_tokens, is_first_output = 0, True
+    
     async for request_output in results_generator:
-        for output in request_output.outputs:
-            usage = {"input": len(request_output.prompt_token_ids), "output": len(output.token_ids)}
+        if is_first_output: # Count input tokens only once
+            n_input_tokens = len(request_output.prompt_token_ids)
+            is_first_output = False
             
+        for output in request_output.outputs:
             if stream:
-                batch.append({"text": output.text[len(last_output_text):], "usage": usage})
-                if len(batch) >= batch_size:
+                
+                batch["tokens"].append(
+                    output.text[len(last_output_text):]
+                )
+                finished = request_output.finished
+                if len(batch["tokens"]) >= batch_size or finished:
+                    batch["usage"] = {
+                        "input": n_input_tokens,
+                        "output": len(output.token_ids),
+                    }
+                    batch["finished"] = finished
                     yield batch
-                    batch = []
+                    batch = {"tokens": []}
+                    
             last_output_text = output.text
-
+    
     if not stream:
-        yield [{"text": last_output_text, "usage": usage}]
+        yield {"tokens": [last_output_text], 
+                "usage": {
+                        "input": n_input_tokens,
+                        "output": len(output.token_ids),
+                    },
+                "finished": True}
 
-    if batch:
-        yield batch
-        
-runpod.serverless.start({
-    "handler": handler,
-    "concurrency_modifier": concurrency_modifier,
-    "return_aggregate_stream": True
-})
+runpod.serverless.start(
+    {
+        "handler": handler,
+        "concurrency_modifier": lambda x: vllm_engine.serverless_config.max_concurrency,
+        "return_aggregate_stream": True,
+    }
+)

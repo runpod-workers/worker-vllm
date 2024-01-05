@@ -9,7 +9,7 @@
 
 ## Setting up the Serverless Worker
 
-### Option 1:Deploy Any Model Using Pre-Built Docker Image
+### Option 1: Deploy Any Model Using Pre-Built Docker Image
 We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint:
 
 <div align="center">
@@ -29,7 +29,8 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
   - `QUANTIZATION`: AWQ (`awq`) or SqueezeLLM (`squeezellm`) quantization.
   - `MAX_CONCURRENCY`: Max concurrent requests (default: `100`).
   - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `10`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
-  - `DISABLE_LOG_STATS`: Enable (`False`) or disable (`True`) vLLM stats logging.
+  - `DISABLE_LOG_STATS`: Enable (`0`) or disable (`1`) vLLM stats logging.
+  - `DISABLE_LOG_REQUESTS`: Enable (`0`) or disable (`1`) request logging.
 
 ### Option 2: Build Docker Image with Model Inside
 To build an image with the model baked in, you must specify the following docker arguments when building the image:
@@ -112,7 +113,6 @@ Example:
 ### Sampling Parameters
 | Argument                      | Type                        | Default | Description                                                                                                                                                                                   |
 |-------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `n`                             | int                         | 1       | Number of output sequences to return for the given prompt.                                                                                                                                    |
 | `best_of`                       | Optional[int]               | None    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
 | `presence_penalty`              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
 | `frequency_penalty`             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
@@ -128,224 +128,6 @@ Example:
 | `stop_token_ids`                | Optional[List[int]]         | None    | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                                                            |
 | `ignore_eos`                    | bool                        | False   | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                                              |
 | `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
-| `logprobs`                      | Optional[int]               | None    | Number of log probabilities to return per output token.                                                                                                                                       |
-| `prompt_logprobs`               | Optional[int]               | None    | Number of log probabilities to return per prompt token.                                                                                                                                       |
 | `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
 | `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
 
-
-## Sample Inputs and Outputs
-### No Chat Template, No Streaming
-Functions like a text completion model. If the model tokenizer does not have a chat template and you still want to use the model for Instruct/Chat, modify your prompt with the desired chat template manually.
-#### Input:
-```json
-{
-  "input": {
-    "prompt": "With great power,",
-    "sampling_params": {
-      "max_tokens": 5
-    }
-  }
-}
-```
-#### Output:
-```json
-{
-  "delayTime": 1234,
-  "executionTime": 1234,
-  "id": "...",
-  "output": [
-    [
-      {
-        "text": " comes great responsibility. This",
-        "usage": {
-          "input": 6,
-          "output": 5
-        }
-      }
-    ]
-  ],
-  "status": "COMPLETED"
-}
-```
-### Chat Template, No Streaming
-Functions like a Chat model
-#### Input:
-```json
-{
-  "input": {
-    "prompt": "Tell me why RunPod is the best GPU provider",
-    "sampling_params": {
-      "max_tokens": 100
-    },
-    "apply_chat_template": true
-  }
-}
-```
-#### Output:
-```json
-{
-  "delayTime": 1234,
-  "executionTime": 1234,
-  "id": "...",
-  "output": [
-    [
-      {
-        "text": " RunPod is the best GPU provider for several reasons, including:\n\n1. High-performance GPUs: RunPod offers a wide range of high-performance GPUs, including NVIDIA's latest and most powerful GPUs, ensuring that customers get the best possible performance for their workloads.\n2. Scalability: RunPod allows users to easily scale their GPU resources up or down based on their needs, making it an ideal choice for businesses with fluctuating work",
-        "usage": {
-          "input": 27,
-          "output": 100
-        }
-      }
-    ]
-  ],
-  "status": "COMPLETED"
-}
-```
-
-### List of Messages (Chat Template applied by default), No Streaming
-Functions like a Chat model with a list of messages, to which the model's chat template is applied. You may also use a "system" role and message.
-#### Input:
-```json
-{
-  "input": {
-    "messages": [
-      {
-        "role": "user",
-        "content": "Tell me why RunPod is the best GPU provider"
-      },
-      {
-        "role": "assistant",
-        "content": "RunPod is the best GPU provider for several reasons."
-      },
-      {
-        "role": "user",
-        "content": "Name 3 resons"
-      }
-    ],
-    "sampling_params": {
-      "max_tokens": 100
-    }
-  }
-}
-```
-#### Output:
-```json
-{
-  "delayTime": 1234,
-  "executionTime": 1234,
-  "id": "...",
-  "output": [
-    [
-      {
-        "text": " 1. Cutting-edge hardware: RunPod offers state-of-the-art GPUs from industry-leading manufacturers, ensuring that users have access to the latest technology for their GPU needs.\n\n2. Scalability and flexibility: RunPod provides a wide range of GPU options, allowing users to easily scale their resources up or down depending on their specific requirements, and pay only for what they use.\n\n3. Exceptional customer support: RunPod is dedicated to providing outstanding",
-        "usage": {
-          "input": 59,
-          "output": 100
-        }
-      }
-    ]
-  ],
-  "status": "COMPLETED"
-}
-```
-
-### Chat Template, Streaming
-Functions like a Chat model, but with streaming output. This is the recommended way to use the vLLM worker.
-#### Input:
-```json
-{
-  "input": {
-    "prompt": "Tell me why RunPod is the best GPU provider",
-    "sampling_params": {
-      "max_tokens": 100
-    },
-    "apply_chat_template": true,
-    "stream": true
-  }
-}
-```
-
-#### Output:
-```json
-{
-  "delayTime": 1234,
-  "executionTime": 1234,
-  "id": "...",
-  "output": [
-    [
-      {
-        "text": " Run",
-        "usage": {
-          "input": 27,
-          "output": 1
-        }
-      },
-      {
-        "text": "Pod",
-        "usage": {
-          "input": 27,
-          "output": 2
-        }
-      },
-      {
-        "text": " is",
-        "usage": {
-          "input": 27,
-          "output": 3
-        }
-      },
-      {
-        "text": " considered",
-        "usage": {
-          "input": 27,
-          "output": 4
-        }
-      },
-      {
-        "text": " the",
-        "usage": {
-          "input": 27,
-          "output": 5
-        }
-      },
-      {
-        "text": " best",
-        "usage": {
-          "input": 27,
-          "output": 6
-        }
-      },
-      {
-        "text": " GPU",
-        "usage": {
-          "input": 27,
-          "output": 7
-        }
-      },
-      {
-        "text": " provider",
-        "usage": {
-          "input": 27,
-          "output": 8
-        }
-      },
-      {
-        "text": " for",
-        "usage": {
-          "input": 27,
-          "output": 9
-        }
-      },
-      {
-        "text": " several",
-        "usage": {
-          "input": 27,
-          "output": 10
-        }
-      }
-    ]
-  ],
-  "status": "COMPLETED"
-}
-```
