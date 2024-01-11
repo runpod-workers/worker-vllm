@@ -28,7 +28,7 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
   - `NUM_GPU_SHARD`: Number of GPUs to split the model across (default: `1`).
   - `QUANTIZATION`: AWQ (`awq`) or SqueezeLLM (`squeezellm`) quantization.
   - `MAX_CONCURRENCY`: Max concurrent requests (default: `100`).
-  - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `10`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
+  - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `30`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
   - `DISABLE_LOG_STATS`: Enable (`0`) or disable (`1`) vLLM stats logging.
   - `DISABLE_LOG_REQUESTS`: Enable (`0`) or disable (`1`) request logging.
 
@@ -82,7 +82,7 @@ You may either use a `prompt` or a list of `messages` as input. If you use `mess
 | `apply_chat_template`       | bool | False              | Whether to apply the model's chat template to the `prompt`. |
 | `sampling_params` | dict | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                  |
 | `stream`       | bool | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated. |
-| `batch_size`      | int  | DEFAULT_BATCH_SIZE | The number of responses to generate in one batch. Only applicable                             |
+| `batch_size`      | int  | DEFAULT_BATCH_SIZE | The number of tokens to stream every HTTP POST call.                            |
 
 ### Messages Format
 Your list can contain any number of messages, and each message can have any role from the following list:
