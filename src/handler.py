@@ -2,9 +2,9 @@
 from typing import Generator
 import runpod
 from utils import validate_sampling_params, random_uuid
-from engine import VLLMEngine
+from engine import vLLMEngine
 
-vllm_engine = VLLMEngine()
+vllm_engine = vLLMEngine()
 async def handler(job: dict) -> Generator[dict, None, None]:
     job_input = job["input"]
     llm_input = job_input.get("messages", job_input.get("prompt"))

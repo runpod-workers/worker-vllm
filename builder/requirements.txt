@@ -1,5 +1,5 @@
 hf_transfer
-runpod==1.5.1
+runpod==1.5.2
 huggingface-hub
 packaging
 typing-extensions==4.7.1

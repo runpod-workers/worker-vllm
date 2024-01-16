@@ -29,7 +29,7 @@ class Tokenizer:
         )
 
 
-class VLLMEngine:
+class vLLMEngine:
     def __init__(self):
         load_dotenv() # For local development
         self.config = self._initialize_config()
@@ -41,11 +41,13 @@ class VLLMEngine:
         return {
             "model": os.getenv("MODEL_NAME"),
             "download_dir": os.getenv("MODEL_BASE_PATH", "/runpod-volume/"),
-            "quantization": os.getenv("QUANTIZATION"),
+            "quantization": self._get_quantization(),
             "dtype": "auto" if os.getenv("QUANTIZATION") is None else "half",
             "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
             "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
+            "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
             "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.98)),
+            "max_model_len": self._get_max_model_len(),
             "tensor_parallel_size": self._get_num_gpu_shard(),
         }
 
@@ -65,9 +67,17 @@ class VLLMEngine:
             logging.info("Using %s GPU shards", final_num_gpu_shard)
         return final_num_gpu_shard
     
+    def _get_max_model_len(self):
+        max_model_len = os.getenv("MAX_MODEL_LEN")
+        return int(max_model_len) if max_model_len is not None else None
+    
     def _get_n_current_jobs(self):
         total_sequences = len(self.llm.engine.scheduler.waiting) + len(self.llm.engine.scheduler.swapped) + len(self.llm.engine.scheduler.running)
         return total_sequences
+
+    def _get_quantization(self):
+        quantization = os.getenv("QUANTIZATION").lower()
+        return quantization if quantization in ["awq", "squeezellm", "gptq"] else None
     
     def concurrency_modifier(self, current_concurrency):
         n_current_jobs = self._get_n_current_jobs()
