@@ -76,7 +76,7 @@ class vLLMEngine:
         return total_sequences
 
     def _get_quantization(self):
-        quantization = os.getenv("QUANTIZATION").lower()
+        quantization = os.getenv("QUANTIZATION", "").lower()
         return quantization if quantization in ["awq", "squeezellm", "gptq"] else None
     
     def concurrency_modifier(self, current_concurrency):
