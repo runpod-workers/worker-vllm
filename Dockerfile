@@ -1,6 +1,6 @@
-# Base image - Set default to CUDA 11.8
+# syntax = docker/dockerfile:1.3
 ARG WORKER_CUDA_VERSION=11.8
-FROM runpod/base:0.4.2-cuda${WORKER_CUDA_VERSION}.0 as builder
+FROM runpod/base:0.4.4-cuda${WORKER_CUDA_VERSION}.0 as builder
 
 ARG WORKER_CUDA_VERSION=11.8 # Required duplicate to keep in scope
 
@@ -34,15 +34,18 @@ COPY src .
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
 ARG MODEL_BASE_PATH="/runpod-volume/"
-ARG HF_TOKEN=""
 ARG QUANTIZATION=""
-RUN if [ -n "$MODEL_NAME" ]; then \
-        export MODEL_BASE_PATH=$MODEL_BASE_PATH && \
-        export MODEL_NAME=$MODEL_NAME && \
-        python3.11 /download_model.py --model $MODEL_NAME; \
+
+ENV MODEL_BASE_PATH=$MODEL_BASE_PATH \
+    MODEL_NAME=$MODEL_NAME \
+    QUANTIZATION=$QUANTIZATION 
+
+RUN --mount=type=secret,id=HF_TOKEN,required=false \
+    if [ -f /run/secrets/HF_TOKEN ]; then \
+        export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
     fi && \
-    if [ -n "$QUANTIZATION" ]; then \
-        export QUANTIZATION=$QUANTIZATION; \
+    if [ -n "$MODEL_NAME" ]; then \
+        python3.11 /download_model.py --model $MODEL_NAME; \
     fi
 
 # Start the handler

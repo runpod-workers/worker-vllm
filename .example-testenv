@@ -1,3 +1,0 @@
-MODEL_NAME="mistralai/Mistral-7B-Instruct-v0.1"
-MODEL_BASE_PATH="./models"
-DISABLE_LOG_STATS=0

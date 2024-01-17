@@ -78,12 +78,4 @@ class vLLMEngine:
     def _get_quantization(self):
         quantization = os.getenv("QUANTIZATION", "").lower()
         return quantization if quantization in ["awq", "squeezellm", "gptq"] else None
-    
-    def concurrency_modifier(self, current_concurrency):
-        n_current_jobs = self._get_n_current_jobs()
-        requested_concurrency = max(0, self.serverless_config.max_concurrency - n_current_jobs)
-        if not self.config["disable_log_stats"]:
-            logging.info("Current Jobs: %s", n_current_jobs)
-            logging.info("Concurrency Modifier Requested Jobs: %s", requested_concurrency)
-        return requested_concurrency
 

@@ -7,6 +7,23 @@
 🚀 | This serverless worker utilizes vLLM behind the scenes and is integrated into RunPod's serverless environment. It supports dynamic auto-scaling using the built-in RunPod autoscaling feature.
 </div>
 
+## Table of Contents
+- [Setting up the Serverless Worker](#setting-up-the-serverless-worker)
+  - [Option 1: Deploy Any Model Using Pre-Built Docker Image](#option-1-deploy-any-model-using-pre-built-docker-image)
+    - [Prerequisites](#prerequisites)
+    - [Environment Variables](#environment-variables)
+  - [Option 2: Build Docker Image with Model Inside](#option-2-build-docker-image-with-model-inside)
+    - [Arguments](#arguments)
+    - [Example: Building an image with OpenChat-3.5](#example-building-an-image-with-openchat-35)
+      - [(Optional) Including Huggingface Token](#optional-including-huggingface-token)
+  - [Compatible Models](#compatible-models)
+- [Usage](#usage)
+    - [Endpoint Model Inputs](#endpoint-model-inputs)
+    - [Text Input Formats](#text-input-formats)
+      - [1. `prompt`](#1-prompt)
+      - [2. `messages`](#2-messages)
+    - [Sampling Parameters](#sampling-parameters)
+
 ## Setting up the Serverless Worker
 
 ### Option 1: Deploy Any Model Using Pre-Built Docker Image
@@ -20,6 +37,9 @@ Stable Image: ```runpod/worker-vllm:0.1.0```
 Development Image: ```runpod/worker-vllm:dev```
 
 </div>
+
+#### Prerequisites
+- RunPod Account
 
 #### Environment Variables
 
@@ -38,21 +58,42 @@ Development Image: ```runpod/worker-vllm:dev```
   - `DISABLE_LOG_REQUESTS`: Enable (`0`) or disable (`1`) request logging.
 
 ### Option 2: Build Docker Image with Model Inside
-To build an image with the model baked in, you must specify the following docker arguments when building the image:
+To build an image with the model baked in, you must specify the following docker arguments when building the image.
+
+#### Prerequisites
+- Docker
+- Linux
+- NVIDIA GPU
+> [!NOTE] 
+> We will be adding support for building on any OS without a GPU.
 
 #### Arguments:
-
 - **Required**
   - `MODEL_NAME`
 - **Optional**
   - `MODEL_BASE_PATH`: Defaults to `/runpod-volume` for network storage. Use `/models` or for local container storage.
   - `QUANTIZATION`
-  - `HF_TOKEN`
   - `WORKER_CUDA_VERSION`: `11.8` or `12.1` (default: `11.8` due to a small amount of workers not having CUDA 12.1 support yet. `12.1` is recommended for optimal performance).
 
 #### Example: Building an image with OpenChat-3.5
+```bash
+sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .
+```
 
-`sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .`
+##### (Optional) Including Huggingface Token
+If the model you would like to deploy is private or gated, you will need to include it during build time as a Docker secret, which will protect it from being exposed in the image and on DockerHub.
+1. Enable Docker BuildKit (required for secrets).
+```bash
+export DOCKER_BUILDKIT=1
+```
+2. Export your Hugging Face token as an environment variable
+```bash
+export HF_TOKEN="your_secret_value_here"
+```
+2. Add the token as a secret when building
+```bash
+docker build -t username/image:tag --secret id=HF_TOKEN --build-arg MODEL_NAME="openchat/openchat_3.5" .
+```
 
 ### Compatible Models
 
@@ -81,7 +122,8 @@ And any other models supported by vLLM 0.2.6.
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand. For further inquiries or assistance, feel free to contact our support team.
 
 
-## Model Inputs
+## Usage
+### Endpoint Model Inputs
 You may either use a `prompt` or a list of `messages` as input. If you use `messages`, the model's chat template will be applied to the messages automatically, so the model must have one. If you use `prompt`, you may optionally apply the model's chat template to the prompt by setting `apply_chat_template` to `true`.
 | Argument              | Type                 | Default            | Description                                                                                            |
 |-----------------------|----------------------|--------------------|--------------------------------------------------------------------------------------------------------|
@@ -92,30 +134,39 @@ You may either use a `prompt` or a list of `messages` as input. If you use `mess
 | `stream`              | bool                 | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated.          |
 | `batch_size`          | int                  | DEFAULT_BATCH_SIZE | The number of tokens to stream every HTTP POST call.                                                   |
 
-### Messages Format
+### Text Input Formats 
+You may either use a `prompt` or a list of `messages` as input.
+#### 1. `prompt` 
+The prompt string can be any string, and the model's chat template will not be applied to it unless `apply_chat_template` is set to `true`, in which case it will be treated as a user message.
+
+Example:
+```json
+"prompt": "..."
+```
+#### 2. `messages`
 Your list can contain any number of messages, and each message can have any role from the following list:
 - `user`
 - `assistant`
 - `system`
 
-The model's chat template will be applied to the messages automatically.
+The model's chat template will be applied to the messages automatically, so the model must have one.
 
 Example:
 ```json
-[
-  {
-    "role": "system",
-    "content": "..."
-  },
-  {
-    "role": "user",
-    "content": "..."
-  },
-  {
-    "role": "assistant",
-    "content": "..."
-  }
-]
+"messages": [
+    {
+      "role": "system",
+      "content": "..."
+    },
+    {
+      "role": "user",
+      "content": "..."
+    },
+    {
+      "role": "assistant",
+      "content": "..."
+    }
+  ]
 ```
 
 ### Sampling Parameters
