@@ -32,15 +32,12 @@ Development Image: ```runpod/worker-vllm:dev```
   - `HF_TOKEN`: Hugging Face token for private and gated models (e.g., Llama, Falcon).
   - `NUM_GPU_SHARD`: Number of GPUs to split the model across. (default: `1`)
   - `QUANTIZATION`: AWQ (`awq`), SqueezeLLM (`squeezellm`) or GPTQ (`gptq`) Quantization. The specified Model Repo must be of a quantized model. (default: `None`)
-  - `TRUST_REMOTE_CODE`: Whether to trust remote code with Hugging Face. (default: `0`)
   - `MAX_CONCURRENCY`: Max concurrent requests. (default: `100`)
   - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `30`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
   - `DISABLE_LOG_STATS`: Enable (`0`) or disable (`1`) vLLM stats logging.
   - `DISABLE_LOG_REQUESTS`: Enable (`0`) or disable (`1`) request logging.
 
 ### Option 2: Build Docker Image with Model Inside
-[!WARNING] If you are getting errors while building the image, try adding `ENV MAX_JOBS` to the Dockerfile and increase Docker memory limit to at least 25GB.
-
 To build an image with the model baked in, you must specify the following docker arguments when building the image:
 
 #### Arguments:
