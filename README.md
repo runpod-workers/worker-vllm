@@ -10,15 +10,19 @@
 ## Setting up the Serverless Worker
 
 ### Option 1: Deploy Any Model Using Pre-Built Docker Image
+
 We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint:
 
 <div align="center">
 
-```runpod/worker-vllm:dev```
+Stable Image: ```runpod/worker-vllm:0.1.0```
+
+Development Image: ```runpod/worker-vllm:dev```
 
 </div>
 
 #### Environment Variables
+
 - **Required**:
    - `MODEL_NAME`: Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`).
 
@@ -40,6 +44,7 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
 To build an image with the model baked in, you must specify the following docker arguments when building the image:
 
 #### Arguments:
+
 - **Required**
   - `MODEL_NAME`
 - **Optional**
@@ -49,9 +54,11 @@ To build an image with the model baked in, you must specify the following docker
   - `WORKER_CUDA_VERSION`: `11.8` or `12.1` (default: `11.8` due to a small amount of workers not having CUDA 12.1 support yet. `12.1` is recommended for optimal performance).
 
 #### Example: Building an image with OpenChat-3.5
+
 `sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .`
 
 ### Compatible Models
+
 - LLaMA & LLaMA-2 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
 - Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
 - Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, etc.)
@@ -70,7 +77,7 @@ To build an image with the model baked in, you must specify the following docker
 - Phi (`microsoft/phi-1_5`, `microsoft/phi-2`, etc.)
 - Qwen (`Qwen/Qwen-7B`, `Qwen/Qwen-7B-Chat`, etc.)
 - Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
-  
+
 And any other models supported by vLLM 0.2.6.
 
 
@@ -79,14 +86,14 @@ Ensure that you have Docker installed and properly set up before running the doc
 
 ## Model Inputs
 You may either use a `prompt` or a list of `messages` as input. If you use `messages`, the model's chat template will be applied to the messages automatically, so the model must have one. If you use `prompt`, you may optionally apply the model's chat template to the prompt by setting `apply_chat_template` to `true`.
-| Argument        | Type | Default            | Description                                                                                   |
-|-----------------|------|--------------------|-----------------------------------------------------------------------------------------------|
-| `prompt`          | str  |                    | Prompt string to generate text based on.                                                      |
-| `messages`          | list[dict[str, str]]  |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`.                                                 |
-| `apply_chat_template`       | bool | False              | Whether to apply the model's chat template to the `prompt`. |
-| `sampling_params` | dict | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                  |
-| `stream`       | bool | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated. |
-| `batch_size`      | int  | DEFAULT_BATCH_SIZE | The number of tokens to stream every HTTP POST call.                            |
+| Argument              | Type                 | Default            | Description                                                                                            |
+|-----------------------|----------------------|--------------------|--------------------------------------------------------------------------------------------------------|
+| `prompt`              | str                  |                    | Prompt string to generate text based on.                                                               |
+| `messages`            | list[dict[str, str]] |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`. |
+| `apply_chat_template` | bool                 | False              | Whether to apply the model's chat template to the `prompt`.                                            |
+| `sampling_params`     | dict                 | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                           |
+| `stream`              | bool                 | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated.          |
+| `batch_size`          | int                  | DEFAULT_BATCH_SIZE | The number of tokens to stream every HTTP POST call.                                                   |
 
 ### Messages Format
 Your list can contain any number of messages, and each message can have any role from the following list:
@@ -94,7 +101,7 @@ Your list can contain any number of messages, and each message can have any role
 - `assistant`
 - `system`
 
-The model's chat template will be applied to the messages automatically. 
+The model's chat template will be applied to the messages automatically.
 
 Example:
 ```json
@@ -115,8 +122,8 @@ Example:
 ```
 
 ### Sampling Parameters
-| Argument                      | Type                        | Default | Description                                                                                                                                                                                   |
-|-------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Argument                        | Type                        | Default | Description                                                                                                                                                                                   |
+|---------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `best_of`                       | Optional[int]               | None    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
 | `presence_penalty`              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
 | `frequency_penalty`             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
@@ -134,4 +141,3 @@ Example:
 | `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
 | `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
 | `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
-
