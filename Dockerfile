@@ -1,52 +1,40 @@
-# syntax = docker/dockerfile:1.3
-ARG WORKER_CUDA_VERSION=11.8
-FROM runpod/base:0.4.4-cuda${WORKER_CUDA_VERSION}.0 as builder
+ARG WORKER_CUDA_VERSION=11.8.0
+FROM runpod/worker-vllm:base-0.2.0-cuda${WORKER_CUDA_VERSION} AS vllm-base
 
-ARG WORKER_CUDA_VERSION=11.8 # Required duplicate to keep in scope
-
-# Set Environment Variables
-ENV WORKER_CUDA_VERSION=${WORKER_CUDA_VERSION} \
-    HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets" \
-    HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub" \
-    TRANSFORMERS_CACHE="/runpod-volume/huggingface-cache/hub" \
-    HF_TRANSFER=1
-
+RUN apt-get update -y \
+    && apt-get install -y python3-pip
 
 # Install Python dependencies
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
-    python3.11 -m pip install --upgrade pip && \
-    python3.11 -m pip install --upgrade -r /requirements.txt && \
-    rm /requirements.txt
-
-# Install torch and vllm based on CUDA version
-RUN if [[ "${WORKER_CUDA_VERSION}" == 11.8* ]]; then \
-        python3.11 -m pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
-        python3.11 -m pip install -e git+https://github.com/runpod/vllm-fork-for-sls-worker.git@old-11.8#egg=vllm; \
-    else \
-        python3.11 -m pip install -e git+https://github.com/runpod/vllm-fork-for-sls-worker.git@old-12.1#egg=vllm; \
-    fi && \
-    rm -rf /root/.cache/pip
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --upgrade -r /requirements.txt
 
 # Add source files
-COPY src .
+COPY src /src
 
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
-ARG MODEL_BASE_PATH="/runpod-volume/"
+ARG MODEL_BASE_PATH="/runpod-volume"
 ARG QUANTIZATION=""
 
 ENV MODEL_BASE_PATH=$MODEL_BASE_PATH \
     MODEL_NAME=$MODEL_NAME \
-    QUANTIZATION=$QUANTIZATION 
-
+    QUANTIZATION=$QUANTIZATION \
+    HF_DATASETS_CACHE="${MODEL_BASE_PATH}/huggingface-cache/datasets" \
+    HUGGINGFACE_HUB_CACHE="${MODEL_BASE_PATH}/huggingface-cache/hub" \
+    HF_HOME="${MODEL_BASE_PATH}/huggingface-cache/hub" \
+    HF_TRANSFER=1 
+    
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
         export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
     fi && \
     if [ -n "$MODEL_NAME" ]; then \
-        python3.11 /download_model.py --model $MODEL_NAME; \
+        python3 /src/download_model.py --model $MODEL_NAME; \
     fi
 
+ENV PYTHONPATH="/:/vllm-installation"
+
 # Start the handler
-CMD ["python3.11", "/handler.py"]
+CMD ["python3", "/src/handler.py"]

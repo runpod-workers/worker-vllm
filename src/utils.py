@@ -1,17 +1,28 @@
-import os
 import logging
 from typing import Any, Dict
-from vllm import SamplingParams
-from constants import SAMPLING_PARAM_TYPES, DEFAULT_BATCH_SIZE, DEFAULT_MAX_CONCURRENCY
+from vllm.utils import random_uuid
+from constants import SAMPLING_PARAM_TYPES, DEFAULT_BATCH_SIZE
 
 logging.basicConfig(level=logging.INFO)
 
-class ServerlessConfig:
-    def __init__(self):
-        self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
-        self.batch_size = int(os.getenv("BATCH_SIZE", DEFAULT_BATCH_SIZE))
+def count_physical_cores():
+    with open('/proc/cpuinfo') as f:
+        content = f.readlines()
 
-def validate_sampling_params(params: Dict[str, Any]) -> SamplingParams:
+    cores = set()
+    current_physical_id = None
+    current_core_id = None
+
+    for line in content:
+        if 'physical id' in line:
+            current_physical_id = line.strip().split(': ')[1]
+        elif 'core id' in line:
+            current_core_id = line.strip().split(': ')[1]
+            cores.add((current_physical_id, current_core_id))
+
+    return len(cores)
+
+def validate_sampling_params(params: Dict[str, Any]) -> Dict[str, Any]:
     validated_params = {}
     invalid_params = []
     for key, value in params.items():
@@ -24,4 +35,15 @@ def validate_sampling_params(params: Dict[str, Any]) -> SamplingParams:
     if len(invalid_params) > 0:
         logging.warning("Ignoring invalid sampling params: %s", invalid_params)
         
-    return SamplingParams(**validated_params)
+    return validated_params
+
+class JobInput:
+    def __init__(self, job):
+        self.llm_input = job.get("messages", job.get("prompt"))
+        self.stream = job.get("stream", False)
+        self.batch_size = job.get("batch_size", DEFAULT_BATCH_SIZE)
+        self.apply_chat_template = job.get("apply_chat_template", False)
+        self.use_openai_format = job.get("use_openai_format", False)
+        self.validated_sampling_params = validate_sampling_params(job.get("sampling_params", {}))
+        self.request_id = random_uuid()
+        

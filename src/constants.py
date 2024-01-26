@@ -24,4 +24,5 @@ SAMPLING_PARAM_TYPES = {
     "prompt_logprobs": int,
     "skip_special_tokens": bool,
     "spaces_between_special_tokens": bool,
+    "include_stop_str_in_output": bool
 }

@@ -1,4 +1,7 @@
 hf_transfer
+ray
+pandas
+pyarrow
 runpod==1.5.2
 huggingface-hub
 packaging
