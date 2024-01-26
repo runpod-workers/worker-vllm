@@ -46,4 +46,7 @@ class JobInput:
         self.use_openai_format = job.get("use_openai_format", False)
         self.validated_sampling_params = validate_sampling_params(job.get("sampling_params", {}))
         self.request_id = random_uuid()
-        
+           
+class DummyRequest:
+    async def is_disconnected(self):
+        return False

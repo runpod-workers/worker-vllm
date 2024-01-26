@@ -151,7 +151,7 @@ You may either use a `prompt` or a list of `messages` as input. If you use `mess
 |-----------------------|----------------------|--------------------|--------------------------------------------------------------------------------------------------------|
 | `prompt`              | str                  |                    | Prompt string to generate text based on.                                                               |
 | `messages`            | list[dict[str, str]] |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`. |
-| `use_openai_format`   | bool                 | False              | Whether to return output in OpenAI format. `ALLOW_OPENAI_FORMAT` environment variable must be `1`, the input must be a `messages` list, and `stream` enabled.                                                              |
+| `use_openai_format`   | bool                 | False              | Whether to return output in OpenAI format. `ALLOW_OPENAI_FORMAT` environment variable must be `1`, the input should preferably be a `messages` list, but `prompt` is accepted.                                                              |
 | `apply_chat_template` | bool                 | False              | Whether to apply the model's chat template to the `prompt`.                                            |
 | `sampling_params`     | dict                 | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                           |
 | `stream`              | bool                 | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated.          |

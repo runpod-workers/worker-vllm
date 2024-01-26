@@ -7,7 +7,7 @@ from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest
 from transformers import AutoTokenizer
-from utils import count_physical_cores
+from utils import count_physical_cores, DummyRequest
 from constants import DEFAULT_MAX_CONCURRENCY
 from dotenv import load_dotenv
 
@@ -106,55 +106,59 @@ class vLLMEngine:
     
     async def generate_openai_chat(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id: str) -> AsyncGenerator[dict, None]:
         
-        if not isinstance(llm_input, list):
-            raise ValueError("Input must be a list of messages")
-        
-        if not stream:
-            raise ValueError("OpenAI Chat Completion Format only supports streaming")
+        if isinstance(llm_input, str):
+            llm_input = [{"role": "user", "content": llm_input}]
+            logging.warning("OpenAI Chat Completion format requires list input, converting to list and assigning 'user' role")
+            
+        if not self.openai_engine:
+            raise ValueError("OpenAI Chat Completion format is disabled")
         
         chat_completion_request = ChatCompletionRequest(
             model=self.config["model"],
             messages=llm_input,
-            stream=True,
+            stream=stream,
             **validated_sampling_params, 
         )
 
-        response_generator = await self.openai_engine.create_chat_completion(chat_completion_request, None)  # None for raw_request
-        batch_contents = {}
-        batch_latest_choices = {}
-        batch_token_counter = 0
-        last_chunk = {}
-        
-        async for chunk_str in response_generator:
-            try:
-                chunk = json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")) 
-            except:
-                continue
+        response_generator = await self.openai_engine.create_chat_completion(chat_completion_request, DummyRequest())
+        if not stream:
+            yield json.loads(response_generator.model_dump_json())
+        else: 
+            batch_contents = {}
+            batch_latest_choices = {}
+            batch_token_counter = 0
+            last_chunk = {}
             
-            if "choices" in chunk:
-                for choice in chunk["choices"]:
-                    choice_index = choice["index"]
-                    if "delta" in choice and "content" in choice["delta"]:
-                        batch_contents[choice_index] =  batch_contents.get(choice_index, []) + [choice["delta"]["content"]]
-                        batch_latest_choices[choice_index] = choice
-                        batch_token_counter += 1
-                last_chunk = chunk
-            
-            if batch_token_counter >= batch_size:
+            async for chunk_str in response_generator:
+                try:
+                    chunk = json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")) 
+                except:
+                    continue
+                
+                if "choices" in chunk:
+                    for choice in chunk["choices"]:
+                        choice_index = choice["index"]
+                        if "delta" in choice and "content" in choice["delta"]:
+                            batch_contents[choice_index] =  batch_contents.get(choice_index, []) + [choice["delta"]["content"]]
+                            batch_latest_choices[choice_index] = choice
+                            batch_token_counter += 1
+                    last_chunk = chunk
+                
+                if batch_token_counter >= batch_size:
+                    for choice_index in batch_latest_choices:
+                        batch_latest_choices[choice_index]["delta"]["content"] = batch_contents[choice_index]
+                    last_chunk["choices"] = list(batch_latest_choices.values())
+                    yield last_chunk
+                    
+                    batch_contents = {}
+                    batch_latest_choices = {}
+                    batch_token_counter = 0
+
+            if batch_contents:
                 for choice_index in batch_latest_choices:
                     batch_latest_choices[choice_index]["delta"]["content"] = batch_contents[choice_index]
                 last_chunk["choices"] = list(batch_latest_choices.values())
                 yield last_chunk
-                
-                batch_contents = {}
-                batch_latest_choices = {}
-                batch_token_counter = 0
-
-        if batch_contents:
-            for choice_index in batch_latest_choices:
-                batch_latest_choices[choice_index]["delta"]["content"] = batch_contents[choice_index]
-            last_chunk["choices"] = list(batch_latest_choices.values())
-            yield last_chunk
     
     def _initialize_config(self):
         quantization = self._get_quantization()
