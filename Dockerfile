@@ -25,6 +25,8 @@ ENV MODEL_BASE_PATH=$MODEL_BASE_PATH \
     HUGGINGFACE_HUB_CACHE="${MODEL_BASE_PATH}/huggingface-cache/hub" \
     HF_HOME="${MODEL_BASE_PATH}/huggingface-cache/hub" \
     HF_TRANSFER=1 
+
+ENV PYTHONPATH="/:/vllm-installation"
     
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
@@ -33,8 +35,6 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -n "$MODEL_NAME" ]; then \
         python3 /src/download_model.py --model $MODEL_NAME; \
     fi
-
-ENV PYTHONPATH="/:/vllm-installation"
 
 # Start the handler
 CMD ["python3", "/src/handler.py"]
