@@ -1,7 +1,7 @@
 import os
 import logging
 from transformers import AutoTokenizer
-from vllm.model_executor.weight_utils import prepare_hf_model_weights
+from huggingface_hub import snapshot_download
 
 if __name__ == "__main__":
     model = os.getenv("MODEL_NAME")
@@ -13,16 +13,12 @@ if __name__ == "__main__":
         os.makedirs(download_dir)
     
     logging.info(f"Downloading model {model} to {download_dir}")
-        
-    hf_folder, hf_weights_files, use_safetensors = prepare_hf_model_weights(
-        model_name_or_path=model,
+    
+    hf_folder = snapshot_download(
+        model,
+        local_dir=download_dir,
         cache_dir=download_dir,
-    )
-
-    tokenizer = os.getenv("TOKENIZER_NAME", model)
-    AutoTokenizer.from_pretrained(
-        pretrained_model_name_or_path=tokenizer,
-        cache_dir=download_dir,
+        local_dir_use_symlinks=False,
     )
     
     logging.info(f"Finished downloading model {model} to {download_dir}")
