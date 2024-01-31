@@ -1,6 +1,5 @@
 import os
 import logging
-from transformers import AutoTokenizer
 from huggingface_hub import snapshot_download
 
 if __name__ == "__main__":
@@ -13,7 +12,7 @@ if __name__ == "__main__":
         os.makedirs(download_dir)
     
     logging.info(f"Downloading model {model} to {download_dir}")
-    
+
     hf_folder = snapshot_download(
         model,
         local_dir=download_dir,
