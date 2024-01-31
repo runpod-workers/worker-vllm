@@ -1,5 +1,6 @@
 import os
 import logging
+from transformers import AutoTokenizer
 from vllm.model_executor.weight_utils import prepare_hf_model_weights
 
 if __name__ == "__main__":
@@ -15,6 +16,12 @@ if __name__ == "__main__":
         
     hf_folder, hf_weights_files, use_safetensors = prepare_hf_model_weights(
         model_name_or_path=model,
+        cache_dir=download_dir,
+    )
+
+    tokenizer = os.getenv("TOKENIZER_NAME", model)
+    AutoTokenizer.from_pretrained(
+        pretrained_model_name_or_path=tokenizer,
         cache_dir=download_dir,
     )
     
