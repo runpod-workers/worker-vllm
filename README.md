@@ -71,10 +71,11 @@ Development Image: ```runpod/worker-vllm:dev```
 
   Note that the more GPUs you split a model's weights accross, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so. 
   - `TENSOR_PARALLEL_SIZE`: Number of GPUs to shard the model across (default: `1`).
+  - If you are having issues loading your model with Tensor Parallelism, try decreasing `VLLM_CPU_FRACTION` (default: `1`).
   
 - System Settings:
   - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.98`).
-  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models (default: `number of available CPU cores`).
+  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
 
 
 - Serverless Settings:

@@ -41,7 +41,7 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.config = self._initialize_config()
         logging.info("vLLM config: %s", self.config)
-        self.tokenizer = Tokenizer(os.environ.get("TOKENIZER_NAME", os.environ.get("MODEL_NAME")))
+        self.tokenizer = Tokenizer(os.getenv("TOKENIZER_NAME", os.getenv("MODEL_NAME")))
         self.llm = self._initialize_llm() if engine is None else engine
         self.openai_engine = self._initialize_openai()
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
@@ -178,7 +178,7 @@ class vLLMEngine:
             "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
             "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
             "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.95)),
-            "max_parallel_loading_workers": int(os.getenv("MAX_PARALLEL_LOADING_WORKERS", count_physical_cores())),
+            "max_parallel_loading_workers": self._get_max_parallel_loading_workers(),
             "max_model_len": self._get_max_model_len(),
             "tensor_parallel_size": self._get_num_gpu_shard(),
         }
@@ -195,6 +195,12 @@ class vLLMEngine:
             return OpenAIServingChat(self.llm, self.config["model"], "assistant", self.tokenizer.tokenizer.chat_template)
         else: 
             return None
+        
+    def _get_max_parallel_loading_workers(self):
+        if int(os.getenv("TENSOR_PARALLEL_SIZE", 1)) > 1:
+            return None
+        else:
+            return int(os.getenv("MAX_PARALLEL_LOADING_WORKERS", count_physical_cores()))
         
     def _get_model_name_and_path(self):
         if os.path.exists("/local_model_path.txt"):
@@ -213,7 +219,7 @@ class vLLMEngine:
         return num_gpu_shard
     
     def _get_max_model_len(self):
-        max_model_len = os.getenv("MAX_MODEL_LEN")
+        max_model_len = os.getenv("MAX_MODEL_LENGTH")
         return int(max_model_len) if max_model_len is not None else None
     
     def _get_n_current_jobs(self):
