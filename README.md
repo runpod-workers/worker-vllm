@@ -70,7 +70,6 @@ Development Image: ```runpod/worker-vllm:dev```
 - Tensor Parallelism:
 
   Note that the more GPUs you split a model's weights accross, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so. 
-  - `USE_TENSOR_PARALLEL`: Enable (`1`) or disable (`0`) Tensor Parallelism. (default: `0`)
   - `TENSOR_PARALLEL_SIZE`: Number of GPUs to shard the model across (default: `1`).
   
 - System Settings:

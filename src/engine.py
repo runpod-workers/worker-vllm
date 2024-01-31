@@ -205,13 +205,12 @@ class vLLMEngine:
         return model, download_dir
         
     def _get_num_gpu_shard(self):
-        final_num_gpu_shard = 1
-        if bool(int(os.getenv("USE_TENSOR_PARALLEL", 0))):
-            env_num_gpu_shard = int(os.getenv("TENSOR_PARALLEL_SIZE", 1))
+        num_gpu_shard = int(os.getenv("TENSOR_PARALLEL_SIZE", 1))
+        if num_gpu_shard > 1:
             num_gpu_available = device_count()
-            final_num_gpu_shard = min(env_num_gpu_shard, num_gpu_available)
-            logging.info("Using %s GPU shards", final_num_gpu_shard)
-        return final_num_gpu_shard
+            num_gpu_shard = min(num_gpu_shard, num_gpu_available)
+            logging.info("Using %s GPU shards", num_gpu_shard)
+        return num_gpu_shard
     
     def _get_max_model_len(self):
         max_model_len = os.getenv("MAX_MODEL_LEN")
