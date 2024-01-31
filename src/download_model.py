@@ -1,6 +1,7 @@
 import os
 import logging
 from huggingface_hub import snapshot_download
+from vllm.model_executor.weight_utils import prepare_hf_model_weights
 
 if __name__ == "__main__":
     model = os.getenv("MODEL_NAME")
@@ -12,12 +13,19 @@ if __name__ == "__main__":
         os.makedirs(download_dir)
     
     logging.info(f"Downloading model {model} to {download_dir}")
-
-    hf_folder = snapshot_download(
-        model,
-        local_dir=download_dir,
+        
+    hf_folder, hf_weights_files, use_safetensors = prepare_hf_model_weights(
+        model_name_or_path=model,
         cache_dir=download_dir,
-        local_dir_use_symlinks=False,
+    )
+
+    snapshot_download(
+        model,
+        cache_dir=download_dir,
+        allow_patterns=[
+            "*token*",
+            "config.json",
+        ]
     )
     
     logging.info(f"Finished downloading model {model} to {download_dir}")
