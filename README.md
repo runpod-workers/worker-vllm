@@ -42,7 +42,7 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
 
 <div align="center">
 
-Stable Image: ```runpod/worker-vllm:0.2.1```
+Stable Image: ```runpod/worker-vllm:0.2.2```
 
 Development Image: ```runpod/worker-vllm:dev```
 
