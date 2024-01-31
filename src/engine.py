@@ -125,44 +125,21 @@ class vLLMEngine:
 
         response_generator = await self.openai_engine.create_chat_completion(chat_completion_request, DummyRequest())
         if not stream:
-            yield json.loads(response_generator.model_dump_json())
+            yield response_generator
         else: 
-            batch_contents = {}
-            batch_latest_choices = {}
+            batch = ""
             batch_token_counter = 0
-            last_chunk = {}
             
             async for chunk_str in response_generator:
-                try:
-                    chunk = json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")) 
-                except:
-                    continue
-                
-                if "choices" in chunk:
-                    for choice in chunk["choices"]:
-                        choice_index = choice["index"]
-                        if "delta" in choice and "content" in choice["delta"]:
-                            batch_contents[choice_index] =  batch_contents.get(choice_index, []) + [choice["delta"]["content"]]
-                            batch_latest_choices[choice_index] = choice
-                            batch_token_counter += 1
-                    last_chunk = chunk
-                
-                if batch_token_counter >= batch_size:
-                    for choice_index in batch_latest_choices:
-                        batch_latest_choices[choice_index]["delta"]["content"] = batch_contents[choice_index]
-                    last_chunk["choices"] = list(batch_latest_choices.values())
-                    yield last_chunk
-                    
-                    batch_contents = {}
-                    batch_latest_choices = {}
-                    batch_token_counter = 0
-
-            if batch_contents:
-                for choice_index in batch_latest_choices:
-                    batch_latest_choices[choice_index]["delta"]["content"] = batch_contents[choice_index]
-                last_chunk["choices"] = list(batch_latest_choices.values())
-                yield last_chunk
-    
+                if "data" in chunk_str:
+                    batch += chunk_str
+                    batch_token_counter += 1
+                    if batch_token_counter >= batch_size:
+                        yield batch
+                        batch = ""
+                        batch_token_counter = 0
+                        
+               
     def _initialize_config(self):
         quantization = self._get_quantization()
         model, download_dir = self._get_model_name_and_path()
