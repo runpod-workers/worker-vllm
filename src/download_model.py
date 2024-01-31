@@ -1,22 +1,25 @@
-import argparse
 import os
+import logging
 from vllm.model_executor.weight_utils import prepare_hf_model_weights
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str)
-    parser.add_argument(
-        "--download_dir", type=str, default=os.environ.get("MODEL_BASE_PATH")
+    model = os.getenv("MODEL_NAME")
+    download_dir = os.getenv("HF_HOME")
+    if not model or not download_dir:
+        raise ValueError(f"Must specify model and download_dir. Model: {model}, download_dir: {download_dir}")
+
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)
+    
+    logging.info(f"Downloading model {model} to {download_dir}")
+        
+    hf_folder, hf_weights_files, use_safetensors = prepare_hf_model_weights(
+        model_name_or_path=model,
+        cache_dir=download_dir,
     )
-
-    args = parser.parse_args()
-    if not args.model or not args.download_dir:
-        raise ValueError("Must specify model and download_dir")
-
-    if not os.path.exists(args.download_dir):
-        os.makedirs(args.download_dir)
-
-    prepare_hf_model_weights(
-        model_name_or_path=args.model,
-        cache_dir=args.download_dir,
-    )
+    
+    logging.info(f"Finished downloading model {model} to {download_dir}")
+    
+    # Wrie hf_folder to file
+    with open("/local_model_path.txt", "w") as f:
+        f.write(hf_folder) 

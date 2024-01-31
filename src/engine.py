@@ -13,9 +13,12 @@ from dotenv import load_dotenv
 
 
 class Tokenizer:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.has_chat_template = bool(self.tokenizer.chat_template)
+        self.custom_chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
+        self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)
+        if self.custom_chat_template and isinstance(self.custom_chat_template, str):
+            self.tokenizer.chat_template = self.custom_chat_template
 
     def apply_chat_template(self, input: Union[str, list[dict[str, str]]]) -> str:
         if isinstance(input, list):
@@ -38,7 +41,7 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.config = self._initialize_config()
         logging.info("vLLM config: %s", self.config)
-        self.tokenizer = Tokenizer(self.config["model"])
+        self.tokenizer = Tokenizer(os.environ.get("TOKENIZER_NAME", os.environ.get("MODEL_NAME")))
         self.llm = self._initialize_llm() if engine is None else engine
         self.openai_engine = self._initialize_openai()
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
@@ -162,13 +165,15 @@ class vLLMEngine:
     
     def _initialize_config(self):
         quantization = self._get_quantization()
-        dtype = "half" if quantization else "auto"
+        model, download_dir = self._get_model_name_and_path()
+        
         return {
-            "model": os.getenv("MODEL_NAME"),
-            "download_dir": os.getenv("MODEL_BASE_PATH", "/runpod-volume/"),
+            "model": model,
+            "download_dir": download_dir,
             "quantization": quantization,
             "load_format": os.getenv("LOAD_FORMAT", "auto"),
-            "dtype": dtype,
+            "dtype": "half" if quantization else "auto",
+            "tokenizer": os.getenv("TOKENIZER_NAME"),
             "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
             "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
             "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
@@ -187,10 +192,17 @@ class vLLMEngine:
     
     def _initialize_openai(self):
         if bool(int(os.getenv("ALLOW_OPENAI_FORMAT", 1))) and self.tokenizer.has_chat_template:
-            return OpenAIServingChat(self.llm, self.config["model"], "assistant")
+            return OpenAIServingChat(self.llm, self.config["model"], "assistant", self.tokenizer.tokenizer.chat_template)
         else: 
             return None
-            
+        
+    def _get_model_name_and_path(self):
+        if os.path.exists("/local_model_path.txt"):
+            model, download_dir = open("/local_model_path.txt", "r").read().strip(), None
+            logging.info("Using local model at %s", model)
+        else:
+            model, download_dir = os.getenv("MODEL_NAME"), os.getenv("HF_HOME")  
+        return model, download_dir
         
     def _get_num_gpu_shard(self):
         final_num_gpu_shard = 1

@@ -57,9 +57,11 @@ Development Image: ```runpod/worker-vllm:dev```
    - `MODEL_NAME`: Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`).
 
 **Optional**:
-- Model Settings:
+- LLM Settings:
+  - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`)
+  - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
   - `MAX_MODEL_LENGTH`: Maximum number of tokens for the engine to be able to handle. (default: maximum supported by the model)
-  - `MODEL_BASE_PATH`: Model storage directory (default: `/runpod-volume`).
+  - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't)
   - `LOAD_FORMAT`: Format to load model in (default: `auto`).
   - `HF_TOKEN`: Hugging Face token for private and gated models (e.g., Llama, Falcon).
   - `QUANTIZATION`: AWQ (`awq`), SqueezeLLM (`squeezellm`) or GPTQ (`gptq`) Quantization. The specified Model Repo must be of a quantized model. (default: `None`)
@@ -94,7 +96,7 @@ To build an image with the model baked in, you must specify the following docker
 - **Required**
   - `MODEL_NAME`
 - **Optional**
-  - `MODEL_BASE_PATH`: Defaults to `/runpod-volume` for network storage. Use `/models` or for local container storage.
+  - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
   - `QUANTIZATION`
   - `WORKER_CUDA_VERSION`: `11.8.0` or `12.1.0` (default: `11.8.0` due to a small amount of workers not having CUDA 12.1 support yet. `12.1.0` is recommended for optimal performance).
 
@@ -102,7 +104,7 @@ For the remaining settings, you may apply them as environment variables when run
 
 #### Example: Building an image with OpenChat-3.5
 ```bash
-sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg MODEL_BASE_PATH="/models" .
+sudo docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg BASE_PATH="/models" .
 ```
 
 ##### (Optional) Including Huggingface Token

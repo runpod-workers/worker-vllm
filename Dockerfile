@@ -15,15 +15,14 @@ COPY src /src
 
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
-ARG MODEL_BASE_PATH="/runpod-volume"
+ARG BASE_PATH="/runpod-volume"
 ARG QUANTIZATION=""
 
-ENV MODEL_BASE_PATH=$MODEL_BASE_PATH \
-    MODEL_NAME=$MODEL_NAME \
+ENV MODEL_NAME=$MODEL_NAME \
     QUANTIZATION=$QUANTIZATION \
-    HF_DATASETS_CACHE="${MODEL_BASE_PATH}/huggingface-cache/datasets" \
-    HUGGINGFACE_HUB_CACHE="${MODEL_BASE_PATH}/huggingface-cache/hub" \
-    HF_HOME="${MODEL_BASE_PATH}/huggingface-cache/hub" \
+    HF_DATASETS_CACHE="${BASE_PATH}/huggingface-cache/datasets" \
+    HUGGINGFACE_HUB_CACHE="${BASE_PATH}/huggingface-cache/hub" \
+    HF_HOME="${BASE_PATH}/huggingface-cache/hub" \
     HF_TRANSFER=1 
 
 ENV PYTHONPATH="/:/vllm-installation"
@@ -33,7 +32,7 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
         export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
     fi && \
     if [ -n "$MODEL_NAME" ]; then \
-        python3 /src/download_model.py --model $MODEL_NAME; \
+        python3 /src/download_model.py; \
     fi
 
 # Start the handler
