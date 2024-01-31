@@ -1,5 +1,5 @@
 ARG WORKER_CUDA_VERSION=11.8.0
-FROM runpod/worker-vllm:base-0.2.0-cuda${WORKER_CUDA_VERSION} AS vllm-base
+FROM runpod/worker-vllm:base-0.2.2-cuda${WORKER_CUDA_VERSION} AS vllm-base
 
 RUN apt-get update -y \
     && apt-get install -y python3-pip
@@ -19,6 +19,7 @@ ARG BASE_PATH="/runpod-volume"
 ARG QUANTIZATION=""
 
 ENV MODEL_NAME=$MODEL_NAME \
+    BASE_PATH=$BASE_PATH \
     QUANTIZATION=$QUANTIZATION \
     HF_DATASETS_CACHE="${BASE_PATH}/huggingface-cache/datasets" \
     HUGGINGFACE_HUB_CACHE="${BASE_PATH}/huggingface-cache/hub" \
