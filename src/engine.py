@@ -41,7 +41,7 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.config = self._initialize_config()
         logging.info("vLLM config: %s", self.config)
-        self.tokenizer = Tokenizer(os.getenv("TOKENIZER_NAME", os.getenv("MODEL_NAME")))
+        self.tokenizer = Tokenizer(self.config["tokenizer_name_or_path"])
         self.llm = self._initialize_llm() if engine is None else engine
         self.openai_engine = self._initialize_openai()
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
@@ -166,6 +166,9 @@ class vLLMEngine:
     def _initialize_config(self):
         quantization = self._get_quantization()
         model, download_dir = self._get_model_name_and_path()
+        tokenizer_name_or_path = self._get_tokenizer_name_or_path()
+        if not tokenizer_name_or_path:
+            tokenizer_name_or_path = model
         
         return {
             "model": model,
@@ -173,7 +176,7 @@ class vLLMEngine:
             "quantization": quantization,
             "load_format": os.getenv("LOAD_FORMAT", "auto"),
             "dtype": "half" if quantization else "auto",
-            "tokenizer": os.getenv("TOKENIZER_NAME"),
+            "tokenizer": tokenizer_name_or_path,
             "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
             "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
             "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
@@ -209,6 +212,14 @@ class vLLMEngine:
         else:
             model, download_dir = os.getenv("MODEL_NAME"), os.getenv("HF_HOME")  
         return model, download_dir
+    
+    def _get_tokenizer_name_or_path(self):
+        if os.path.exists("/local_tokenizer_path.txt"):
+            tokenizer_name_or_path = open("/local_tokenizer_path.txt", "r").read().strip()
+            logging.info("Using local tokenizer at %s", tokenizer_name_or_path)
+        else:
+            tokenizer_name_or_path = os.getenv("TOKENIZER_NAME")
+        return tokenizer_name_or_path
         
     def _get_num_gpu_shard(self):
         num_gpu_shard = int(os.getenv("TENSOR_PARALLEL_SIZE", 1))
