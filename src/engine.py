@@ -138,7 +138,8 @@ class vLLMEngine:
                         yield batch
                         batch = ""
                         batch_token_counter = 0
-                        
+            if batch:
+                yield batch
                
     def _initialize_config(self):
         quantization = self._get_quantization()
