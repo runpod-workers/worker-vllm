@@ -5,7 +5,7 @@ import json
 from torch.cuda import device_count
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest
+from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ErrorResponse
 from transformers import AutoTokenizer
 from utils import count_physical_cores, DummyRequest
 from constants import DEFAULT_MAX_CONCURRENCY
@@ -124,6 +124,8 @@ class vLLMEngine:
         )
 
         response_generator = await self.openai_engine.create_chat_completion(chat_completion_request, DummyRequest())
+        if isinstance(response_generator, ErrorResponse):
+            raise ValueError(response_generator.model_dump())
         if not stream:
             yield response_generator
         else: 
