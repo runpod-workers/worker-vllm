@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 
 
 class Tokenizer:
-    def __init__(self, model_name):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+    def __init__(self, tokenizer_name_or_path, tokenizer_revision):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, revision=tokenizer_revision)
         self.custom_chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
         self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)
         if self.custom_chat_template and isinstance(self.custom_chat_template, str):
@@ -41,7 +41,7 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.config = self._initialize_config()
         logging.info("vLLM config: %s", self.config)
-        self.tokenizer = Tokenizer(self.config["tokenizer_name_or_path"])
+        self.tokenizer = Tokenizer(self.config["tokenizer"], self.config["tokenizer_revision"])
         self.llm = self._initialize_llm() if engine is None else engine
         self.openai_engine = self._initialize_openai()
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
@@ -60,7 +60,6 @@ class vLLMEngine:
             yield batch
 
     async def generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id: str) -> AsyncGenerator[dict, None]:
-        
         if apply_chat_template or isinstance(llm_input, list):
             llm_input = self.tokenizer.apply_chat_template(llm_input)
         validated_sampling_params = SamplingParams(**validated_sampling_params)
@@ -165,18 +164,20 @@ class vLLMEngine:
     
     def _initialize_config(self):
         quantization = self._get_quantization()
-        model, download_dir = self._get_model_name_and_path()
-        tokenizer_name_or_path = self._get_tokenizer_name_or_path()
+        model, download_dir, model_revision = self._get_model_info()
+        tokenizer_name_or_path, tokenizer_revision = self._get_tokenizer_info()
         if not tokenizer_name_or_path:
             tokenizer_name_or_path = model
         
         return {
             "model": model,
+            "revision": model_revision,
             "download_dir": download_dir,
             "quantization": quantization,
             "load_format": os.getenv("LOAD_FORMAT", "auto"),
             "dtype": "half" if quantization else "auto",
             "tokenizer": tokenizer_name_or_path,
+            "tokenizer_revision": tokenizer_revision,
             "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
             "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
             "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
@@ -204,22 +205,22 @@ class vLLMEngine:
             return None
         else:
             return int(os.getenv("MAX_PARALLEL_LOADING_WORKERS", count_physical_cores()))
-        
-    def _get_model_name_and_path(self):
+
+    def _get_model_info(self):
         if os.path.exists("/local_model_path.txt"):
-            model, download_dir = open("/local_model_path.txt", "r").read().strip(), None
+            model, download_dir, revision = open("/local_model_path.txt", "r").read().strip(), None, None
             logging.info("Using local model at %s", model)
         else:
-            model, download_dir = os.getenv("MODEL_NAME"), os.getenv("HF_HOME")  
-        return model, download_dir
+            model, download_dir, revision = os.getenv("MODEL_NAME"), os.getenv("HF_HOME"), os.getenv("MODEL_REVISION") or None
+        return model, download_dir, revision
     
-    def _get_tokenizer_name_or_path(self):
+    def _get_tokenizer_info(self):
         if os.path.exists("/local_tokenizer_path.txt"):
-            tokenizer_name_or_path = open("/local_tokenizer_path.txt", "r").read().strip()
+            tokenizer_name_or_path, revision = open("/local_tokenizer_path.txt", "r").read().strip(), None
             logging.info("Using local tokenizer at %s", tokenizer_name_or_path)
         else:
-            tokenizer_name_or_path = os.getenv("TOKENIZER_NAME")
-        return tokenizer_name_or_path
+            tokenizer_name_or_path, revision = os.getenv("TOKENIZER_NAME"), os.getenv("TOKENIZER_REVISION") or None
+        return tokenizer_name_or_path, revision
         
     def _get_num_gpu_shard(self):
         num_gpu_shard = int(os.getenv("TENSOR_PARALLEL_SIZE", 1))

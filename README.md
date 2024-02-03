@@ -58,7 +58,7 @@ Development Image: ```runpod/worker-vllm:dev```
 
 **Optional**:
 - LLM Settings:
-  - `MODEL_REVISION`: Model revision to load (default: `main`).
+  - `MODEL_REVISION`: Model revision to load (default: `None`).
   - `MAX_MODEL_LENGTH`: Maximum number of tokens for the engine to be able to handle. (default: maximum supported by the model)
   - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't)
   - `LOAD_FORMAT`: Format to load model in (default: `auto`).
@@ -68,7 +68,7 @@ Development Image: ```runpod/worker-vllm:dev```
   
 - Tokenizer Settings:
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
-  - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `main`).
+  - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `None`).
   - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
 
 - Tensor Parallelism:
@@ -78,7 +78,7 @@ Development Image: ```runpod/worker-vllm:dev```
   
 - System Settings:
   - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.98`).
-  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
+  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models, for non-Tensor Parallel only. (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
 
 
 - Serverless Settings:
