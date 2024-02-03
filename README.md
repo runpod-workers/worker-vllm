@@ -58,8 +58,7 @@ Development Image: ```runpod/worker-vllm:dev```
 
 **Optional**:
 - LLM Settings:
-  - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`)
-  - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
+  - `MODEL_REVISION`: Model revision to load (default: `None`).
   - `MAX_MODEL_LENGTH`: Maximum number of tokens for the engine to be able to handle. (default: maximum supported by the model)
   - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't)
   - `LOAD_FORMAT`: Format to load model in (default: `auto`).
@@ -67,15 +66,19 @@ Development Image: ```runpod/worker-vllm:dev```
   - `QUANTIZATION`: AWQ (`awq`), SqueezeLLM (`squeezellm`) or GPTQ (`gptq`) Quantization. The specified Model Repo must be of a quantized model. (default: `None`)
   - `TRUST_REMOTE_CODE`: Trust remote code for Hugging Face (default: `0`)
   
-- Tensor Parallelism:
+- Tokenizer Settings:
+  - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
+  - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `None`).
+  - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
 
+- Tensor Parallelism:
   Note that the more GPUs you split a model's weights accross, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so. 
   - `TENSOR_PARALLEL_SIZE`: Number of GPUs to shard the model across (default: `1`).
   - If you are having issues loading your model with Tensor Parallelism, try decreasing `VLLM_CPU_FRACTION` (default: `1`).
   
 - System Settings:
   - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.98`).
-  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
+  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models, for non-Tensor Parallel only. (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
 
 
 - Serverless Settings:
@@ -96,9 +99,12 @@ To build an image with the model baked in, you must specify the following docker
 - **Required**
   - `MODEL_NAME`
 - **Optional**
+  - `MODEL_REVISION`: Model revision to load (default: `main`).
   - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
   - `QUANTIZATION`
   - `WORKER_CUDA_VERSION`: `11.8.0` or `12.1.0` (default: `11.8.0` due to a small amount of workers not having CUDA 12.1 support yet. `12.1.0` is recommended for optimal performance).
+  - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
+  - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `main`).
 
 For the remaining settings, you may apply them as environment variables when running the container. Supported environment variables are listed in the [Environment Variables](#environment-variables) section.
 
