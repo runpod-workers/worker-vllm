@@ -12,7 +12,7 @@ from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ErrorResponse, CompletionRequest
 
-from utils import DummyRequest, OpenAIRequest, JobInput
+from utils import DummyRequest, OpenAIRequest, JobInput, BatchSize
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE
 from tokenizer import TokenizerWrapper
 from config import EngineConfig
@@ -26,7 +26,12 @@ class vLLMEngine:
         self.llm = self._initialize_llm() if engine is None else engine
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
+        self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", 1))
+        self.min_batch_size = int(os.getenv("MIN_BATCH_SIZE", 1))
 
+    def dynamic_batch_size(self, current_batch_size, growth_factor):
+        return min(current_batch_size*growth_factor, self.default_batch_size)
+                           
     async def generate(self, job_input: JobInput):
         # Adjust to use attributes from JobInput directly
         async for batch in self._generate_vllm(
@@ -35,11 +40,13 @@ class vLLMEngine:
             batch_size=job_input.batch_size,
             stream=job_input.stream,
             apply_chat_template=job_input.apply_chat_template,
-            request_id=job_input.request_id
+            request_id=job_input.request_id,
+            growth_factor=job_input.growth_factor,
+            min_batch_size=job_input.min_batch_size
         ):
             yield batch
 
-    async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id: str) -> AsyncGenerator[dict, None]:
+    async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
         if apply_chat_template or isinstance(llm_input, list):
             llm_input = self.tokenizer.apply_chat_template(llm_input)
         validated_sampling_params = SamplingParams(**validated_sampling_params)
@@ -51,7 +58,10 @@ class vLLMEngine:
             "choices": [{"tokens": []} for _ in range(n_responses)],
         }
         
-        batch_size = batch_size or self.default_batch_size
+        max_batch_size = batch_size or self.default_batch_size
+        growth_factor, min_batch_size = growth_factor or self.batch_size_growth_factor, min_batch_size or self.min_batch_size
+        batch_size = BatchSize(max_batch_size, min_batch_size, growth_factor)
+    
 
         async for request_output in results_generator:
             if is_first_output:  # Count input tokens only once
@@ -66,7 +76,7 @@ class vLLMEngine:
                     batch["choices"][output_index]["tokens"].append(new_output)
                     token_counters["batch"] += 1
 
-                    if token_counters["batch"] >= batch_size:
+                    if token_counters["batch"] >= batch_size.current_batch_size:
                         batch["usage"] = {
                             "input": n_input_tokens,
                             "output": token_counters["total"],
@@ -76,6 +86,7 @@ class vLLMEngine:
                             "choices": [{"tokens": []} for _ in range(n_responses)],
                         }
                         token_counters["batch"] = 0
+                        batch_size.update()
 
                 last_output_texts[output_index] = output.text
 
@@ -102,6 +113,7 @@ class OpenAIvLLMEngine:
         self.llm = vllm_engine.llm
         self.tokenizer = vllm_engine.tokenizer
         self.default_batch_size = vllm_engine.default_batch_size
+        self.batch_size_growth_factor, self.min_batch_size = vllm_engine.batch_size_growth_factor, vllm_engine.min_batch_size
         self._initialize_engines()
         
     def _initialize_engines(self):
@@ -144,14 +156,16 @@ class OpenAIvLLMEngine:
         else:
             batch = []
             batch_token_counter = 0
+            batch_size = BatchSize(self.default_batch_size, self.min_batch_size, self.batch_size_growth_factor)
         
             async for chunk_str in response_generator:
                 if "data" in chunk_str and not "[DONE]" in chunk_str:
                     batch.append(json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")))
                     batch_token_counter += 1
-                    if batch_token_counter >= self.default_batch_size:
+                    if batch_token_counter >= batch_size.current_batch_size:
                         yield batch
                         batch = []
                         batch_token_counter = 0
+                        batch_size.update()
             if batch:
                 yield batch

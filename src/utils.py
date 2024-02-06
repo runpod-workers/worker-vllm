@@ -46,6 +46,10 @@ class JobInput:
         self.use_openai_format = job.get("use_openai_format", False)
         self.validated_sampling_params = validate_sampling_params(job.get("sampling_params", {}))
         self.request_id = random_uuid()
+        growth_factor = job.get("growth_factor")
+        self.growth_factor = float(growth_factor) if growth_factor else None 
+        min_batch_size = job.get("min_batch_size")
+        self.min_batch_size = int(min_batch_size) if min_batch_size else None 
 
 class OpenAIRequest:
     def __init__(self, request):
@@ -55,3 +59,19 @@ class OpenAIRequest:
 class DummyRequest:
     async def is_disconnected(self):
         return False
+    
+class BatchSize:
+    def __init__(self, max_batch_size, min_batch_size, growth_factor):
+        self.max_batch_size = max_batch_size
+        self.growth_factor = growth_factor
+        self.min_batch_size = min_batch_size
+        self.is_dynamic = growth_factor > 1 and min_batch_size >= 1 and max_batch_size > min_batch_size
+        if self.is_dynamic:
+            self.current_batch_size = min_batch_size
+        else:
+            self.current_batch_size = max_batch_size
+        
+    def update(self):
+        if self.is_dynamic:
+            self.current_batch_size = min(self.current_batch_size*self.growth_factor, self.max_batch_size)
+        
