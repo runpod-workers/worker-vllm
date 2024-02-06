@@ -1,65 +1,45 @@
 import os
 import logging
-from typing import Union, AsyncGenerator
 import json
+
+from dotenv import load_dotenv
 from torch.cuda import device_count
+from transformers import AutoTokenizer
+from typing import Union, AsyncGenerator
+
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ErrorResponse
-from transformers import AutoTokenizer
-from utils import count_physical_cores, DummyRequest
-from constants import DEFAULT_MAX_CONCURRENCY
-from dotenv import load_dotenv
+from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
+from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ErrorResponse, CompletionRequest
 
-
-class Tokenizer:
-    def __init__(self, tokenizer_name_or_path, tokenizer_revision):
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, revision=tokenizer_revision)
-        self.custom_chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
-        self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)
-        if self.custom_chat_template and isinstance(self.custom_chat_template, str):
-            self.tokenizer.chat_template = self.custom_chat_template
-
-    def apply_chat_template(self, input: Union[str, list[dict[str, str]]]) -> str:
-        if isinstance(input, list):
-            if not self.has_chat_template:
-                raise ValueError(
-                    "Chat template does not exist for this model, you must provide a single string input instead of a list of messages"
-                )
-        elif isinstance(input, str):
-            input = [{"role": "user", "content": input}]
-        else:
-            raise ValueError("Input must be a string or a list of messages")
-        
-        return self.tokenizer.apply_chat_template(
-            input, tokenize=False, add_generation_prompt=True
-        )
+from utils import DummyRequest, OpenAIRequest, JobInput
+from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE
+from tokenizer import TokenizerWrapper
+from config import EngineConfig
 
 
 class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
-        self.config = self._initialize_config()
-        logging.info("vLLM config: %s", self.config)
-        self.tokenizer = Tokenizer(self.config["tokenizer"], self.config["tokenizer_revision"])
+        self.config = EngineConfig().config
+        self.tokenizer = TokenizerWrapper(self.config["tokenizer"], self.config["tokenizer_revision"])
         self.llm = self._initialize_llm() if engine is None else engine
-        self.openai_engine = self._initialize_openai()
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
+        self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
 
-    async def generate(self, job_input):
-        generator_args = job_input.__dict__
-        
-        if generator_args.pop("use_openai_format"):
-            if self.openai_engine is None:
-                raise ValueError("OpenAI Chat Completion Format is not enabled for this model")
-            generator = self.generate_openai_chat
-        else:
-            generator = self.generate_vllm        
-        
-        async for batch in generator(**generator_args):
+    async def generate(self, job_input: JobInput):
+        # Adjust to use attributes from JobInput directly
+        async for batch in self._generate_vllm(
+            llm_input=job_input.llm_input,
+            validated_sampling_params=job_input.validated_sampling_params,
+            batch_size=job_input.batch_size,
+            stream=job_input.stream,
+            apply_chat_template=job_input.apply_chat_template,
+            request_id=job_input.request_id
+        ):
             yield batch
 
-    async def generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id: str) -> AsyncGenerator[dict, None]:
+    async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id: str) -> AsyncGenerator[dict, None]:
         if apply_chat_template or isinstance(llm_input, list):
             llm_input = self.tokenizer.apply_chat_template(llm_input)
         validated_sampling_params = SamplingParams(**validated_sampling_params)
@@ -70,6 +50,8 @@ class vLLMEngine:
         batch = {
             "choices": [{"tokens": []} for _ in range(n_responses)],
         }
+        
+        batch_size = batch_size or self.default_batch_size
 
         async for request_output in results_generator:
             if is_first_output:  # Count input tokens only once
@@ -105,67 +87,6 @@ class vLLMEngine:
         if token_counters["batch"] > 0:
             batch["usage"] = {"input": n_input_tokens, "output": token_counters["total"]}
             yield batch
-    
-    async def generate_openai_chat(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id: str) -> AsyncGenerator[dict, None]:
-        
-        if isinstance(llm_input, str):
-            llm_input = [{"role": "user", "content": llm_input}]
-            logging.warning("OpenAI Chat Completion format requires list input, converting to list and assigning 'user' role")
-            
-        if not self.openai_engine:
-            raise ValueError("OpenAI Chat Completion format is disabled")
-        
-        chat_completion_request = ChatCompletionRequest(
-            model=self.config["model"],
-            messages=llm_input,
-            stream=stream,
-            **validated_sampling_params, 
-        )
-
-        response_generator = await self.openai_engine.create_chat_completion(chat_completion_request, DummyRequest())
-        if isinstance(response_generator, ErrorResponse):
-            raise ValueError(response_generator.model_dump())
-        if not stream:
-            yield response_generator
-        else: 
-            batch = ""
-            batch_token_counter = 0
-            
-            async for chunk_str in response_generator:
-                if "data" in chunk_str:
-                    batch += chunk_str
-                    batch_token_counter += 1
-                    if batch_token_counter >= batch_size:
-                        yield batch
-                        batch = ""
-                        batch_token_counter = 0
-            if batch:
-                yield batch
-               
-    def _initialize_config(self):
-        quantization = self._get_quantization()
-        model, download_dir, model_revision = self._get_model_info()
-        tokenizer_name_or_path, tokenizer_revision = self._get_tokenizer_info()
-        if not tokenizer_name_or_path:
-            tokenizer_name_or_path = model
-        
-        return {
-            "model": model,
-            "revision": model_revision,
-            "download_dir": download_dir,
-            "quantization": quantization,
-            "load_format": os.getenv("LOAD_FORMAT", "auto"),
-            "dtype": "half" if quantization else "auto",
-            "tokenizer": tokenizer_name_or_path,
-            "tokenizer_revision": tokenizer_revision,
-            "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
-            "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
-            "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
-            "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.95)),
-            "max_parallel_loading_workers": self._get_max_parallel_loading_workers(),
-            "max_model_len": self._get_max_model_len(),
-            "tensor_parallel_size": self._get_num_gpu_shard(),
-        }
 
     def _initialize_llm(self):
         try:
@@ -173,51 +94,64 @@ class vLLMEngine:
         except Exception as e:
             logging.error("Error initializing vLLM engine: %s", e)
             raise e
-    
-    def _initialize_openai(self):
-        if bool(int(os.getenv("ALLOW_OPENAI_FORMAT", 1))) and self.tokenizer.has_chat_template:
-            return OpenAIServingChat(self.llm, self.config["model"], "assistant", self.tokenizer.tokenizer.chat_template)
-        else: 
-            return None
-        
-    def _get_max_parallel_loading_workers(self):
-        if int(os.getenv("TENSOR_PARALLEL_SIZE", 1)) > 1:
-            return None
-        else:
-            return int(os.getenv("MAX_PARALLEL_LOADING_WORKERS", count_physical_cores()))
 
-    def _get_model_info(self):
-        if os.path.exists("/local_model_path.txt"):
-            model, download_dir, revision = open("/local_model_path.txt", "r").read().strip(), None, None
-            logging.info("Using local model at %s", model)
-        else:
-            model, download_dir, revision = os.getenv("MODEL_NAME"), os.getenv("HF_HOME"), os.getenv("MODEL_REVISION") or None
-        return model, download_dir, revision
-    
-    def _get_tokenizer_info(self):
-        if os.path.exists("/local_tokenizer_path.txt"):
-            tokenizer_name_or_path, revision = open("/local_tokenizer_path.txt", "r").read().strip(), None
-            logging.info("Using local tokenizer at %s", tokenizer_name_or_path)
-        else:
-            tokenizer_name_or_path, revision = os.getenv("TOKENIZER_NAME"), os.getenv("TOKENIZER_REVISION") or None
-        return tokenizer_name_or_path, revision
-        
-    def _get_num_gpu_shard(self):
-        num_gpu_shard = int(os.getenv("TENSOR_PARALLEL_SIZE", 1))
-        if num_gpu_shard > 1:
-            num_gpu_available = device_count()
-            num_gpu_shard = min(num_gpu_shard, num_gpu_available)
-            logging.info("Using %s GPU shards", num_gpu_shard)
-        return num_gpu_shard
-    
-    def _get_max_model_len(self):
-        max_model_len = os.getenv("MAX_MODEL_LENGTH")
-        return int(max_model_len) if max_model_len is not None else None
-    
-    def _get_n_current_jobs(self):
-        total_sequences = len(self.llm.engine.scheduler.waiting) + len(self.llm.engine.scheduler.swapped) + len(self.llm.engine.scheduler.running)
-        return total_sequences
 
-    def _get_quantization(self):
-        quantization = os.getenv("QUANTIZATION", "").lower()
-        return quantization if quantization in ["awq", "squeezellm", "gptq"] else None
+class OpenAIvLLMEngine:
+    def __init__(self, vllm_engine):
+        self.config = vllm_engine.config
+        self.llm = vllm_engine.llm
+        self.tokenizer = vllm_engine.tokenizer
+        self.default_batch_size = vllm_engine.default_batch_size
+        self._initialize_engines()
+        
+    def _initialize_engines(self):
+        self.chat_engine = OpenAIServingChat(
+            self.llm, self.config["model"], "assistant", self.tokenizer.tokenizer.chat_template
+        )
+        self.completion_engine = OpenAIServingCompletion(self.llm, self.config["model"])
+    
+    async def generate(self, openai_request: OpenAIRequest):
+        if openai_request.route == "/models":
+            yield self._handle_model_request()
+        elif openai_request.route in ["/chat/completions", "/completions"]:
+            async for response in self._handle_chat_or_completion_request(openai_request):
+                yield response
+        else:
+            raise ValueError("Invalid route")
+    
+    def _handle_model_request(self):
+        return self.config["model"]
+    
+    async def _handle_chat_or_completion_request(self, openai_request: OpenAIRequest):
+        if openai_request.route == "/chat/completions":
+            request_class = ChatCompletionRequest
+            generator_function = self.chat_engine.create_chat_completion
+        else:  # "/completions"
+            request_class = CompletionRequest
+            generator_function = self.completion_engine.create_completion
+        
+        request = request_class(
+            model=self.config["model"],
+            **openai_request.inputs
+        )
+        
+        response_generator = await generator_function(request, DummyRequest())
+
+        if isinstance(response_generator, ErrorResponse):
+            raise ValueError(response_generator.model_dump())
+        elif not openai_request.inputs.get("stream"):
+            yield response_generator.model_dump()
+        else:
+            batch = []
+            batch_token_counter = 0
+        
+            async for chunk_str in response_generator:
+                if "data" in chunk_str and not "[DONE]" in chunk_str:
+                    batch.append(json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")))
+                    batch_token_counter += 1
+                    if batch_token_counter >= self.default_batch_size:
+                        yield batch
+                        batch = []
+                        batch_token_counter = 0
+            if batch:
+                yield batch

@@ -41,12 +41,17 @@ class JobInput:
     def __init__(self, job):
         self.llm_input = job.get("messages", job.get("prompt"))
         self.stream = job.get("stream", False)
-        self.batch_size = job.get("batch_size", DEFAULT_BATCH_SIZE)
+        self.batch_size = job.get("batch_size")
         self.apply_chat_template = job.get("apply_chat_template", False)
         self.use_openai_format = job.get("use_openai_format", False)
         self.validated_sampling_params = validate_sampling_params(job.get("sampling_params", {}))
         self.request_id = random_uuid()
-           
+
+class OpenAIRequest:
+    def __init__(self, request):
+        self.route = request["openai"]["route"]
+        self.inputs = request["input"]
+
 class DummyRequest:
     async def is_disconnected(self):
         return False
