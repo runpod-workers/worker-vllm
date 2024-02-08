@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 
 
 class Tokenizer:
-    def __init__(self, tokenizer_name_or_path, tokenizer_revision):
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, revision=tokenizer_revision)
+    def __init__(self, tokenizer_name_or_path, tokenizer_revision, trust_remote_code):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, revision=tokenizer_revision, trust_remote_code=trust_remote_code)
         self.custom_chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
         self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)
         if self.custom_chat_template and isinstance(self.custom_chat_template, str):
@@ -41,7 +41,7 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.config = self._initialize_config()
         logging.info("vLLM config: %s", self.config)
-        self.tokenizer = Tokenizer(self.config["tokenizer"], self.config["tokenizer_revision"])
+        self.tokenizer = Tokenizer(self.config["tokenizer"], self.config["tokenizer_revision"], self.config["trust_remote_code"])
         self.llm = self._initialize_llm() if engine is None else engine
         self.openai_engine = self._initialize_openai()
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
