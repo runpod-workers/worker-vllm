@@ -28,6 +28,8 @@ def move_files(src_dir, dest_dir):
 if __name__ == "__main__":
     model, download_dir = os.getenv("MODEL_NAME"), os.getenv("HF_HOME")
     tokenizer = os.getenv("TOKENIZER_NAME", model)
+    if len(tokenizer) == 0:
+        tokenizer = model
     revisions = {
         "model": os.getenv("MODEL_REVISION") or None,
         "tokenizer": os.getenv("TOKENIZER_REVISION") or None
