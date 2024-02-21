@@ -4,16 +4,15 @@ import json
 
 from dotenv import load_dotenv
 from torch.cuda import device_count
-from transformers import AutoTokenizer
-from typing import Union, AsyncGenerator
+from typing import AsyncGenerator
 
 from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ErrorResponse, CompletionRequest
+from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
 
-from utils import DummyRequest, OpenAIRequest, JobInput, BatchSize
-from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE
+from utils import DummyRequest, JobInput, BatchSize, create_error_response
+from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
 from tokenizer import TokenizerWrapper
 from config import EngineConfig
 
@@ -26,14 +25,13 @@ class vLLMEngine:
         self.llm = self._initialize_llm() if engine is None else engine
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
-        self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", 1))
-        self.min_batch_size = int(os.getenv("MIN_BATCH_SIZE", 1))
+        self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", DEFAULT_BATCH_SIZE_GROWTH_FACTOR))
+        self.min_batch_size = int(os.getenv("MIN_BATCH_SIZE", DEFAULT_MIN_BATCH_SIZE))
 
     def dynamic_batch_size(self, current_batch_size, growth_factor):
         return min(current_batch_size*growth_factor, self.default_batch_size)
                            
     async def generate(self, job_input: JobInput):
-        # Adjust to use attributes from JobInput directly
         async for batch in self._generate_vllm(
             llm_input=job_input.llm_input,
             validated_sampling_params=job_input.validated_sampling_params,
@@ -115,6 +113,7 @@ class OpenAIvLLMEngine:
         self.default_batch_size = vllm_engine.default_batch_size
         self.batch_size_growth_factor, self.min_batch_size = vllm_engine.batch_size_growth_factor, vllm_engine.min_batch_size
         self._initialize_engines()
+        self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 0)))
         
     def _initialize_engines(self):
         self.chat_engine = OpenAIServingChat(
@@ -122,36 +121,38 @@ class OpenAIvLLMEngine:
         )
         self.completion_engine = OpenAIServingCompletion(self.llm, self.config["model"])
     
-    async def generate(self, openai_request: OpenAIRequest):
-        if openai_request.route == "/models":
-            yield self._handle_model_request()
-        elif openai_request.route in ["/chat/completions", "/completions"]:
+    async def generate(self, openai_request: JobInput):
+        if openai_request.openai_route == "/v1/models":
+            yield await self._handle_model_request()
+        elif openai_request.openai_route in ["/v1/chat/completions", "/v1/completions"]:
             async for response in self._handle_chat_or_completion_request(openai_request):
                 yield response
         else:
-            raise ValueError("Invalid route")
+            yield create_error_response("Invalid route").model_dump()
     
-    def _handle_model_request(self):
-        return self.config["model"]
+    async def _handle_model_request(self):
+        models = await self.chat_engine.show_available_models()
+        return models.model_dump()
     
-    async def _handle_chat_or_completion_request(self, openai_request: OpenAIRequest):
-        if openai_request.route == "/chat/completions":
+    async def _handle_chat_or_completion_request(self, openai_request: JobInput):
+        if openai_request.openai_route == "/v1/chat/completions":
             request_class = ChatCompletionRequest
             generator_function = self.chat_engine.create_chat_completion
-        else:  # "/completions"
+        elif openai_request.openai_route == "/v1/completions":
             request_class = CompletionRequest
             generator_function = self.completion_engine.create_completion
         
-        request = request_class(
-            model=self.config["model"],
-            **openai_request.inputs
-        )
+        try:
+            request = request_class(
+                **openai_request.openai_input
+            )
+        except Exception as e:
+            yield create_error_response(str(e)).model_dump()
+            return
         
         response_generator = await generator_function(request, DummyRequest())
 
-        if isinstance(response_generator, ErrorResponse):
-            raise ValueError(response_generator.model_dump())
-        elif not openai_request.inputs.get("stream"):
+        if not openai_request.openai_input.get("stream") or isinstance(response_generator, ErrorResponse):
             yield response_generator.model_dump()
         else:
             batch = []
@@ -159,13 +160,24 @@ class OpenAIvLLMEngine:
             batch_size = BatchSize(self.default_batch_size, self.min_batch_size, self.batch_size_growth_factor)
         
             async for chunk_str in response_generator:
-                if "data" in chunk_str and not "[DONE]" in chunk_str:
-                    batch.append(json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")))
+                if "data" in chunk_str:
+                    if self.raw_openai_output:
+                        data = chunk_str
+                    elif "[DONE]" in chunk_str:
+                        continue
+                    else:
+                        data = json.loads(chunk_str.removeprefix("data: ").rstrip("\n\n")) if not self.raw_openai_output else chunk_str
+                    batch.append(data)
                     batch_token_counter += 1
                     if batch_token_counter >= batch_size.current_batch_size:
+                        if self.raw_openai_output:
+                            batch = "".join(batch)
                         yield batch
                         batch = []
                         batch_token_counter = 0
                         batch_size.update()
             if batch:
+                if self.raw_openai_output:
+                    batch = "".join(batch)
                 yield batch
+            

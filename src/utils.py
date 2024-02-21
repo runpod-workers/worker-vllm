@@ -1,7 +1,10 @@
 import logging
+from http import HTTPStatus
 from typing import Any, Dict
+from constants import SAMPLING_PARAM_TYPES
 from vllm.utils import random_uuid
-from constants import SAMPLING_PARAM_TYPES, DEFAULT_BATCH_SIZE
+from vllm.entrypoints.openai.protocol import ErrorResponse
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -50,11 +53,8 @@ class JobInput:
         self.growth_factor = float(growth_factor) if growth_factor else None 
         min_batch_size = job.get("min_batch_size")
         self.min_batch_size = int(min_batch_size) if min_batch_size else None 
-
-class OpenAIRequest:
-    def __init__(self, request):
-        self.route = request["openai"]["route"]
-        self.inputs = request["input"]
+        self.openai_route = job.get("openai_route")
+        self.openai_input = job.get("openai_input")
 
 class DummyRequest:
     async def is_disconnected(self):
@@ -75,3 +75,7 @@ class BatchSize:
         if self.is_dynamic:
             self.current_batch_size = min(self.current_batch_size*self.growth_factor, self.max_batch_size)
         
+def create_error_response(message: str, err_type: str = "BadRequestError", status_code: HTTPStatus = HTTPStatus.BAD_REQUEST) -> ErrorResponse:
+    return ErrorResponse(message=message,
+                            type=err_type,
+                            code=status_code.value)

@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-from typing import Tuple, Optional
 from utils import count_physical_cores 
 from torch.cuda import device_count
 
