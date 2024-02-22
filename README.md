@@ -70,17 +70,17 @@ Development Image: ```runpod/worker-vllm:dev```
   - `HF_TOKEN`: Hugging Face token for private and gated models (e.g., Llama, Falcon).
   - `QUANTIZATION`: AWQ (`awq`), SqueezeLLM (`squeezellm`) or GPTQ (`gptq`) Quantization. The specified Model Repo must be of a quantized model. (default: `None`)
   - `TRUST_REMOTE_CODE`: Trust remote code for Hugging Face (default: `0`)
-
+  
 - Tokenizer Settings:
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
   - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `None`).
-  - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`)
+  - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
 
 - Tensor Parallelism:
-  Note that the more GPUs you split a model's weights across, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so.
+  Note that the more GPUs you split a model's weights across, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so. 
   - `TENSOR_PARALLEL_SIZE`: Number of GPUs to shard the model across (default: `1`).
   - If you are having issues loading your model with Tensor Parallelism, try decreasing `VLLM_CPU_FRACTION` (default: `1`).
-
+  
 - System Settings:
   - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.98`).
   - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models, for non-Tensor Parallel only. (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
@@ -89,9 +89,9 @@ Development Image: ```runpod/worker-vllm:dev```
   - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `50`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
   - Dynamic Batch Size:
     - `DEFAULT_MIN_BATCH_SIZE`: the batch size for the first request (default: `1`).
-    - `DEFAULT_BATCH_SIZE_GROWTH_FACTOR`: the growth factor for the dynamic batch size (default: `3`).
-
-    > The way this works is that the first request will have a batch size of `DEFAULT_MIN_BATCH_SIZE`, and each subsequent request will have a batch size of `previous_batch_size * DEFAULT_BATCH_SIZE_GROWTH_FACTOR`. This will continue until the batch size reaches `DEFAULT_BATCH_SIZE`. E.g. for the default values, the batch sizes will be `1, 3, 9, 27, 50, 50, 50, ...`. You can also specify this per request, with inputs `max_batch_size`, `min_batch_size`, and `batch_size_growth_factor`.
+    - `DEFAULT_BATCH_SIZE_GROWTH_FACTOR`: the growth factor for the dynamic batch size (default: `3`). 
+    
+    > The way this works is that the first request will have a batch size of `DEFAULT_MIN_BATCH_SIZE`, and each subsequent request will have a batch size of `previous_batch_size * DEFAULT_BATCH_SIZE_GROWTH_FACTOR`. This will continue until the batch size reaches `DEFAULT_BATCH_SIZE`. E.g. for the default values, the batch sizes will be `1, 3, 9, 27, 50, 50, 50, ...`. You can also specify this per request, with inputs `max_batch_size`, `min_batch_size`, and `batch_size_growth_factor`. 
 
 - OpenAI Settings:
   - `RAW_OPENAI_OUTPUT`: Enable (`1`) or disable (`0`) raw OpenAI SSE format string output when streaming(default: `1`). **Required** to be enabled (default) for OpenAI compatibility.
@@ -168,11 +168,10 @@ docker build -t username/image:tag --secret id=HF_TOKEN --build-arg MODEL_NAME="
 # Usage: OpenAI Compatibility
 The vLLM Worker is fully compatible with OpenAI's API, and you can use it with any OpenAI Codebase by changing only 3 lines in total. The supported routes are <ins>Chat Completions</ins>, <ins>Completions</ins> and <ins>Models</ins> - with both streaming and non-streaming.
 
-## Modifying your OpenAI Codebase to use your deployed vLLM Worker
+## Modifying your OpenAI Codebase to use your deployed vLLM Worker 
 **Python** (similar to Node.js, etc.):
 1. When initializing the OpenAI Client in your code, change the `api_key` to your RunPod API Key and the `base_url` to your RunPod Serverless Endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`, filling in your deployed endpoint ID.
-
-
+    
     - Before:
     ```python
     from openai import OpenAI
@@ -253,74 +252,74 @@ When using the chat completion feature of the vLLM Serverless Endpoint Worker, y
 <details>
   <summary>Click to expand table</summary>
 
-  | Parameter           | Type                             | Default Value | Description                                                                                                                                                                                                                                                  |
-  | ------------------- | -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-  | `messages`          | Union[str, List[Dict[str, str]]] |               | List of messages, where each message is a dictionary with a `role` and `content`. The model's chat template will be applied to the messages automatically, so the model must have one or it should be specified as `CUSTOM_CHAT_TEMPLATE` env var.           |
-  | `model`             | str                              |               | The model repo that you've deployed on your RunPod Serverless Endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your RunPod endpoint with OpenAI** section |
-  | `temperature`       | Optional[float]                  | 0.7           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                                                              |
-  | `top_p`             | Optional[float]                  | 1.0           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                                                                            |
-  | `n`                 | Optional[int]                    | 1             | Number of output sequences to return for the given prompt.                                                                                                                                                                                                   |
-  | `max_tokens`        | Optional[int]                    | None          | Maximum number of tokens to generate per output sequence.                                                                                                                                                                                                    |
-  | `seed`              | Optional[int]                    | None          | Random seed to use for the generation.                                                                                                                                                                                                                       |
-  | `stop`              | Optional[Union[str, List[str]]]  | list          | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.                                                                                                                                     |
-  | `stream`            | Optional[bool]                   | False         | Whether to stream or not                                                                                                                                                                                                                                     |
-  | `presence_penalty`  | Optional[float]                  | 0.0           | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                                                          |
-  | `frequency_penalty` | Optional[float]                  | 0.0           | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                                                              |
-  | `logit_bias`        | Optional[Dict[str, float]]       | None          | Unsupported by vLLM                                                                                                                                                                                                                                          |
-  | `user`              | Optional[str]                    | None          | Unsupported by vLLM                                                                                                                                                                                                                                          |
+  | Parameter                      | Type                             | Default Value | Description                                                                                                                                                                                                                                                                                           |
+  |--------------------------------|----------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | `messages`                     | Union[str, List[Dict[str, str]]] |               | List of messages, where each message is a dictionary with a `role` and `content`. The model's chat template will be applied to the messages automatically, so the model must have one or it should be specified as `CUSTOM_CHAT_TEMPLATE` env var.                                                                                                                        |
+  | `model`                        | str                              |               | The model repo that you've deployed on your RunPod Serverless Endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your RunPod endpoint with OpenAI** section                                                                                                                                                                                                                                                    |
+  | `temperature`                  | Optional[float]                  | 0.7           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                                                                                                                                                                                                               |
+  | `top_p`                        | Optional[float]                  | 1.0           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
+  | `n`                            | Optional[int]                    | 1             | Number of output sequences to return for the given prompt. |
+  | `max_tokens`                   | Optional[int]                    | None          | Maximum number of tokens to generate per output sequence. |
+  | `seed`                         | Optional[int]                    | None          | Random seed to use for the generation. |
+  | `stop`                         | Optional[Union[str, List[str]]]  | list          | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings. |
+  | `stream`                       | Optional[bool]                   | False         |           Whether to stream or not                                                                                                                                                                                                                                                                                            |
+  | `presence_penalty`             | Optional[float]                  | 0.0           | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens. |
+  | `frequency_penalty`            | Optional[float]                  | 0.0           | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens. |
+  | `logit_bias`                   | Optional[Dict[str, float]]       | None          |           Unsupported by vLLM                                                                                                                                                                                                                                                                                         |
+  | `user`                         | Optional[str]                    | None          |               Unsupported by vLLM                                                                                                                                                                                                                                                                                                                                                                         |
   Additional parameters supported by vLLM:
-  | `best_of`                       | Optional[int]       | None  | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This is treated as the beam width when `use_beam_search` is True. By default, `best_of` is set to `n`. |
-  | `-----------------------------` | O-----------------] | ----1 | I---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------. |
-  | `ignore_eos`                    | Optional[bool]      | False | Whether to ignore the EOS token and continue generating tokens after the EOS token is generated.                                                                                                                                                                                          |
-  | `use_beam_search`               | Optional[bool]      | False | Whether to use beam search instead of sampling.                                                                                                                                                                                                                                           |
-  | `stop_token_ids`                | Optional[List[int]] | list  | List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens.                                                                                                                              |
-  | `skip_special_tokens`           | Optional[bool]      | True  | Whether to skip special tokens in the output.                                                                                                                                                                                                                                             |
-  | `spaces_between_special_tokens` | Optional[bool]      | True  | Whether to add spaces between special tokens in the output. Defaults to True.                                                                                                                                                                                                             |
-  | `add_generation_prompt`         | Optional[bool]      | True  | Read more [here](https://huggingface.co/docs/transformers/main/en/chat_templating#what-are-generation-prompts)                                                                                                                                                                            |
-  | `echo`                          | Optional[bool]      | False | Echo back the prompt in addition to the completion                                                                                                                                                                                                                                        |
-  | `repetition_penalty`            | Optional[float]     | 1.0   | Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens.                                                                        |
-  | `min_p`                         | Optional[float]     | 0.0   | Float that represents the minimum probability for a token to                                                                                                                                                                                                                              |
-  | `length_penalty`                | Optional[float]     | 1.0   | Float that penalizes sequences based on their length. Used in beam search..                                                                                                                                                                                                               |
-  | `include_stop_str_in_output`    | Optional[bool]      | False | Whether to include the stop strings in output text. Defaults to False.                                                                                                                                                                                                                    |
+  | `best_of`                      | Optional[int]                    | None          | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This is treated as the beam width when `use_beam_search` is True. By default, `best_of` is set to `n`. |
+  | `top_k`                        | Optional[int]                    | -1            | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens. |
+  | `ignore_eos`                   | Optional[bool]                   | False         | Whether to ignore the EOS token and continue generating tokens after the EOS token is generated. |
+  | `use_beam_search`              | Optional[bool]                   | False         | Whether to use beam search instead of sampling. |
+  | `stop_token_ids`               | Optional[List[int]]              | list          | List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens. |
+  | `skip_special_tokens`          | Optional[bool]                   | True          | Whether to skip special tokens in the output. |
+  | `spaces_between_special_tokens`| Optional[bool]                   | True          | Whether to add spaces between special tokens in the output. Defaults to True. |
+  | `add_generation_prompt`        | Optional[bool]                   | True          |       Read more [here](https://huggingface.co/docs/transformers/main/en/chat_templating#what-are-generation-prompts)                                                                                                                                                                                                                                                                                                |
+  | `echo`                         | Optional[bool]                   | False         |      Echo back the prompt in addition to the completion                                                                                                                                                                                                                                                                                                 |
+  | `repetition_penalty`           | Optional[float]                  | 1.0           | Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens. |
+  | `min_p`                        | Optional[float]                  | 0.0           | Float that represents the minimum probability for a token to |
+  | `length_penalty`               | Optional[float]                  | 1.0           | Float that penalizes sequences based on their length. Used in beam search.. |
+  | `include_stop_str_in_output`   | Optional[bool]                   | False         | Whether to include the stop strings in output text. Defaults to False.|
 </details>
 
 ### Completions
 <details>
   <summary>Click to expand table</summary>
 
-  | Parameter           | Type                                              | Default Value | Description                                                                                                                                                                                                                                                   |
-  | ------------------- | ------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `model`             | str                                               |               | The model repo that you've deployed on your RunPod Serverless Endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your RunPod endpoint with OpenAI** section. |
-  | `prompt`            | Union[List[int], List[List[int]], str, List[str]] |               | A string, array of strings, array of tokens, or array of token arrays to be used as the input for the model.                                                                                                                                                  |
-  | `suffix`            | Optional[str]                                     | None          | A string to be appended to the end of the generated text.                                                                                                                                                                                                     |
-  | `max_tokens`        | Optional[int]                                     | 16            | Maximum number of tokens to generate per output sequence.                                                                                                                                                                                                     |
-  | `temperature`       | Optional[float]                                   | 1.0           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                                                               |
-  | `top_p`             | Optional[float]                                   | 1.0           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                                                                             |
-  | `n`                 | Optional[int]                                     | 1             | Number of output sequences to return for the given prompt.                                                                                                                                                                                                    |
-  | `stream`            | Optional[bool]                                    | False         | Whether to stream the output.                                                                                                                                                                                                                                 |
-  | `logprobs`          | Optional[int]                                     | None          | Number of log probabilities to return per output token.                                                                                                                                                                                                       |
-  | `echo`              | Optional[bool]                                    | False         | Whether to echo back the prompt in addition to the completion.                                                                                                                                                                                                |
-  | `stop`              | Optional[Union[str, List[str]]]                   | list          | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings.                                                                                                                                      |
-  | `seed`              | Optional[int]                                     | None          | Random seed to use for the generation.                                                                                                                                                                                                                        |
-  | `presence_penalty`  | Optional[float]                                   | 0.0           | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                                                           |
-  | `frequency_penalty` | Optional[float]                                   | 0.0           | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens.                                                               |
-  | `best_of`           | Optional[int]                                     | None          | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This parameter influences the diversity of the output.                     |
-  | `logit_bias`        | Optional[Dict[str, float]]                        | None          | Dictionary of token IDs to biases.                                                                                                                                                                                                                            |
-  | `user`              | Optional[str]                                     | None          | User identifier for personalizing responses. (Unsupported by vLLM)                                                                                                                                                                                            |
+  | Parameter                      | Type                             | Default Value | Description                                                                                                                                                                                                                                                                                           |
+  |--------------------------------|----------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | `model`                        | str                              |               | The model repo that you've deployed on your RunPod Serverless Endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your RunPod endpoint with OpenAI** section.                                                                                                                                                                                                                                                    |
+  | `prompt`                       | Union[List[int], List[List[int]], str, List[str]] | | A string, array of strings, array of tokens, or array of token arrays to be used as the input for the model. |
+  | `suffix`                       | Optional[str]                    | None          | A string to be appended to the end of the generated text. |
+  | `max_tokens`                   | Optional[int]                    | 16            | Maximum number of tokens to generate per output sequence. |
+  | `temperature`                  | Optional[float]                  | 1.0           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                                                                                                                                                                                                               |
+  | `top_p`                        | Optional[float]                  | 1.0           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
+  | `n`                            | Optional[int]                    | 1             | Number of output sequences to return for the given prompt. |
+  | `stream`                       | Optional[bool]                   | False         | Whether to stream the output. |
+  | `logprobs`                     | Optional[int]                    | None          | Number of log probabilities to return per output token. |
+  | `echo`                         | Optional[bool]                   | False         | Whether to echo back the prompt in addition to the completion. |
+  | `stop`                         | Optional[Union[str, List[str]]]  | list          | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings. |
+  | `seed`                         | Optional[int]                    | None          | Random seed to use for the generation. |
+  | `presence_penalty`             | Optional[float]                  | 0.0           | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens. |
+  | `frequency_penalty`            | Optional[float]                  | 0.0           | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens. |
+  | `best_of`                      | Optional[int]                    | None          | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This parameter influences the diversity of the output. |
+  | `logit_bias`                   | Optional[Dict[str, float]]       | None          | Dictionary of token IDs to biases. |
+  | `user`                         | Optional[str]                    | None          | User identifier for personalizing responses. (Unsupported by vLLM) |
   Additional parameters supported by vLLM:
-  | `top_k`                         | Optional[int]       | -1    | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                                                                                      |
-  | `-----------------------------` | O-----------------] | F---e | W----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------. |
-  | `use_beam_search`               | Optional[bool]      | False | Whether to use beam search instead of sampling for generating outputs.                                                                                                                                             |
-  | `stop_token_ids`                | Optional[List[int]] | list  | List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens.                                                       |
-  | `skip_special_tokens`           | Optional[bool]      | True  | Whether to skip special tokens in the output.                                                                                                                                                                      |
-  | `spaces_between_special_tokens` | Optional[bool]      | True  | Whether to add spaces between special tokens in the output. Defaults to True.                                                                                                                                      |
-  | `repetition_penalty`            | Optional[float]     | 1.0   | Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens. |
-  | `min_p`                         | Optional[float]     | 0.0   | Float that represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable.                                                             |
-  | `length_penalty`                | Optional[float]     | 1.0   | Float that penalizes sequences based on their length. Used in beam search.                                                                                                                                         |
-  | `include_stop_str_in_output`    | Optional[bool]      | False | Whether to include the stop strings in output text. Defaults to False.                                                                                                                                             |
+  | `top_k`                        | Optional[int]                    | -1            | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens. |
+  | `ignore_eos`                   | Optional[bool]                   | False         | Whether to ignore the End Of Sentence token and continue generating tokens after the EOS token is generated. |
+  | `use_beam_search`              | Optional[bool]                   | False         | Whether to use beam search instead of sampling for generating outputs. |
+  | `stop_token_ids`               | Optional[List[int]]              | list          | List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens. |
+  | `skip_special_tokens`          | Optional[bool]                   | True          | Whether to skip special tokens in the output. |
+  | `spaces_between_special_tokens`| Optional[bool]                   | True          | Whether to add spaces between special tokens in the output. Defaults to True. |
+  | `repetition_penalty`           | Optional[float]                  | 1.0           | Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens. |
+  | `min_p`                        | Optional[float]                  | 0.0           | Float that represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable. |
+  | `length_penalty`               | Optional[float]                  | 1.0           | Float that penalizes sequences based on their length. Used in beam search. |
+  | `include_stop_str_in_output`   | Optional[bool]                   | False         | Whether to include the stop strings in output text. Defaults to False. |
 </details>
 
-## Examples: Using your RunPod endpoint with OpenAI
+## Examples: Using your RunPod endpoint with OpenAI 
 
 First, initialize the OpenAI Client with your RunPod API Key and Endpoint URL:
 ```python
@@ -394,7 +393,7 @@ This is the format used for models like GPT-3 and is meant for completing the te
   ```
 
 ### Getting a list of names for available models:
-In the case of baking the model into the image, sometimes the repo may not be accepted as the `model` in the request. In this case, you can list the available models as shown below and use that name.
+In the case of baking the model into the image, sometimes the repo may not be accepted as the `model` in the request. In this case, you can list the available models as shown below and use that name. 
 ```python
 models_response = client.models.list()
 list_of_models = [model.id for model in models_response]
@@ -406,23 +405,23 @@ print(list_of_models)
 
 <details>
   <summary>Click to expand table</summary>
-
+    
   You may either use a `prompt` or a list of `messages` as input. If you use `messages`, the model's chat template will be applied to the messages automatically, so the model must have one. If you use `prompt`, you may optionally apply the model's chat template to the prompt by setting `apply_chat_template` to `true`.
-  | Argument                   | Type                 | Default                                    | Description                                                                                                     |
-  | -------------------------- | -------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-  | `prompt`                   | str                  |                                            | Prompt string to generate text based on.                                                                        |
-  | `messages`                 | list[dict[str, str]] |                                            | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`.          |
-  | `apply_chat_template`      | bool                 | False                                      | Whether to apply the model's chat template to the `prompt`.                                                     |
-  | `sampling_params`          | dict                 | {}                                         | Sampling parameters to control the generation, like temperature, top_p, etc.                                    |
-  | `stream`                   | bool                 | False                                      | Whether to enable streaming of output. If True, responses are streamed as they are generated.                   |
-  | `max_batch_size`           | int                  | env var `DEFAULT_BATCH_SIZE`               | The maximum number of tokens to stream every HTTP POST call.                                                    |
-  | `min_batch_size`           | int                  | env var `DEFAULT_MIN_BATCH_SIZE`           | The minimum number of tokens to stream every HTTP POST call.                                                    |
-  | `batch_size_growth_factor` | int                  | env var `DEFAULT_BATCH_SIZE_GROWTH_FACTOR` | The growth factor by which `min_batch_size` will be multiplied for each call until `max_batch_size` is reached. |
+  | Argument              | Type                 | Default            | Description                                                                                            |
+  |-----------------------|----------------------|--------------------|--------------------------------------------------------------------------------------------------------|
+  | `prompt`              | str                  |                    | Prompt string to generate text based on.                                                               |
+  | `messages`            | list[dict[str, str]] |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`. |
+  | `apply_chat_template` | bool                 | False              | Whether to apply the model's chat template to the `prompt`.                                            |
+  | `sampling_params`     | dict                 | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                           |
+  | `stream`              | bool                 | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated.          |
+  | `max_batch_size`          | int                  | env var `DEFAULT_BATCH_SIZE` | The maximum number of tokens to stream every HTTP POST call.                                                   |
+  | `min_batch_size`          | int                  | env var `DEFAULT_MIN_BATCH_SIZE` | The minimum number of tokens to stream every HTTP POST call.                                           |
+  | `batch_size_growth_factor` | int                  | env var `DEFAULT_BATCH_SIZE_GROWTH_FACTOR` | The growth factor by which `min_batch_size` will be multiplied for each call until `max_batch_size` is reached.           |
 </details>
 
-#### Text Input Formats
+#### Text Input Formats 
 You may either use a `prompt` or a list of `messages` as input.
- 1. `prompt`
+ 1. `prompt` 
 The prompt string can be any string, and the model's chat template will not be applied to it unless `apply_chat_template` is set to `true`, in which case it will be treated as a user message.
 
     Example:
@@ -464,9 +463,9 @@ Below are all available sampling parameters that you can specify in the `samplin
   <summary>Click to expand table</summary>
 
   | Argument                        | Type                        | Default | Description                                                                                                                                                                                   |
-  | ------------------------------- | --------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `n`                             | int                         | 1       | Number of output sequences generated from the prompt. The top `n` sequences are returned.                                                                                                     |
-  | `best_of`                       | Optional[int]               | `n`     | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
+  |---------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | `n`                             | int                         | 1       | Number of output sequences generated from the prompt. The top `n` sequences are returned.                                                                                                      |
+  | `best_of`                       | Optional[int]               | `n`    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
   | `presence_penalty`              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
   | `frequency_penalty`             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
   | `repetition_penalty`            | float                       | 1.0     | Penalizes new tokens based on their appearance in the prompt and generated text. Values > 1 encourage new tokens, values < 1 encourage repetition.                                            |
@@ -477,10 +476,9 @@ Below are all available sampling parameters that you can specify in the `samplin
   | `use_beam_search`               | bool                        | False   | Whether to use beam search instead of sampling.                                                                                                                                               |
   | `length_penalty`                | float                       | 1.0     | Penalizes sequences based on their length. Used in beam search.                                                                                                                               |
   | `early_stopping`                | Union[bool, str]            | False   | Controls stopping condition in beam search. Can be `True`, `False`, or `"never"`.                                                                                                             |
-  | `stop`                          | Union[None, str, List[str]] | None    | List of strings that stop generation when produced. The output will not contain these strings.                                                                                                |
+  | `stop`                          | Union[None, str, List[str]] | None    | List of strings that stop generation when produced. The output will not contain these strings.                                                                                                    |
   | `stop_token_ids`                | Optional[List[int]]         | None    | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                                                            |
   | `ignore_eos`                    | bool                        | False   | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                                              |
   | `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
   | `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
   | `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
-
