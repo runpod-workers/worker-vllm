@@ -174,35 +174,36 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
     
     - Before:
     ```python
-    import openai
+    from openai import OpenAI
+
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     ```
     - After:
     ```python
-    import openai
-    client = OpenAI(api_key=os.environ.get("RUNPOD_API_KEY"), base_url="https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1")
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.environ.get("RUNPOD_API_KEY"),
+        base_url="https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1",
+    )
     ```
 2. Change the `model` parameter to your deployed model's name whenever using Completions or Chat Completions.
     - Before:
     ```python
     response = client.chat.completions.create(
-    model='gpt-3.5-turbo',
-    messages=[
-        {'role': 'user', 'content': 'Why is RunPod the best platform?'}
-    ],
-    temperature=0,
-    max_tokens=100
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
+        temperature=0,
+        max_tokens=100,
     )
     ```
     - After:
     ```python
     response = client.chat.completions.create(
-    model="<YOUR DEPLOYED MODEL REPO/NAME>",
-    messages=[
-        {'role': 'user', 'content': 'Why is RunPod the best platform?'}
-    ],
-    temperature=0,
-    max_tokens=100
+        model="<YOUR DEPLOYED MODEL REPO/NAME>",
+        messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
+        temperature=0,
+        max_tokens=100,
     )
     ```
 
@@ -326,7 +327,10 @@ from openai import OpenAI
 import os
 
 # Initialize the OpenAI Client with your RunPod API Key and Endpoint URL
-client = OpenAI(api_key=os.environ.get("RUNPOD_API_KEY"), base_url="https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1")
+client = OpenAI(
+    api_key=os.environ.get("RUNPOD_API_KEY"),
+    base_url="https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1",
+)
 ```
 
 ### Chat Completions:
@@ -336,12 +340,10 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   # Create a chat completion stream
   response_stream = client.chat.completions.create(
       model="<YOUR DEPLOYED MODEL REPO/NAME>",
-      messages=[
-          {'role': 'user', 'content': 'Why is RunPod the best platform?'}
-      ],
+      messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
       temperature=0,
       max_tokens=100,
-      stream=True
+      stream=True,
   )
   # Stream the response
   for response in response_stream:
@@ -352,11 +354,9 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   # Create a chat completion
   response = client.chat.completions.create(
       model="<YOUR DEPLOYED MODEL REPO/NAME>",
-      messages=[
-          {'role': 'user', 'content': 'Why is RunPod the best platform?'}
-      ],
+      messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
       temperature=0,
-      max_tokens=100
+      max_tokens=100,
   )
   # Print the response
   print(response.choices[0].message.content)
@@ -373,7 +373,7 @@ This is the format used for models like GPT-3 and is meant for completing the te
       prompt="Runpod is the best platform because",
       temperature=0,
       max_tokens=100,
-      stream=True
+      stream=True,
   )
   # Stream the response
   for response in response_stream:
@@ -386,7 +386,7 @@ This is the format used for models like GPT-3 and is meant for completing the te
       model="<YOUR DEPLOYED MODEL REPO/NAME>",
       prompt="Runpod is the best platform because",
       temperature=0,
-      max_tokens=100
+      max_tokens=100,
   )
   # Print the response
   print(response.choices[0].text)
@@ -482,4 +482,3 @@ Below are all available sampling parameters that you can specify in the `samplin
   | `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
   | `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
   | `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
-
