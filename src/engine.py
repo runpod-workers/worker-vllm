@@ -28,23 +28,26 @@ class vLLMEngine:
         self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", DEFAULT_BATCH_SIZE_GROWTH_FACTOR))
         self.min_batch_size = int(os.getenv("MIN_BATCH_SIZE", DEFAULT_MIN_BATCH_SIZE))
 
-    def dynamic_batch_size(self, current_batch_size, growth_factor):
-        return min(current_batch_size*growth_factor, self.default_batch_size)
+    def dynamic_batch_size(self, current_batch_size, batch_size_growth_factor):
+        return min(current_batch_size*batch_size_growth_factor, self.default_batch_size)
                            
     async def generate(self, job_input: JobInput):
-        async for batch in self._generate_vllm(
-            llm_input=job_input.llm_input,
-            validated_sampling_params=job_input.validated_sampling_params,
-            batch_size=job_input.batch_size,
-            stream=job_input.stream,
-            apply_chat_template=job_input.apply_chat_template,
-            request_id=job_input.request_id,
-            growth_factor=job_input.growth_factor,
-            min_batch_size=job_input.min_batch_size
-        ):
-            yield batch
+        try:
+            async for batch in self._generate_vllm(
+                llm_input=job_input.llm_input,
+                validated_sampling_params=job_input.validated_sampling_params,
+                batch_size=job_input.max_batch_size,
+                stream=job_input.stream,
+                apply_chat_template=job_input.apply_chat_template,
+                request_id=job_input.request_id,
+                batch_size_growth_factor=job_input.batch_size_growth_factor,
+                min_batch_size=job_input.min_batch_size
+            ):
+                yield batch
+        except Exception as e:
+            yield create_error_response(str(e)).model_dump()
 
-    async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
+    async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, batch_size_growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
         if apply_chat_template or isinstance(llm_input, list):
             llm_input = self.tokenizer.apply_chat_template(llm_input)
         validated_sampling_params = SamplingParams(**validated_sampling_params)
@@ -57,8 +60,8 @@ class vLLMEngine:
         }
         
         max_batch_size = batch_size or self.default_batch_size
-        growth_factor, min_batch_size = growth_factor or self.batch_size_growth_factor, min_batch_size or self.min_batch_size
-        batch_size = BatchSize(max_batch_size, min_batch_size, growth_factor)
+        batch_size_growth_factor, min_batch_size = batch_size_growth_factor or self.batch_size_growth_factor, min_batch_size or self.min_batch_size
+        batch_size = BatchSize(max_batch_size, min_batch_size, batch_size_growth_factor)
     
 
         async for request_output in results_generator:
@@ -113,8 +116,8 @@ class OpenAIvLLMEngine:
         self.default_batch_size = vllm_engine.default_batch_size
         self.batch_size_growth_factor, self.min_batch_size = vllm_engine.batch_size_growth_factor, vllm_engine.min_batch_size
         self._initialize_engines()
-        self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 0)))
-        
+        self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
+
     def _initialize_engines(self):
         self.chat_engine = OpenAIServingChat(
             self.llm, self.config["model"], "assistant", self.tokenizer.tokenizer.chat_template
