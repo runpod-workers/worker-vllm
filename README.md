@@ -12,7 +12,12 @@ Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm)
 
   You may now use your deployment with any OpenAI Codebase by changing **only 3 lines** in total. The supported routes are <ins>Chat Completions</ins>, <ins>Completions</ins>, and <ins>Models</ins> - with both streaming and non-streaming.
 - **Dynamic Batch Size** - time-to-first token as fast no batching, while maintaining the performance of batched token streaming throughout the request.
+- vLLM 0.2.7 -> 0.3.2
+  - Gemma, DeepSeek MoE and OLMo support.
+  - FP8 KV Cache support
+  - We're working on adding support for Multi-LoRA
 - **Custom chat templates** that you can specify as an environment variable.
+- Support for more vLLM Engine args (also configurable via env vars).
 - Fixed Tensor Parallelism, baking model into images, and more bugs.
 
 ## Table of Contents
@@ -77,6 +82,12 @@ Development Image: ```runpod/worker-vllm:dev```
   - `HF_TOKEN`: Hugging Face token for private and gated models (e.g., Llama, Falcon).
   - `QUANTIZATION`: AWQ (`awq`), SqueezeLLM (`squeezellm`) or GPTQ (`gptq`) Quantization. The specified Model Repo must be of a quantized model. (default: `None`)
   - `TRUST_REMOTE_CODE`: Trust remote code for Hugging Face (default: `0`)
+  - `SEED`: Random seed for operations. (default: `0`)
+  - `KV_CACHE_DTYPE`: Data type for kv cache storage. If `auto`, will use `DTYPE`. (default: `auto`).
+  - `DTYPE`: Data Type/Precision for the model weights and activations. (default: `auto`, choices: `auto`, `half`, `float16`, `bfloat16`, `float`, `float32`)
+
+> [!TIP]
+> If you are using Mixtral 8x7B, Quantized models, or are generally facing issues with unusual models/architectures, try setting `TRUST_REMOTE_CODE` to `1`.
   
 - Tokenizer Settings:
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
@@ -89,7 +100,13 @@ Development Image: ```runpod/worker-vllm:dev```
   
 - System Settings:
   - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.95`).
-  - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models, for non-Tensor Parallel only. (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
+  - `MAX_PARALLEL_LOADING_WORKERS`: Load model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models. (default: `None`).
+  - `BLOCK_SIZE`: Token block size for contiguous chunks of tokens. (default: `16`, choices: `8`, `16`, `32`)
+  - `SWAP_SPACE`: CPU swap space size (GiB) per GPU. (default: `4`)
+  - `ENFORCE_EAGER`: Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. (default: `0`)
+  - `MAX_CONTEXT_LEN_TO_CAPTURE`: maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode. (default: `8192`, type: `int`)
+  - `DISABLE_CUSTOM_ALL_REDUCE`: `1` to disable, `0` to enable. (default: `0`)
+  
 
 - Streaming Batch Size:
   - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `50`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
@@ -148,27 +165,30 @@ docker build -t username/image:tag --secret id=HF_TOKEN --build-arg MODEL_NAME="
 ```
 
 ### Compatible Model Architectures
-- Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
-- Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, etc.)
-- Phi (`microsoft/phi-1_5`, `microsoft/phi-2`, etc.)
-- LLaMA & LLaMA-2 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
-- Qwen2 (`Qwen/Qwen2-7B-beta`, `Qwen/Qwen-7B-Chat-beta`, etc.)
-- StableLM(`stabilityai/stablelm-3b-4e1t`, `stabilityai/stablelm-base-alpha-7b-v2`, etc.)
-- Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
-- Qwen (`Qwen/Qwen-7B`, `Qwen/Qwen-7B-Chat`, etc.)
 - Aquila & Aquila2 (`BAAI/AquilaChat2-7B`, `BAAI/AquilaChat2-34B`, `BAAI/Aquila-7B`, `BAAI/AquilaChat-7B`, etc.)
 - Baichuan & Baichuan2 (`baichuan-inc/Baichuan2-13B-Chat`, `baichuan-inc/Baichuan-7B`, etc.)
 - BLOOM (`bigscience/bloom`, `bigscience/bloomz`, etc.)
 - ChatGLM (`THUDM/chatglm2-6b`, `THUDM/chatglm3-6b`, etc.)
 - DeciLM (`Deci/DeciLM-7B`, `Deci/DeciLM-7B-instruct`, etc.)
 - Falcon (`tiiuae/falcon-7b`, `tiiuae/falcon-40b`, `tiiuae/falcon-rw-7b`, etc.)
+- Gemma (`google/gemma-2b`, `google/gemma-7b`, etc.)
 - GPT-2 (`gpt2`, `gpt2-xl`, etc.)
 - GPT BigCode (`bigcode/starcoder`, `bigcode/gpt_bigcode-santacoder`, etc.)
 - GPT-J (`EleutherAI/gpt-j-6b`, `nomic-ai/gpt4all-j`, etc.)
 - GPT-NeoX (`EleutherAI/gpt-neox-20b`, `databricks/dolly-v2-12b`, `stabilityai/stablelm-tuned-alpha-7b`, etc.)
 - InternLM (`internlm/internlm-7b`, `internlm/internlm-chat-7b`, etc.)
+- InternLM2 (`internlm/internlm2-7b`, `internlm/internlm2-chat-7b`, etc.)
+- LLaMA & LLaMA-2 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
+- Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
+- Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, etc.)
 - MPT (`mosaicml/mpt-7b`, `mosaicml/mpt-30b`, etc.)
+- OLMo (`allenai/OLMo-1B`, `allenai/OLMo-7B`, etc.)
 - OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
+- Phi (`microsoft/phi-1_5`, `microsoft/phi-2`, etc.)
+- Qwen (`Qwen/Qwen-7B`, `Qwen/Qwen-7B-Chat`, etc.)
+- Qwen2 (`Qwen/Qwen2-7B-beta`, `Qwen/Qwen-7B-Chat-beta`, etc.)
+- StableLM(`stabilityai/stablelm-3b-4e1t`, `stabilityai/stablelm-base-alpha-7b-v2`, etc.)
+- Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
 
 
 # Usage: OpenAI Compatibility
@@ -176,7 +196,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
 
 ## Modifying your OpenAI Codebase to use your deployed vLLM Worker 
 **Python** (similar to Node.js, etc.):
-1. When initializing the OpenAI Client in your code, change the `api_key` to your RunPod API Key and the `base_url` to your RunPod Serverless Endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`, filling in your deployed endpoint ID.
+1. When initializing the OpenAI Client in your code, change the `api_key` to your RunPod API Key and the `base_url` to your RunPod Serverless Endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`, filling in your deployed endpoint ID. For example, if your Endpoint ID is `abc1234`, the URL would be `https://api.runpod.ai/v2/abc1234/openai/v1`. 
     
     - Before:
     ```python

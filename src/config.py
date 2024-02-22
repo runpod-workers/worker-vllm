@@ -29,7 +29,7 @@ class EngineConfig:
             "download_dir": self.hf_home,
             "quantization": self.quantization,
             "load_format": os.getenv("LOAD_FORMAT", "auto"),
-            "dtype": "half" if self.quantization else "auto",
+            "dtype": os.getenv("DTYPE", "half" if self.quantization else "auto"),
             "tokenizer": self.tokenizer_name_or_path,
             "tokenizer_revision": self.tokenizer_revision,
             "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
@@ -39,12 +39,19 @@ class EngineConfig:
             "max_parallel_loading_workers": self._get_max_parallel_loading_workers(),
             "max_model_len": self._get_max_model_len(),
             "tensor_parallel_size": device_count(),
+            "seed": int(os.getenv("SEED")),
+            "kv_cache_dtype": os.getenv("KV_CACHE_DTYPE"),
+            "block_size": int(os.getenv("BLOCK_SIZE")),
+            "swap_space": int(os.getenv("SWAP_SPACE")),
+            "max_context_len_to_capture": int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE")),
+            "disable_custom_all_reduce": bool(int(os.getenv("DISABLE_CUSTOM_ALL_REDUCE", 0))),
+            "enforce_eager": bool(int(os.getenv("ENFORCE_EAGER", 0)))
         }
 
     def _get_max_parallel_loading_workers(self):
         if device_count() > 1:
             return None
-        return int(os.getenv("MAX_PARALLEL_LOADING_WORKERS", count_physical_cores()))
+        return int(os.getenv("MAX_PARALLEL_LOADING_WORKERS"))
 
     def _get_max_model_len(self):
         max_model_len = os.getenv("MAX_MODEL_LENGTH")
