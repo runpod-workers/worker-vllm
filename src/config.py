@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from utils import count_physical_cores 
 from torch.cuda import device_count
 
-
 class EngineConfig:
     def __init__(self):
         load_dotenv()
@@ -39,20 +38,13 @@ class EngineConfig:
             "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.95)),
             "max_parallel_loading_workers": self._get_max_parallel_loading_workers(),
             "max_model_len": self._get_max_model_len(),
-            "tensor_parallel_size": self._get_num_gpu_shard(),
+            "tensor_parallel_size": device_count(),
         }
 
     def _get_max_parallel_loading_workers(self):
-        if int(os.getenv("TENSOR_PARALLEL_SIZE", 1)) > 1:
+        if device_count() > 1:
             return None
         return int(os.getenv("MAX_PARALLEL_LOADING_WORKERS", count_physical_cores()))
-
-    def _get_num_gpu_shard(self):
-        num_gpu_shard = int(os.getenv("TENSOR_PARALLEL_SIZE", 1))
-        if num_gpu_shard > 1:
-            num_gpu_available = device_count()
-            num_gpu_shard = min(num_gpu_shard, num_gpu_available)
-        return num_gpu_shard
 
     def _get_max_model_len(self):
         max_model_len = os.getenv("MAX_MODEL_LENGTH")

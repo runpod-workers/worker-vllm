@@ -20,6 +20,13 @@ Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm)
   - [Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
     - [Prerequisites](#prerequisites)
     - [Environment Variables](#environment-variables)
+      - [LLM Settings](#llm-settings)
+      - [Tokenizer Settings](#tokenizer-settings)
+      - [Tensor Parallelism (Multi-GPU) Settings](#tensor-parallelism-multi-gpu-settings)
+      - [System Settings](#system-settings)
+      - [Streaming Batch Size](#streaming-batch-size)
+      - [OpenAI Settings](#openai-settings)
+      - [Serverless Settings](#serverless-settings)
   - [Option 2: Build Docker Image with Model Inside](#option-2-build-docker-image-with-model-inside)
     - [Prerequisites](#prerequisites-1)
     - [Arguments](#arguments)
@@ -76,13 +83,12 @@ Development Image: ```runpod/worker-vllm:dev```
   - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `None`).
   - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
 
-- Tensor Parallelism:
+- Tensor Parallelism (Multi-GPU) Settings:
   Note that the more GPUs you split a model's weights across, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so. 
-  - `TENSOR_PARALLEL_SIZE`: Number of GPUs to shard the model across (default: `1`).
   - If you are having issues loading your model with Tensor Parallelism, try decreasing `VLLM_CPU_FRACTION` (default: `1`).
   
 - System Settings:
-  - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.98`).
+  - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.95`).
   - `MAX_PARALLEL_LOADING_WORKERS`: Maximum number of parallel workers for loading models, for non-Tensor Parallel only. (default: `number of available CPU cores` if `TENSOR_PARALLEL_SIZE` is `1`, otherwise `None`).
 
 - Streaming Batch Size:
