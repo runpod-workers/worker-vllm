@@ -1,7 +1,6 @@
 """
-1. Modify not to use LoRA
-2. Modify to point at --rp_serve_api launched handler
-3. 
+Instructions:
+1. Run 
 """
 
 import os
@@ -47,20 +46,20 @@ class ServerRunner:
 
     def _wait_for_server(self):
         # run health check
-        time.sleep(13)
+        time.sleep(15)
         # while True:
-            # try:
-            #     if requests.get(
-            #             "http://localhost:8000/health").status_code == 200:
-            #         break
-            # except Exception as err:
-            #     if self.proc.poll() is not None:
-            #         raise RuntimeError("Server exited unexpectedly.") from err
+        #     try:
+        #         if requests.get(
+        #                 "http://0.0.0.0:8888/health").status_code == 200:
+        #             break
+        #     except Exception as err:
+        #         if self.proc.poll() is not None:
+        #             raise RuntimeError("Server exited unexpectedly.") from err
 
-            #     time.sleep(0.5)
-            #     if time.time() - start > MAX_SERVER_START_WAIT_S:
-            #         raise RuntimeError(
-            #             "Server failed to start in time.") from err
+        #         time.sleep(5)
+        #         # if time.time() - start > MAX_SERVER_START_WAIT_S:
+        #         #     raise RuntimeError(
+        #         #         "Server failed to start in time.") from err
 
     def __del__(self):
         if hasattr(self, "proc"):
@@ -103,7 +102,7 @@ def server(zephyr_lora_files):
 @pytest.fixture(scope="session")
 def client():
     client = openai.AsyncOpenAI(
-        base_url="http://localhost:8888/v1",
+        base_url="http://0.0.0.0:8888/v1",
         api_key="token-abc123",
     )
     yield client
@@ -123,7 +122,7 @@ async def test_check_models(server, client: openai.AsyncOpenAI):
 @pytest.mark.parametrize(
     # first test base model, then test loras
     "model_name",
-    [MODEL_NAME, "zephyr-lora", "zephyr-lora2"],
+    [MODEL_NAME],
 )
 async def test_single_completion(server, client: openai.AsyncOpenAI,
                                  model_name: str):
@@ -131,7 +130,7 @@ async def test_single_completion(server, client: openai.AsyncOpenAI,
                                                  prompt="Hello, my name is",
                                                  max_tokens=5,
                                                  temperature=0.0)
-
+    print(completion)
     assert completion.id is not None
     assert completion.choices is not None and len(completion.choices) == 1
     assert completion.choices[0].text is not None and len(
@@ -195,7 +194,7 @@ async def test_single_chat_session(server, client: openai.AsyncOpenAI,
 @pytest.mark.parametrize(
     # just test 1 lora hereafter
     "model_name",
-    [MODEL_NAME, "zephyr-lora"],
+    [MODEL_NAME],
 )
 async def test_completion_streaming(server, client: openai.AsyncOpenAI,
                                     model_name: str):
@@ -228,7 +227,7 @@ async def test_completion_streaming(server, client: openai.AsyncOpenAI,
 @pytest.mark.parametrize(
     # just test 1 lora hereafter
     "model_name",
-    [MODEL_NAME, "zephyr-lora"],
+    [MODEL_NAME],
 )
 async def test_chat_streaming(server, client: openai.AsyncOpenAI,
                               model_name: str):
@@ -272,7 +271,7 @@ async def test_chat_streaming(server, client: openai.AsyncOpenAI,
 @pytest.mark.parametrize(
     # just test 1 lora hereafter
     "model_name",
-    [MODEL_NAME, "zephyr-lora"],
+    [MODEL_NAME]
 )
 async def test_batch_completions(server, client: openai.AsyncOpenAI,
                                  model_name: str):
