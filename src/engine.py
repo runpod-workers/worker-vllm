@@ -112,6 +112,8 @@ class OpenAIvLLMEngine:
     def __init__(self, vllm_engine):
         self.config = vllm_engine.config
         self.llm = vllm_engine.llm
+        self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.config["model"]
+        self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
         self.tokenizer = vllm_engine.tokenizer
         self.default_batch_size = vllm_engine.default_batch_size
         self.batch_size_growth_factor, self.min_batch_size = vllm_engine.batch_size_growth_factor, vllm_engine.min_batch_size
@@ -120,9 +122,10 @@ class OpenAIvLLMEngine:
 
     def _initialize_engines(self):
         self.chat_engine = OpenAIServingChat(
-            self.llm, self.config["model"], "assistant", self.tokenizer.tokenizer.chat_template
+            self.llm, self.served_model_name, self.response_role,
+            chat_template=self.tokenizer.tokenizer.chat_template
         )
-        self.completion_engine = OpenAIServingCompletion(self.llm, self.config["model"])
+        self.completion_engine = OpenAIServingCompletion(self.llm, self.served_model_name)
     
     async def generate(self, openai_request: JobInput):
         if openai_request.openai_route == "/v1/models":
