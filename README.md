@@ -22,7 +22,7 @@ Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm)
 
 ## Table of Contents
 - [Setting up the Serverless Worker](#setting-up-the-serverless-worker)
-  - [Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
+  - [Option 1: Deploy Any Model Using Pre-Built Docker Image **[RECOMMENDED]**](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
     - [Prerequisites](#prerequisites)
     - [Environment Variables](#environment-variables)
       - [LLM Settings](#llm-settings)
@@ -57,72 +57,68 @@ Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm)
 
 We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint:
 
-<div align="center">
+---
 
-Stable Image: ```runpod/worker-vllm:0.2.3```
+## RunPod Worker Images
 
-Development Image: ```runpod/worker-vllm:dev```
+Below is a summary of the available RunPod Worker images, categorized by image stability and CUDA version compatibility.
 
-</div>
+| CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
+|--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
+| 11.8.0       | `runpod/worker-vllm:0.2.3-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
+| 12.1.0       | `runpod/worker-vllm:0.2.3-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.2 and 12.1 in the filter. |
+
+This table provides a quick reference to the image tags you should use based on the desired CUDA version and image stability (Stable or Development). Ensure to follow the selection note for CUDA 12.1.0 compatibility.
+
+---
 
 #### Prerequisites
 - RunPod Account
 
 #### Environment Variables
+> Note:  `0` is equivalent to `False` and `1` is equivalent to `True` for boolean values.
 
-**Required**:
-   - `MODEL_NAME`: Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`).
-
-**Optional**:
-- LLM Settings:
-  - `MODEL_REVISION`: Model revision to load (default: `None`).
-  - `MAX_MODEL_LENGTH`: Maximum number of tokens for the engine to be able to handle. (default: maximum supported by the model)
-  - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't)
-  - `LOAD_FORMAT`: Format to load model in (default: `auto`).
-  - `HF_TOKEN`: Hugging Face token for private and gated models (e.g., Llama, Falcon).
-  - `QUANTIZATION`: AWQ (`awq`), SqueezeLLM (`squeezellm`) or GPTQ (`gptq`) Quantization. The specified Model Repo must be of a quantized model. (default: `None`)
-  - `TRUST_REMOTE_CODE`: Trust remote code for Hugging Face (default: `0`)
-  - `SEED`: Random seed for operations. (default: `0`)
-  - `KV_CACHE_DTYPE`: Data type for kv cache storage. If `auto`, will use `DTYPE`. (default: `auto`).
-  - `DTYPE`: Data Type/Precision for the model weights and activations. (default: `auto`, choices: `auto`, `half`, `float16`, `bfloat16`, `float`, `float32`)
+| Name                                | Default              | Type/Choices                              | Description |
+|-------------------------------------|----------------------|-------------------------------------------|-------------|
+**LLM Settings**
+| `MODEL_NAME`**\***                        | -                    | `str`                                         | Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`). |
+| `MODEL_REVISION`                    | `None`               | `str`                                         |Model revision(branch) to load. |
+| `MAX_MODEL_LENGTH`                  | Model's maximum      | `int`                                         |Maximum number of tokens for the engine to handle per request. |
+| `BASE_PATH`                         | `/runpod-volume`     | `str`                                         |Storage directory for Huggingface cache and model. Utilizes network storage if attached when pointed at `/runpod-volume`, which will have only one worker download the model once, which all workers will be able to load. If no network volume is present, creates a local directory within each worker. |
+| `LOAD_FORMAT`                       | `auto`               | `str`                                         |Format to load model in. |
+| `HF_TOKEN`                          | -                    | `str`                                         |Hugging Face token for private and gated models. |
+| `QUANTIZATION`                      | `None`               | `awq`, `squeezellm`, `gptq`              |Quantization of given model. The model must already be quantized. |
+| `TRUST_REMOTE_CODE`                 | `0`                  | boolean as `int`                                         |Trust remote code for Hugging Face models. Can help with Mixtral 8x7B, Quantized models, and unusual models/architectures.
+| `SEED`                              | `0`                  | `int`                                         |Sets random seed for operations. |
+| `KV_CACHE_DTYPE`                    | `auto`               | boolean as `int`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
+| `DTYPE`                             | `auto`               | `auto`, `half`, `float16`, `bfloat16`, `float`, `float32` |Sets datatype/precision for model weights and activations. |
+**Tokenizer Settings**
+| `TOKENIZER_NAME`                    | `None`               | `str`                                         |Tokenizer repository to use a different tokenizer than the model's default. |
+| `TOKENIZER_REVISION`                | `None`               | `str`                                         |Tokenizer revision to load. |
+| `CUSTOM_CHAT_TEMPLATE`              | `None`               | `str` of single-line jinja template                                         |Custom chat jinja template. [More Info](https://huggingface.co/docs/transformers/chat_templating) |
+**System, GPU, and Tensor Parallelism(Multi-GPU) Settings**
+| `GPU_MEMORY_UTILIZATION`            | `0.95`               | `float`                                         |Sets GPU VRAM utilization. |
+| `MAX_PARALLEL_LOADING_WORKERS`      | `None`               | `int`                                         |Load model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models. |
+| `BLOCK_SIZE`                        | `16`                 | `8`, `16`, `32`                           |Token block size for contiguous chunks of tokens. |
+| `SWAP_SPACE`                        | `4`                  | `int`                                         |CPU swap space size (GiB) per GPU. |
+| `ENFORCE_EAGER`                     | `0`                  | boolean as `int`                                         |Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. |
+| `MAX_CONTEXT_LEN_TO_CAPTURE`        | `8192`               | `int`                                     |Maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode.|
+| `DISABLE_CUSTOM_ALL_REDUCE`         | `0`                  | `int`                                         |Enables or disables custom all reduce. |
+**Streaming Batch Size Settings**:  
+| `DEFAULT_BATCH_SIZE`                | `50`                 | `int`                                         |Default and Maximum batch size for token streaming to reduce HTTP calls. |
+| `DEFAULT_MIN_BATCH_SIZE`            | `1`                  | `int`                                         |Batch size for the first request, which will be multiplied by the growth factor every subsequent request. |
+| `DEFAULT_BATCH_SIZE_GROWTH_FACTOR`  | `3`                  | `float`                                         |Growth factor for dynamic batch size. |
+The way this works is that the first request will have a batch size of `DEFAULT_MIN_BATCH_SIZE`, and each subsequent request will have a batch size of `previous_batch_size * DEFAULT_BATCH_SIZE_GROWTH_FACTOR`. This will continue until the batch size reaches `DEFAULT_BATCH_SIZE`. E.g. for the default values, the batch sizes will be `1, 3, 9, 27, 50, 50, 50, ...`. You can also specify this per request, with inputs `max_batch_size`, `min_batch_size`, and `batch_size_growth_factor`. This has nothing to do with vLLM's internal batching, but rather the number of tokens sent in each HTTP request from the worker |
+**OpenAI Settings**
+| `RAW_OPENAI_OUTPUT`                 | `1`                  | boolean as `int`                                         |Enables raw OpenAI SSE format string output when streaming.  **Required** to be enabled (which it is by default) for OpenAI compatibility. |
+**Serverless Settings**
+| `MAX_CONCURRENCY`                   | `300`                | `int`                                         |Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency |
+| `DISABLE_LOG_STATS`                 | `1`                  | boolean as `int`                                         |Enables or disables vLLM stats logging. |
+| `DISABLE_LOG_REQUESTS`              | `1`                  | boolean as `int`                                         |Enables or disables vLLM request logging. |
 
 > [!TIP]
-> If you are using Mixtral 8x7B, Quantized models, or are generally facing issues with unusual models/architectures, try setting `TRUST_REMOTE_CODE` to `1`.
-  
-- Tokenizer Settings:
-  - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
-  - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `None`).
-  - `CUSTOM_CHAT_TEMPLATE`: Custom chat jinja template, read more about Hugging Face chat templates [here](https://huggingface.co/docs/transformers/chat_templating). (default: `None`) 
+> If you are facing issues when using Mixtral 8x7B, Quantized models, or handling unusual models/architectures, try setting `TRUST_REMOTE_CODE` to `1`.
 
-- Tensor Parallelism (Multi-GPU) Settings:
-  Note that the more GPUs you split a model's weights across, the slower it will be due to inter-GPU communication overhead. If you can fit the model on a single GPU, it is recommended to do so. 
-  - If you are having issues loading your model with Tensor Parallelism, try decreasing `VLLM_CPU_FRACTION` (default: `1`).
-  
-- System Settings:
-  - `GPU_MEMORY_UTILIZATION`: GPU VRAM utilization (default: `0.95`).
-  - `MAX_PARALLEL_LOADING_WORKERS`: Load model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models. (default: `None`).
-  - `BLOCK_SIZE`: Token block size for contiguous chunks of tokens. (default: `16`, choices: `8`, `16`, `32`)
-  - `SWAP_SPACE`: CPU swap space size (GiB) per GPU. (default: `4`)
-  - `ENFORCE_EAGER`: Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. (default: `0`)
-  - `MAX_CONTEXT_LEN_TO_CAPTURE`: maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode. (default: `8192`, type: `int`)
-  - `DISABLE_CUSTOM_ALL_REDUCE`: `1` to disable, `0` to enable. (default: `0`)
-  
-
-- Streaming Batch Size:
-  - `DEFAULT_BATCH_SIZE`: Token streaming batch size (default: `50`). This reduces the number of HTTP calls, increasing speed 8-10x vs non-batching, matching non-streaming performance.
-  - Dynamic Batch Size:
-    - `DEFAULT_MIN_BATCH_SIZE`: the batch size for the first request (default: `1`).
-    - `DEFAULT_BATCH_SIZE_GROWTH_FACTOR`: the growth factor for the dynamic batch size (default: `3`). 
-    
-    > The way this works is that the first request will have a batch size of `DEFAULT_MIN_BATCH_SIZE`, and each subsequent request will have a batch size of `previous_batch_size * DEFAULT_BATCH_SIZE_GROWTH_FACTOR`. This will continue until the batch size reaches `DEFAULT_BATCH_SIZE`. E.g. for the default values, the batch sizes will be `1, 3, 9, 27, 50, 50, 50, ...`. You can also specify this per request, with inputs `max_batch_size`, `min_batch_size`, and `batch_size_growth_factor`. 
-
-- OpenAI Settings:
-  - `RAW_OPENAI_OUTPUT`: Enable (`1`) or disable (`0`) raw OpenAI SSE format string output when streaming(default: `1`). **Required** to be enabled (default) for OpenAI compatibility.
-
-- Serverless Settings:
-  - `MAX_CONCURRENCY`: Max concurrent requests. (default: `100`)
-  - `DISABLE_LOG_STATS`: Enable (`0`) or disable (`1`) vLLM stats logging.
-  - `DISABLE_LOG_REQUESTS`: Enable (`0`) or disable (`1`) request logging.
 
 ### Option 2: Build Docker Image with Model Inside
 To build an image with the model baked in, you must specify the following docker arguments when building the image.
@@ -164,7 +160,9 @@ export HF_TOKEN="your_token_here"
 docker build -t username/image:tag --secret id=HF_TOKEN --build-arg MODEL_NAME="openchat/openchat_3.5" .
 ```
 
-### Compatible Model Architectures
+## Compatible Model Architectures
+Below are all supported model architectures (and examples of each) that you can deploy using the vLLM Worker. You can deploy **any model on HuggingFace**, as long as its base architecture is one of the following:
+
 - Aquila & Aquila2 (`BAAI/AquilaChat2-7B`, `BAAI/AquilaChat2-34B`, `BAAI/Aquila-7B`, `BAAI/AquilaChat-7B`, etc.)
 - Baichuan & Baichuan2 (`baichuan-inc/Baichuan2-13B-Chat`, `baichuan-inc/Baichuan-7B`, etc.)
 - BLOOM (`bigscience/bloom`, `bigscience/bloomz`, etc.)
@@ -189,7 +187,6 @@ docker build -t username/image:tag --secret id=HF_TOKEN --build-arg MODEL_NAME="
 - Qwen2 (`Qwen/Qwen2-7B-beta`, `Qwen/Qwen-7B-Chat-beta`, etc.)
 - StableLM(`stabilityai/stablelm-3b-4e1t`, `stabilityai/stablelm-base-alpha-7b-v2`, etc.)
 - Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
-
 
 # Usage: OpenAI Compatibility
 The vLLM Worker is fully compatible with OpenAI's API, and you can use it with any OpenAI Codebase by changing only 3 lines in total. The supported routes are <ins>Chat Completions</ins>, <ins>Completions</ins> and <ins>Models</ins> - with both streaming and non-streaming.
@@ -276,7 +273,7 @@ When using the chat completion feature of the vLLM Serverless Endpoint Worker, y
 
 ### Chat Completions
 <details>
-  <summary>Click to expand table</summary>
+  <summary>Supported Chat Completions Inputs and Descriptions</summary>
 
   | Parameter                      | Type                             | Default Value | Description                                                                                                                                                                                                                                                                                           |
   |--------------------------------|----------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -311,7 +308,7 @@ When using the chat completion feature of the vLLM Serverless Endpoint Worker, y
 
 ### Completions
 <details>
-  <summary>Click to expand table</summary>
+  <summary>Supported Completions Inputs and Descriptions</summary>
 
   | Parameter                      | Type                             | Default Value | Description                                                                                                                                                                                                                                                                                           |
   |--------------------------------|----------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -426,8 +423,8 @@ list_of_models = [model.id for model in models_response]
 print(list_of_models)
 ```
 
-## Non-OpenAI Usage
-### Input Request Parameters
+# Usage: Standard (Non-OpenAI)
+## Request Input Parameters
 
 <details>
   <summary>Click to expand table</summary>
@@ -438,14 +435,42 @@ print(list_of_models)
   | `prompt`              | str                  |                    | Prompt string to generate text based on.                                                               |
   | `messages`            | list[dict[str, str]] |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`. |
   | `apply_chat_template` | bool                 | False              | Whether to apply the model's chat template to the `prompt`.                                            |
-  | `sampling_params`     | dict                 | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc.                           |
+  | `sampling_params`     | dict                 | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc. You can find all available parameters in the `Sampling Parameters` section below. |
   | `stream`              | bool                 | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated.          |
   | `max_batch_size`          | int                  | env var `DEFAULT_BATCH_SIZE` | The maximum number of tokens to stream every HTTP POST call.                                                   |
   | `min_batch_size`          | int                  | env var `DEFAULT_MIN_BATCH_SIZE` | The minimum number of tokens to stream every HTTP POST call.                                           |
   | `batch_size_growth_factor` | int                  | env var `DEFAULT_BATCH_SIZE_GROWTH_FACTOR` | The growth factor by which `min_batch_size` will be multiplied for each call until `max_batch_size` is reached.           |
 </details>
 
-#### Text Input Formats 
+### Sampling Parameters
+
+Below are all available sampling parameters that you can specify in the `sampling_params` dictionary. If you do not specify any of these parameters, the default values will be used.
+<details>
+  <summary>Click to expand table</summary>
+
+  | Argument                        | Type                        | Default | Description                                                                                                                                                                                   |
+  |---------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | `n`                             | int                         | 1       | Number of output sequences generated from the prompt. The top `n` sequences are returned.                                                                                                      |
+  | `best_of`                       | Optional[int]               | `n`    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
+  | `presence_penalty`              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
+  | `frequency_penalty`             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
+  | `repetition_penalty`            | float                       | 1.0     | Penalizes new tokens based on their appearance in the prompt and generated text. Values > 1 encourage new tokens, values < 1 encourage repetition.                                            |
+  | `temperature`                   | float                       | 1.0     | Controls the randomness of sampling. Lower values make it more deterministic, higher values make it more random. Zero means greedy sampling.                                                  |
+  | `top_p`                         | float                       | 1.0     | Controls the cumulative probability of top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                            |
+  | `top_k`                         | int                         | -1      | Controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                                                                              |
+  | `min_p`                         | float                       | 0.0     | Represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable.                                                   |
+  | `use_beam_search`               | bool                        | False   | Whether to use beam search instead of sampling.                                                                                                                                               |
+  | `length_penalty`                | float                       | 1.0     | Penalizes sequences based on their length. Used in beam search.                                                                                                                               |
+  | `early_stopping`                | Union[bool, str]            | False   | Controls stopping condition in beam search. Can be `True`, `False`, or `"never"`.                                                                                                             |
+  | `stop`                          | Union[None, str, List[str]] | None    | List of strings that stop generation when produced. The output will not contain these strings.                                                                                                    |
+  | `stop_token_ids`                | Optional[List[int]]         | None    | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                                                            |
+  | `ignore_eos`                    | bool                        | False   | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                                              |
+  | `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
+  | `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
+  | `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
+
+
+### Text Input Formats 
 You may either use a `prompt` or a list of `messages` as input.
  1. `prompt` 
 The prompt string can be any string, and the model's chat template will not be applied to it unless `apply_chat_template` is set to `true`, in which case it will be treated as a user message.
@@ -482,29 +507,3 @@ Your list can contain any number of messages, and each message usually can have 
       ]
     ```
 
-#### Sampling Parameters
-
-Below are all available sampling parameters that you can specify in the `sampling_params` dictionary. If you do not specify any of these parameters, the default values will be used.
-<details>
-  <summary>Click to expand table</summary>
-
-  | Argument                        | Type                        | Default | Description                                                                                                                                                                                   |
-  |---------------------------------|-----------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | `n`                             | int                         | 1       | Number of output sequences generated from the prompt. The top `n` sequences are returned.                                                                                                      |
-  | `best_of`                       | Optional[int]               | `n`    | Number of output sequences generated from the prompt. The top `n` sequences are returned from these `best_of` sequences. Must be ≥ `n`. Treated as beam width in beam search. Default is `n`. |
-  | `presence_penalty`              | float                       | 0.0     | Penalizes new tokens based on their presence in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                  |
-  | `frequency_penalty`             | float                       | 0.0     | Penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage new tokens, values < 0 encourage repetition.                                                 |
-  | `repetition_penalty`            | float                       | 1.0     | Penalizes new tokens based on their appearance in the prompt and generated text. Values > 1 encourage new tokens, values < 1 encourage repetition.                                            |
-  | `temperature`                   | float                       | 1.0     | Controls the randomness of sampling. Lower values make it more deterministic, higher values make it more random. Zero means greedy sampling.                                                  |
-  | `top_p`                         | float                       | 1.0     | Controls the cumulative probability of top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                            |
-  | `top_k`                         | int                         | -1      | Controls the number of top tokens to consider. Set to -1 to consider all tokens.                                                                                                              |
-  | `min_p`                         | float                       | 0.0     | Represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable.                                                   |
-  | `use_beam_search`               | bool                        | False   | Whether to use beam search instead of sampling.                                                                                                                                               |
-  | `length_penalty`                | float                       | 1.0     | Penalizes sequences based on their length. Used in beam search.                                                                                                                               |
-  | `early_stopping`                | Union[bool, str]            | False   | Controls stopping condition in beam search. Can be `True`, `False`, or `"never"`.                                                                                                             |
-  | `stop`                          | Union[None, str, List[str]] | None    | List of strings that stop generation when produced. The output will not contain these strings.                                                                                                    |
-  | `stop_token_ids`                | Optional[List[int]]         | None    | List of token IDs that stop generation when produced. Output contains these tokens unless they are special tokens.                                                                            |
-  | `ignore_eos`                    | bool                        | False   | Whether to ignore the End-Of-Sequence token and continue generating tokens after its generation.                                                                                              |
-  | `max_tokens`                    | int                         | 16      | Maximum number of tokens to generate per output sequence.                                                                                                                                     |
-  | `skip_special_tokens`           | bool                        | True    | Whether to skip special tokens in the output.                                                                                                                                                 |
-  | `spaces_between_special_tokens` | bool                        | True    | Whether to add spaces between special tokens in the output.                                                                                                                                   |
