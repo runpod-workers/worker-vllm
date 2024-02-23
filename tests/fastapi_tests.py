@@ -1,6 +1,9 @@
 """
 Instructions:
-1. Run 
+1. Run middleware.py
+2. change path to HF cache
+3. run pytest tests/fastapi_tests.py -rsx -vvv --disable-warnings 
+4. Change wait time in line 54 if needed, it should be a bit above handler initialization
 """
 
 import os
@@ -16,6 +19,7 @@ from huggingface_hub import snapshot_download  # downloading lora to test lora r
 
 MAX_SERVER_START_WAIT_S = 600  # wait for server to start for 60 seconds
 MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"
+CHAT_TEMPLATE = "{% for message in messages %}\n{% if message['role'] == 'user' %}\n{{ '<|user|>\n' + message['content'] + eos_token }}\n{% elif message['role'] == 'system' %}\n{{ '<|system|>\n' + message['content'] + eos_token }}\n{% elif message['role'] == 'assistant' %}\n{{ '<|assistant|>\n'  + message['content'] + eos_token }}\n{% endif %}\n{% if loop.last and add_generation_prompt %}\n{{ '<|assistant|>' }}\n{% endif %}\n{% endfor %}"
 PATH_TO_HF_CACHE= "/devdisk/.cache/huggingface/hub/"
 LORA_NAME = "typeof/zephyr-7b-beta-lora"  # technically this needs Mistral-7B-v0.1 as base, but we're not testing generation quality here
 
@@ -32,7 +36,8 @@ class ServerRunner:
         env["DTYPE"]="bfloat16"
         env["MAX_MODEL_LENGTH"]="8192"
         env["ENFORCE_EAGER"]="1"
-        
+        env["CUSTOM_CHAT_TEMPLATE"]=CHAT_TEMPLATE
+    
         self.proc = subprocess.Popen(
             ["python", "src/handler.py", "--rp_serve_api"],
             env=env,
@@ -246,6 +251,7 @@ async def test_chat_streaming(server, client: openai.AsyncOpenAI,
         max_tokens=10,
         temperature=0.0,
     )
+    print(chat_completion)
     output = chat_completion.choices[0].message.content
     stop_reason = chat_completion.choices[0].finish_reason
 

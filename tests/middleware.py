@@ -9,16 +9,13 @@ app = FastAPI()
 RUNPOD_URL = "http://localhost:8000"
 
 async def stream_generator(headers, check_url):
-    results = []
     async with aiohttp.ClientSession() as session:
         while True:       
             async with session.post(check_url, headers=headers) as response:
                 result = await response.json()
                 for chunk in result.get('stream', []):
                     yield chunk["output"].encode()
-                    results.append(chunk["output"].encode())
                 if result.get('status') == 'COMPLETED':
-                    print(results)
                     break
             await asyncio.sleep(0.01)
 
@@ -89,10 +86,10 @@ async def completion(request: Request):
     stream = request_data.get("stream", False)
 
     if stream:
-        generator = await fetch_response(request_data, headers, "/v1/chat/completions", stream=True)
+        generator = await fetch_response(request_data, headers, "/v1/completions", stream=True)
         return StreamingResponse(generator)  # Make sure generator is called as a function
     else:
-        result = await fetch_response(request_data, headers, "/v1/chat/completions")
+        result = await fetch_response(request_data, headers, "/v1/completions")
         return JSONResponse(result)  # This now correctly waits for and passes the result
 
 # @app.get("/health")
