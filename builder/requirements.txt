@@ -2,7 +2,7 @@ hf_transfer
 ray
 pandas
 pyarrow
-runpod==1.5.3
+runpod==1.6.2
 huggingface-hub
 packaging
 typing-extensions==4.7.1
