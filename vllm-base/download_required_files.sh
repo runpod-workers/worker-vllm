@@ -7,6 +7,6 @@ cp -r vllm-fork-for-sls-worker vllm-11.8.0
 rm -rf vllm-fork-for-sls-worker
 
 cd vllm-11.8.0
-git checkout cuda11.8
+git checkout cuda-11.8
 
 echo "vLLM Base Image Builder Setup Complete."

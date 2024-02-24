@@ -6,7 +6,7 @@
 ##########################################################
 
 # Define the CUDA version for the build
-ARG WORKER_CUDA_VERSION=12.1.0
+ARG WORKER_CUDA_VERSION=11.8.0
 
 FROM nvidia/cuda:${WORKER_CUDA_VERSION}-devel-ubuntu22.04 AS dev
 
@@ -17,6 +17,10 @@ ARG WORKER_CUDA_VERSION
 RUN apt-get update -y \
     && apt-get install -y python3-pip git
 
+RUN if [ "${WORKER_CUDA_VERSION}" = "12.1.0" ]; then \
+        ldconfig /usr/local/cuda-12.1/compat/; \
+    fi
+
 # Set working directory
 WORKDIR /vllm-installation
 
@@ -24,6 +28,11 @@ WORKDIR /vllm-installation
 COPY vllm-${WORKER_CUDA_VERSION}/requirements.txt requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    if [ "${WORKER_CUDA_VERSION}" = "11.8.0" ]; then \
+        pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
+    fi
 
 # Install development dependencies
 COPY vllm-${WORKER_CUDA_VERSION}/requirements-dev.txt requirements-dev.txt
@@ -67,7 +76,7 @@ ENV NVCC_THREADS=${nvcc_threads}
 # Build extensions
 RUN python3 setup.py build_ext --inplace
 
-FROM nvidia/cuda:${WORKER_CUDA_VERSION}-base-ubuntu22.04 AS vllm-base
+FROM nvidia/cuda:${WORKER_CUDA_VERSION}-runtime-ubuntu22.04 AS vllm-base
 
 # Re-declare ARG after FROM
 ARG WORKER_CUDA_VERSION
