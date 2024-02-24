@@ -21,7 +21,7 @@ class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
         self.config = EngineConfig().config
-        self.tokenizer = TokenizerWrapper(self.config.get("tokenizer"), self.config.get("tokenizer_revision"))
+        self.tokenizer = TokenizerWrapper(self.config.get("tokenizer"), self.config.get("tokenizer_revision"), self.config.get("trust_remote_code"))
         self.llm = self._initialize_llm() if engine is None else engine
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))

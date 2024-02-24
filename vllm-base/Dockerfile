@@ -6,7 +6,7 @@
 ##########################################################
 
 # Define the CUDA version for the build
-ARG WORKER_CUDA_VERSION=12.1.0
+ARG WORKER_CUDA_VERSION=11.8.0
 
 FROM nvidia/cuda:${WORKER_CUDA_VERSION}-devel-ubuntu22.04 AS dev
 
@@ -76,7 +76,7 @@ ENV NVCC_THREADS=${nvcc_threads}
 # Build extensions
 RUN python3 setup.py build_ext --inplace
 
-FROM nvidia/cuda:${WORKER_CUDA_VERSION}-base-ubuntu22.04 AS vllm-base
+FROM nvidia/cuda:${WORKER_CUDA_VERSION}-runtime-ubuntu22.04 AS vllm-base
 
 # Re-declare ARG after FROM
 ARG WORKER_CUDA_VERSION
