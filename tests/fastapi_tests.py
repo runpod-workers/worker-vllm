@@ -2,7 +2,7 @@
 Instructions:
 1. Run middleware.py
 2. change path to HF cache
-3. run pytest tests/fastapi_tests.py -rsx -vvv --disable-warnings 
+3. run pytest tests/fastapi_tests.py -rsx -vvv --disable-warningspytest tests/fastapi_tests.py -rsx -vvv --disable-warnings 
 4. Change wait time in line 54 if needed, it should be a bit above handler initialization
 """
 
@@ -22,24 +22,52 @@ MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"
 CHAT_TEMPLATE = "{% for message in messages %}\n{% if message['role'] == 'user' %}\n{{ '<|user|>\n' + message['content'] + eos_token }}\n{% elif message['role'] == 'system' %}\n{{ '<|system|>\n' + message['content'] + eos_token }}\n{% elif message['role'] == 'assistant' %}\n{{ '<|assistant|>\n'  + message['content'] + eos_token }}\n{% endif %}\n{% if loop.last and add_generation_prompt %}\n{{ '<|assistant|>' }}\n{% endif %}\n{% endfor %}"
 PATH_TO_HF_CACHE= "/devdisk/.cache/huggingface/hub/"
 LORA_NAME = "typeof/zephyr-7b-beta-lora"  # technically this needs Mistral-7B-v0.1 as base, but we're not testing generation quality here
-
 pytestmark = pytest.mark.asyncio
 
+MODELS = [
+    #"mistralai/Mistral-7B-Instruct-v0.1",
+    "NousResearch/Llama-2-7b-hf",
+    #"facebook/opt-125m",
+]
+
+PRECISION = [
+    "half",
+    #"float16",
+    #"bfloat16"
+]
+
+QUANTIZATION = [
+    False,
+    #"awq",
+    #"gptq",
+    #"squeezellm"
+]
+
+TP = [
+    False,
+    #True
+]
+
+MAX_TOKENS = [
+    100,
+    1024,
+    2048
+]
 
 @ray.remote(num_gpus=1)
 class ServerRunner:
     def __init__(self, args):
         env = os.environ.copy()
         env["HF_HUB_CACHE"] = "1"
-        env["MODEL_NAME"]=MODEL_NAME
+        env["MODEL_NAME"]=args["model_name"]
         env["BASE_PATH"]=PATH_TO_HF_CACHE
         env["DTYPE"]="bfloat16"
-        env["MAX_MODEL_LENGTH"]="8192"
+        env["MAX_MODEL_LENGTH"]="2048"
         env["ENFORCE_EAGER"]="1"
         env["CUSTOM_CHAT_TEMPLATE"]=CHAT_TEMPLATE
     
         self.proc = subprocess.Popen(
-            ["python", "src/handler.py", "--rp_serve_api"],
+            ["python3.10", "src/handler.py", "--rp_serve_api"],
             env=env,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -70,67 +98,40 @@ class ServerRunner:
         if hasattr(self, "proc"):
             self.proc.terminate()
 
+@pytest.mark.parametrize("model_name", MODELS)
+@pytest.mark.parametrize("precision", PRECISION)
+@pytest.mark.parametrize("quantization", QUANTIZATION)
+@pytest.mark.parametrize("use_tp", TP)
+@pytest.mark.parametrize("max_tokens")
+async def test_single_completion(model_name, precision, quantization, use_tp, max_tokens):
+    env = os.environ.copy()
 
-@pytest.fixture(scope="session")
-def zephyr_lora_files():
-    return snapshot_download(repo_id=LORA_NAME)
-
-
-@pytest.fixture(scope="session")
-def server(zephyr_lora_files):
-    ray.init()
-    server_runner = ServerRunner.remote([
-        "--model",
-        MODEL_NAME,
-        "--dtype",
-        "bfloat16",  # use half precision for speed and memory savings in CI environment
-        "--max-model-len",
-        "8192",
-        "--enforce-eager",
-        # # lora config below
-        # "--enable-lora",
-        # "--lora-modules",
-        # f"zephyr-lora={zephyr_lora_files}",
-        # f"zephyr-lora2={zephyr_lora_files}",
-        # "--max-lora-rank",
-        # "64",
-        # "--max-cpu-loras",
-        # "2",
-        # "--max-num-seqs",
-        # "128"
-    ])
-    ray.get(server_runner.ready.remote())
-    yield server_runner
     ray.shutdown()
+    ray.init()
 
+    params = [
+        "--model",
+        model_name,
+        "--dtype",
+        precision,
+        "--enforce-eager", 
+    ]
 
-@pytest.fixture(scope="session")
-def client():
+    if use_tp:
+        params += ["--tensor-parallel-size", 1]
+    
+    if quantization:
+        params += ["--quantization", quantization]
+
+    server = ServerRunner.remote(
+        {'model_name': model_name}
+    )
+
+    ray.get(server.ready.remote())
     client = openai.AsyncOpenAI(
         base_url="http://0.0.0.0:8888/v1",
         api_key="token-abc123",
     )
-    yield client
-
-
-async def test_check_models(server, client: openai.AsyncOpenAI):
-    models = await client.models.list()
-    models = models.data
-    served_model = models[0]
-    # lora_models = models[1:]
-    assert served_model.id == MODEL_NAME
-    # assert all(model.root == MODEL_NAME for model in models)
-    # assert lora_models[0].id == "zephyr-lora"
-    # assert lora_models[1].id == "zephyr-lora2"
-
-
-@pytest.mark.parametrize(
-    # first test base model, then test loras
-    "model_name",
-    [MODEL_NAME],
-)
-async def test_single_completion(server, client: openai.AsyncOpenAI,
-                                 model_name: str):
     completion = await client.completions.create(model=model_name,
                                                  prompt="Hello, my name is",
                                                  max_tokens=5,
@@ -146,22 +147,49 @@ async def test_single_completion(server, client: openai.AsyncOpenAI,
 
     # test using token IDs
     completion = await client.completions.create(
-        model=MODEL_NAME,
+        model=model_name,
         prompt=[0, 0, 0, 0, 0],
-        max_tokens=5,
+        max_tokens=max_tokens,
         temperature=0.0,
     )
     assert completion.choices[0].text is not None and len(
         completion.choices[0].text) >= 5
 
+    ray.shutdown()
 
-@pytest.mark.parametrize(
-    # just test 1 lora hereafter
-    "model_name",
-    [MODEL_NAME],
-)
-async def test_single_chat_session(server, client: openai.AsyncOpenAI,
-                                   model_name: str):
+@pytest.mark.parametrize("model_name", MODELS)
+@pytest.mark.parametrize("precision", PRECISION)
+@pytest.mark.parametrize("quantization", QUANTIZATION)
+@pytest.mark.parametrize("use_tp", TP)
+async def test_single_chat_session(model_name, precision, quantization, use_tp):
+    env = os.environ.copy()
+
+    ray.shutdown()
+    ray.init()
+
+    params = [
+        "--model",
+        model_name,
+        "--dtype",
+        precision,
+        "--enforce-eager", 
+    ]
+
+    if use_tp:
+        params += ["--tensor-parallel-size", 1]
+    
+    if quantization:
+        params += ["--quantization", quantization]
+
+    server = ServerRunner.remote(
+        {'model_name': model_name}
+    )
+
+    ray.get(server.ready.remote())
+    client = openai.AsyncOpenAI(
+        base_url="http://0.0.0.0:8888/v1",
+        api_key="token-abc123",
+    )
     messages = [{
         "role": "system",
         "content": "you are a helpful assistant"
@@ -188,21 +216,46 @@ async def test_single_chat_session(server, client: openai.AsyncOpenAI,
     # test multi-turn dialogue
     messages.append({"role": "user", "content": "express your result in json"})
     chat_completion = await client.chat.completions.create(
-        model=MODEL_NAME,
+        model=model_name,
         messages=messages,
         max_tokens=10,
     )
     message = chat_completion.choices[0].message
     assert message.content is not None and len(message.content) >= 0
 
+@pytest.mark.parametrize("model_name", MODELS)
+@pytest.mark.parametrize("precision", PRECISION)
+@pytest.mark.parametrize("quantization", QUANTIZATION)
+@pytest.mark.parametrize("use_tp", TP)
+async def test_completion_streaming(model_name, precision, quantization, use_tp):
+    env = os.environ.copy()
 
-@pytest.mark.parametrize(
-    # just test 1 lora hereafter
-    "model_name",
-    [MODEL_NAME],
-)
-async def test_completion_streaming(server, client: openai.AsyncOpenAI,
-                                    model_name: str):
+    ray.shutdown()
+    ray.init()
+
+    params = [
+        "--model",
+        model_name,
+        "--dtype",
+        precision,
+        "--enforce-eager", 
+    ]
+
+    if use_tp:
+        params += ["--tensor-parallel-size", 1]
+    
+    if quantization:
+        params += ["--quantization", quantization]
+
+    server = ServerRunner.remote(
+        {'model_name': model_name}
+    )
+
+    ray.get(server.ready.remote())
+    client = openai.AsyncOpenAI(
+        base_url="http://0.0.0.0:8888/v1",
+        api_key="token-abc123",
+    )
     prompt = "What is an LLM?"
 
     single_completion = await client.completions.create(
@@ -228,14 +281,39 @@ async def test_completion_streaming(server, client: openai.AsyncOpenAI,
     assert chunk.usage == single_usage
     assert "".join(chunks) == single_output
 
+@pytest.mark.parametrize("model_name", MODELS)
+@pytest.mark.parametrize("precision", PRECISION)
+@pytest.mark.parametrize("quantization", QUANTIZATION)
+@pytest.mark.parametrize("use_tp", TP)
+async def test_chat_streaming(model_name, precision, quantization, use_tp):
+    env = os.environ.copy()
 
-@pytest.mark.parametrize(
-    # just test 1 lora hereafter
-    "model_name",
-    [MODEL_NAME],
-)
-async def test_chat_streaming(server, client: openai.AsyncOpenAI,
-                              model_name: str):
+    ray.shutdown()
+    ray.init()
+
+    params = [
+        "--model",
+        model_name,
+        "--dtype",
+        precision,
+        "--enforce-eager", 
+    ]
+
+    if use_tp:
+        params += ["--tensor-parallel-size", 1]
+    
+    if quantization:
+        params += ["--quantization", quantization]
+
+    server = ServerRunner.remote(
+        {'model_name': model_name}
+    )
+
+    ray.get(server.ready.remote())
+    client = openai.AsyncOpenAI(
+        base_url="http://0.0.0.0:8888/v1",
+        api_key="token-abc123",
+    )
     messages = [{
         "role": "system",
         "content": "you are a helpful assistant"
@@ -273,15 +351,42 @@ async def test_chat_streaming(server, client: openai.AsyncOpenAI,
     assert chunk.choices[0].finish_reason == stop_reason
     assert "".join(chunks) == output
 
-
-@pytest.mark.parametrize(
-    # just test 1 lora hereafter
-    "model_name",
-    [MODEL_NAME]
-)
-async def test_batch_completions(server, client: openai.AsyncOpenAI,
-                                 model_name: str):
+@pytest.mark.parametrize("model_name", MODELS)
+@pytest.mark.parametrize("precision", PRECISION)
+@pytest.mark.parametrize("quantization", QUANTIZATION)
+@pytest.mark.parametrize("use_tp", TP)
+async def test_batch_completions(model_name, precision, quantization, use_tp):
     # test simple list
+
+    env = os.environ.copy()
+
+    ray.shutdown()
+    ray.init()
+
+    params = [
+        "--model",
+        model_name,
+        "--dtype",
+        precision,
+        "--enforce-eager", 
+    ]
+
+    if use_tp:
+        params += ["--tensor-parallel-size", 1]
+    
+    if quantization:
+        params += ["--quantization", quantization]
+
+    server = ServerRunner.remote(
+        {'model_name': model_name}
+    )
+
+    ray.get(server.ready.remote())
+    client = openai.AsyncOpenAI(
+        base_url="http://0.0.0.0:8888/v1",
+        api_key="token-abc123",
+    )
+
     batch = await client.completions.create(
         model=model_name,
         prompt=["Hello, my name is", "Hello, my name is"],
@@ -324,7 +429,6 @@ async def test_batch_completions(server, client: openai.AsyncOpenAI,
         choice = chunk.choices[0]
         texts[choice.index] += choice.text
     assert texts[0] == texts[1]
-
 
 if __name__ == "__main__":
     pytest.main([__file__])
