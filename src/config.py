@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from utils import count_physical_cores 
 from torch.cuda import device_count
+import os
 
 class EngineConfig:
     def __init__(self):
@@ -14,9 +14,11 @@ class EngineConfig:
 
     def _get_local_or_env(self, local_path, env_var):
         if os.path.exists(local_path):
+            os.environ["TRANSFORMERS_OFFLINE"] = "1"
+            os.environ["HF_HUB_OFFLINE"] = "1"
             with open(local_path, "r") as file:
                 return file.read().strip(), None, None
-        return os.getenv(env_var), os.getenv("HF_HOME"), os.getenv(f"{env_var}_REVISION")
+        return os.getenv(env_var), os.getenv("HF_HOME"), os.getenv(f"{env_var.split('_')[0]}_REVISION") or None
 
     def _get_quantization(self):
         quantization = os.getenv("QUANTIZATION", "").lower()

@@ -2,13 +2,14 @@
 
 <h1> vLLM Serverless Endpoint Worker </h1>
 
+Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm) on RunPod Serverless in a few clicks.
+
+<p>Worker Version: 0.3.1 | vLLM Version: 0.3.2</p>
+
 [![CD | Docker-Build-Release](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml/badge.svg)](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml)
 
-Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm) on RunPod Serverless in a few clicks.
-</div>
 
-> [!IMPORTANT]
-> [02.28.2024] When HuggingFace is down: to successfully load models that are downloaded on the image or endpoint network storage, set environment variables `TRANSFORMERS_OFFLINE` and `HF_HUB_OFFLINE` to `1` in the endpoint template.
+</div>
 
 ### Worker vLLM 0.3.0: What's New since 0.2.0:
 - **🚀 Full OpenAI Compatibility 🚀**
@@ -69,8 +70,8 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
 |--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
-| 11.8.0       | `runpod/worker-vllm:0.3.0-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
-| 12.1.0       | `runpod/worker-vllm:0.3.0-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.2 and 12.1 in the filter. |
+| 11.8.0       | `runpod/worker-vllm:0.3.1-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
+| 12.1.0       | `runpod/worker-vllm:0.3.1-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.2 and 12.1 in the filter. |
 
 This table provides a quick reference to the image tags you should use based on the desired CUDA version and image stability (Stable or Development). Ensure to follow the selection note for CUDA 12.1.0 compatibility.
 
