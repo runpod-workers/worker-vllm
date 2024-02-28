@@ -7,6 +7,9 @@
 Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm) on RunPod Serverless in a few clicks.
 </div>
 
+> [!IMPORTANT]
+> [02.28.2024] When HuggingFace is down: to successfully load models that are downloaded on the image or endpoint network storage, set environment variables `TRANSFORMERS_OFFLINE` and `HF_HUB_OFFLINE` to `1` in the endpoint template.
+
 ### Worker vLLM 0.3.0: What's New since 0.2.0:
 - **🚀 Full OpenAI Compatibility 🚀**
 
