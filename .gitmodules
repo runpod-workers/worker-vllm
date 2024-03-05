@@ -1,3 +1,3 @@
 [submodule "vllm-base-image/vllm"]
 	path = vllm-base-image/vllm
-	url = /devdisk/inference/worker-vllm/vllm-base-image/vllm
+	url = https://github.com/runpod/vllm-fork-for-sls-worker.git
