@@ -39,7 +39,7 @@ class EngineConfig:
             "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
             "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.95)),
             "max_parallel_loading_workers": None if device_count() > 1 or not os.getenv("MAX_PARALLEL_LOADING_WORKERS") else int(os.getenv("MAX_PARALLEL_LOADING_WORKERS")),
-            "max_model_len": int(os.getenv("MAX_MODEL_LENGTH")) if os.getenv("MAX_MODEL_LENGTH") else None,
+            "max_model_len": int(os.getenv("MAX_MODEL_LEN")) if os.getenv("MAX_MODEL_LEN") else None,
             "tensor_parallel_size": device_count(),
             "seed": int(os.getenv("SEED")) if os.getenv("SEED") else None,
             "kv_cache_dtype": os.getenv("KV_CACHE_DTYPE"),
