@@ -7,3 +7,4 @@ huggingface-hub
 packaging
 typing-extensions==4.7.1
 pydantic
+pydantic-settings
