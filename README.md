@@ -58,7 +58,9 @@ Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm)
 
 ### Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]
 > [!TIP]
-> This is the recommended way to deploy your model, as it does not require you to build a Docker image, upload heavy models to DockerHub and wait for workers to download them. Instead, use this option to deploy your model in a few clicks. For even more convenience, attach a network storage volume to your Endpoint, which will download the model once and share it across all workers.
+> This is the quickest and easiest way to tes your model, as it does not require you to build a Docker image, upload heavy models to DockerHub and wait for workers to download them. You can use this option to deploy your model in a few clicks. For even more convenience, attach a network storage volume to your Endpoint, which will download the model once and share it across all workers.
+> 
+> However, for actual deployment, it is recommended that you build an image with the model baked in, which is described in Option 2 - this will ensure the fastest load speeds.
 
 We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint:
 
@@ -70,8 +72,8 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
 |--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
-| 11.8.0       | `runpod/worker-vllm:0.3.1-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
-| 12.1.0       | `runpod/worker-vllm:0.3.1-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.2 and 12.1 in the filter. |
+| 11.8.0       | `runpod/worker-vllm:0.3.2-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
+| 12.1.0       | `runpod/worker-vllm:0.3.2-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.2 and 12.1 in the filter. |
 
 This table provides a quick reference to the image tags you should use based on the desired CUDA version and image stability (Stable or Development). Ensure to follow the selection note for CUDA 12.1.0 compatibility.
 
