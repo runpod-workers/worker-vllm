@@ -15,7 +15,6 @@ from utils import DummyRequest, JobInput, BatchSize, create_error_response
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
 from tokenizer import TokenizerWrapper
 from config import EngineConfig
-from sampling_params import validate_sampling_params
 
 class vLLMEngine:
     def __init__(self, engine = None):
@@ -33,10 +32,9 @@ class vLLMEngine:
                            
     async def generate(self, job_input: JobInput):
         try:
-            validated_sampling_params = validate_sampling_params(job_input.input_sampling_params)
             async for batch in self._generate_vllm(
                 llm_input=job_input.llm_input,
-                validated_sampling_params=validated_sampling_params,
+                validated_sampling_params=job_input.sampling_params,
                 batch_size=job_input.max_batch_size,
                 stream=job_input.stream,
                 apply_chat_template=job_input.apply_chat_template,
