@@ -45,7 +45,6 @@ if __name__ == "__main__":
     with open("/local_model_path.txt", "w") as f:
         f.write(model_folder)
 
-    if tokenizer != model:
-        tokenizer_folder = download_extras_or_tokenizer(tokenizer, download_dir, revisions["tokenizer"])
-        with open("/local_tokenizer_path.txt", "w") as f:
-            f.write(tokenizer_folder)
+    tokenizer_folder = download_extras_or_tokenizer(tokenizer, download_dir, revisions["tokenizer"])
+    with open("/local_tokenizer_path.txt", "w") as f:
+        f.write(tokenizer_folder)

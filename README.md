@@ -4,7 +4,7 @@
 
 Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm) on RunPod Serverless in a few clicks.
 
-<p>Worker Version: 0.3.1 | vLLM Version: 0.3.2</p>
+<p>Worker Version: 0.3.2 | vLLM Version: 0.3.3</p>
 
 [![CD | Docker-Build-Release](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml/badge.svg)](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml)
 
@@ -88,7 +88,7 @@ This table provides a quick reference to the image tags you should use based on 
 **LLM Settings**
 | `MODEL_NAME`**\***                        | -                    | `str`                                         | Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`). |
 | `MODEL_REVISION`                    | `None`               | `str`                                         |Model revision(branch) to load. |
-| `MAX_MODEL_LENGTH`                  | Model's maximum      | `int`                                         |Maximum number of tokens for the engine to handle per request. |
+| `MAX_MODEL_LEN`                  | Model's maximum      | `int`                                         |Maximum number of tokens for the engine to handle per request. |
 | `BASE_PATH`                         | `/runpod-volume`     | `str`                                         |Storage directory for Huggingface cache and model. Utilizes network storage if attached when pointed at `/runpod-volume`, which will have only one worker download the model once, which all workers will be able to load. If no network volume is present, creates a local directory within each worker. |
 | `LOAD_FORMAT`                       | `auto`               | `str`                                         |Format to load model in. |
 | `HF_TOKEN`                          | -                    | `str`                                         |Hugging Face token for private and gated models. |

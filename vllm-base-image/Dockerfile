@@ -17,25 +17,16 @@ ARG WORKER_CUDA_VERSION
 RUN apt-get update -y \
     && apt-get install -y python3-pip git
 
-RUN if [ "${WORKER_CUDA_VERSION}" = "12.1.0" ]; then \
-        ldconfig /usr/local/cuda-12.1/compat/; \
-    fi
-
 # Set working directory
 WORKDIR /vllm-installation
 
 # Install build and runtime dependencies
-COPY vllm-${WORKER_CUDA_VERSION}/requirements.txt requirements.txt
+COPY vllm/requirements-${WORKER_CUDA_VERSION}.txt  requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    if [ "${WORKER_CUDA_VERSION}" = "11.8.0" ]; then \
-        pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
-    fi
-
 # Install development dependencies
-COPY vllm-${WORKER_CUDA_VERSION}/requirements-dev.txt requirements-dev.txt
+COPY vllm/requirements-dev.txt requirements-dev.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-dev.txt
 
@@ -45,25 +36,15 @@ FROM dev AS build
 ARG WORKER_CUDA_VERSION
 
 # Install build dependencies
-COPY vllm-${WORKER_CUDA_VERSION}/requirements-build.txt requirements-build.txt
+COPY vllm/requirements-build.txt requirements-build.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-build.txt
 
 # Copy necessary files
-COPY vllm-${WORKER_CUDA_VERSION}/csrc csrc
-COPY vllm-${WORKER_CUDA_VERSION}/setup.py setup.py
-COPY vllm-12.1.0/pyproject.toml pyproject.toml
-COPY vllm-${WORKER_CUDA_VERSION}/vllm/__init__.py vllm/__init__.py
-
-# Conditional installation based on CUDA version
-RUN --mount=type=cache,target=/root/.cache/pip \
-    if [ "${WORKER_CUDA_VERSION}" = "11.8.0" ]; then \
-        pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
-        rm pyproject.toml; \
-    elif [ "${WORKER_CUDA_VERSION}" != "12.1.0" ]; then \
-        echo "WORKER_CUDA_VERSION not supported"; \
-        exit 1; \
-    fi
+COPY vllm/csrc csrc
+COPY vllm/setup.py setup.py
+COPY vllm/pyproject.toml pyproject.toml
+COPY vllm/vllm/__init__.py vllm/__init__.py
 
 # Set environment variables for building extensions
 ARG torch_cuda_arch_list='7.0 7.5 8.0 8.6 8.9 9.0+PTX'
@@ -72,8 +53,10 @@ ARG max_jobs=48
 ENV MAX_JOBS=${max_jobs}
 ARG nvcc_threads=1024
 ENV NVCC_THREADS=${nvcc_threads}
-
+ENV WORKER_CUDA_VERSION=${WORKER_CUDA_VERSION}
+ENV VLLM_INSTALL_PUNICA_KERNELS=0
 # Build extensions
+RUN ldconfig /usr/local/cuda-$(echo "$WORKER_CUDA_VERSION" | sed 's/\.0$//')/compat/
 RUN python3 setup.py build_ext --inplace
 
 FROM nvidia/cuda:${WORKER_CUDA_VERSION}-runtime-ubuntu22.04 AS vllm-base
@@ -88,19 +71,15 @@ RUN apt-get update -y \
 # Set working directory
 WORKDIR /vllm-installation
 
+
 # Install runtime dependencies
-COPY vllm-${WORKER_CUDA_VERSION}/requirements.txt requirements.txt
+COPY vllm/requirements-${WORKER_CUDA_VERSION}.txt  requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    if [ "${WORKER_CUDA_VERSION}" = "11.8.0" ]; then \
-        pip install -U --force-reinstall torch==2.1.2 xformers==0.0.23.post1 --index-url https://download.pytorch.org/whl/cu118; \
-    fi
-
 # Copy built files from the build stage
 COPY --from=build /vllm-installation/vllm/*.so /vllm-installation/vllm/
-COPY vllm-${WORKER_CUDA_VERSION}/vllm vllm
+COPY vllm/vllm vllm
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH="/"
