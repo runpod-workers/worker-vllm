@@ -1,13 +1,14 @@
 <div align="center">
 
-<h1> vLLM Serverless Endpoint Worker </h1>
+# vLLM Serverless Endpoint Worker
 
-Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm) on RunPod Serverless in a few clicks.
+Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https://github.com/vllm-project/vllm) Inference Engine on RunPod Serverless with just a few clicks.
 
-<p>Worker Version: 0.3.2 | vLLM Version: 0.3.3</p>
+| Worker Version | vLLM Version |
+|----------------|--------------|
+| 0.3.2          | 0.3.3        |
 
 [![CD | Docker-Build-Release](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml/badge.svg)](https://github.com/runpod-workers/worker-vllm/actions/workflows/docker-build-release.yml)
-
 
 </div>
 
@@ -15,7 +16,7 @@ Deploy Blazing-fast LLMs powered by [vLLM](https://github.com/vllm-project/vllm)
 - **🚀 Full OpenAI Compatibility 🚀**
 
   You may now use your deployment with any OpenAI Codebase by changing **only 3 lines** in total. The supported routes are <ins>Chat Completions</ins>, <ins>Completions</ins>, and <ins>Models</ins> - with both streaming and non-streaming.
-- **Dynamic Batch Size** - time-to-first token as fast no batching, while maintaining the performance of batched token streaming throughout the request.
+- **Dynamic Batch Size** - time-to-first token(TTFT) as fast no batching, while maintaining the performance of batched token streaming throughout the request.
 - vLLM 0.2.7 -> 0.3.2
   - Gemma, DeepSeek MoE and OLMo support.
   - FP8 KV Cache support
@@ -72,10 +73,10 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
 |--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
-| 11.8.0       | `runpod/worker-vllm:0.3.2-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
-| 12.1.0       | `runpod/worker-vllm:0.3.2-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.2 and 12.1 in the filter. |
+| 11.8.0       | `runpod/worker-vllm:stable-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
+| 12.1.0       | `runpod/worker-vllm:stable-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
 
-This table provides a quick reference to the image tags you should use based on the desired CUDA version and image stability (Stable or Development). Ensure to follow the selection note for CUDA 12.1.0 compatibility.
+
 
 ---
 
@@ -97,7 +98,7 @@ This table provides a quick reference to the image tags you should use based on 
 | `QUANTIZATION`                      | `None`               | `awq`, `squeezellm`, `gptq`              |Quantization of given model. The model must already be quantized. |
 | `TRUST_REMOTE_CODE`                 | `0`                  | boolean as `int`                                         |Trust remote code for Hugging Face models. Can help with Mixtral 8x7B, Quantized models, and unusual models/architectures.
 | `SEED`                              | `0`                  | `int`                                         |Sets random seed for operations. |
-| `KV_CACHE_DTYPE`                    | `auto`               | boolean as `int`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
+| `KV_CACHE_DTYPE`                    | `auto`               | `auto`,  `fp8_e5m2`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
 | `DTYPE`                             | `auto`               | `auto`, `half`, `float16`, `bfloat16`, `float`, `float32` |Sets datatype/precision for model weights and activations. |
 **Tokenizer Settings**
 | `TOKENIZER_NAME`                    | `None`               | `str`                                         |Tokenizer repository to use a different tokenizer than the model's default. |

@@ -16,9 +16,6 @@ on:
 jobs:
   docker-build:
     runs-on: DO
-    # DO is a custom runner deployed on DigitalOcean, only available for workflows under the runpod-workers organization.
-    # If you would like to use this workflow, you can replace DO with ubuntu-latest or any other runner.
-
     strategy:
       matrix:
         cuda_version: [11.8.0, 12.1.0]
@@ -41,5 +38,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ vars.DOCKERHUB_REPO }}/${{ vars.DOCKERHUB_IMG }}:${{ (github.event_name == 'release' && github.event.release.tag_name) || (github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag) || 'dev' }}-cuda${{ matrix.cuda_version }}
+          tags: |
+            ${{ vars.DOCKERHUB_REPO }}/${{ vars.DOCKERHUB_IMG }}:${{ (github.event_name == 'release' && github.event.release.tag_name) || (github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag) || 'dev' }}-cuda${{ matrix.cuda_version }}
+            ${{ vars.DOCKERHUB_REPO }}/${{ vars.DOCKERHUB_IMG }}:stable-cuda${{ matrix.cuda_version }}
           build-args: WORKER_CUDA_VERSION=${{ matrix.cuda_version }}
