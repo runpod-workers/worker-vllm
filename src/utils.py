@@ -1,6 +1,5 @@
 import logging
 from http import HTTPStatus
-from typing import Any, Dict
 from vllm.utils import random_uuid
 from vllm.entrypoints.openai.protocol import ErrorResponse
 from vllm import SamplingParams
