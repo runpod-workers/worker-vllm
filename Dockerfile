@@ -1,4 +1,5 @@
-FROM alpayariyakrunpod/worker-vllm:base-1.0.0-cuda12.1.0 AS vllm-base
+# FROM alpayariyakrunpod/worker-vllm:base-1.0.0-cuda12.1.0 AS vllm-base
+FROM runpod/worker-vllm:base-0.3.2-cuda11.8.0 as vllm-base
 
 RUN apt-get update -y \
   && apt-get install -y python3-pip
@@ -41,6 +42,10 @@ RUN if [ -f /run/secrets/HF_TOKEN ]; then \
 # Add source files
 COPY src /src
 
+# apply patch :-) should be changed once upstreamed
+# RUN apt install -y wget git
+# RUN wget https://github.com/vllm-project/vllm/pull/3804.patch
+# RUN cd /vllm-installation && git apply /3804.patch
 
 # Start the handler
 CMD ["python3", "/src/handler.py"]
