@@ -23,15 +23,18 @@ WORKDIR /vllm-installation
 RUN ldconfig /usr/local/cuda-$(echo "$WORKER_CUDA_VERSION" | sed 's/\.0$//')/compat/
 
 # Install build and runtime dependencies
-COPY vllm/requirements-${WORKER_CUDA_VERSION}.txt  requirements.txt
+COPY vllm/requirements-common.txt requirements-common.txt
+COPY vllm/requirements-cuda${WORKER_CUDA_VERSION}.txt  requirements-cuda.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+    pip install -r requirements-cuda.txt
 
 # Install development dependencies
 COPY vllm/requirements-dev.txt requirements-dev.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-dev.txt
     
+ARG torch_cuda_arch_list='7.0 7.5 8.0 8.6 8.9 9.0+PTX'
+ENV TORCH_CUDA_ARCH_LIST=${torch_cuda_arch_list}
 
 FROM dev AS build
 
@@ -49,14 +52,14 @@ RUN apt-get update -y && apt-get install -y ccache
 # Copy necessary files
 COPY vllm/csrc csrc
 COPY vllm/setup.py setup.py
-COPY vllm/pyproject.toml pyproject.toml
-COPY vllm/vllm/__init__.py vllm/__init__.py
 COPY vllm/cmake cmake
 COPY vllm/CMakeLists.txt CMakeLists.txt
+COPY vllm/requirements-common.txt requirements-common.txt
+COPY vllm/requirements-cuda${WORKER_CUDA_VERSION}.txt requirements-cuda.txt
+COPY vllm/pyproject.toml pyproject.toml
+COPY vllm/vllm vllm 
 
 # Set environment variables for building extensions
-ARG torch_cuda_arch_list='7.0 7.5 8.0 8.6 8.9 9.0+PTX'
-ENV TORCH_CUDA_ARCH_LIST=${torch_cuda_arch_list}
 ARG max_jobs=1024
 ENV MAX_JOBS=${max_jobs}
 ARG nvcc_threads=512
@@ -66,7 +69,11 @@ ENV VLLM_INSTALL_PUNICA_KERNELS=0
 # Build extensions
 ENV CCACHE_DIR=/root/.cache/ccache
 RUN --mount=type=cache,target=/root/.cache/ccache \
-    python3 setup.py build_ext --inplace
+    --mount=type=cache,target=/root/.cache/pip \
+    python3 setup.py bdist_wheel --dist-dir=dist
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip cache remove vllm_nccl*
 
 FROM dev as flash-attn-builder
 # max jobs used for build
@@ -82,31 +89,6 @@ WORKDIR /usr/src/flash-attention-v2
 RUN pip --verbose wheel flash-attn==${FLASH_ATTN_VERSION} \
     --no-build-isolation --no-deps --no-cache-dir
 
-FROM dev as NCCL-installer
-
-# Re-declare ARG after FROM
-ARG WORKER_CUDA_VERSION
-
-# Update and install necessary libraries
-RUN apt-get update -y \
-    && apt-get install -y wget
-
-# Install NCCL library
-RUN if [ "$WORKER_CUDA_VERSION" = "11.8.0" ]; then \
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb \
-        && dpkg -i cuda-keyring_1.0-1_all.deb \
-        && apt-get update \
-        && apt install -y libnccl2=2.15.5-1+cuda11.8 libnccl-dev=2.15.5-1+cuda11.8; \
-    elif [ "$WORKER_CUDA_VERSION" = "12.1.0" ]; then \
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb \
-        && dpkg -i cuda-keyring_1.0-1_all.deb \
-        && apt-get update \
-        && apt install -y libnccl2=2.17.1-1+cuda12.1 libnccl-dev=2.17.1-1+cuda12.1; \
-    else \
-        echo "Unsupported CUDA version: $WORKER_CUDA_VERSION"; \
-        exit 1; \
-    fi
-
 FROM nvidia/cuda:${WORKER_CUDA_VERSION}-base-ubuntu22.04 AS vllm-base
 
 # Re-declare ARG after FROM
@@ -117,34 +99,27 @@ RUN apt-get update -y \
     && apt-get install -y python3-pip
 
 # Set working directory
-WORKDIR /vllm-installation
+WORKDIR /vllm-workspace
 
-# Install runtime dependencies
-COPY vllm/requirements-${WORKER_CUDA_VERSION}.txt  requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+RUN ldconfig /usr/local/cuda-$(echo "$WORKER_CUDA_VERSION" | sed 's/\.0$//')/compat/
 
-# Install flash attention (from pre-built wheel)
+RUN --mount=type=bind,from=build,src=/vllm-installation/dist,target=/vllm-workspace/dist \
+    --mount=type=cache,target=/root/.cache/pip \
+    pip install dist/*.whl --verbose
+
 RUN --mount=type=bind,from=flash-attn-builder,src=/usr/src/flash-attention-v2,target=/usr/src/flash-attention-v2 \
+    --mount=type=cache,target=/root/.cache/pip \
     pip install /usr/src/flash-attention-v2/*.whl --no-cache-dir
 
+FROM vllm-base AS runtime
+
+# install additional dependencies for openai api server
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install accelerate hf_transfer modelscope
-
-# Copy NCCL library
-COPY --from=NCCL-installer /usr/lib/x86_64-linux-gnu/libnccl.so.2 /usr/lib/x86_64-linux-gnu/libnccl.so.2
-# Set the VLLM_NCCL_SO_PATH environment variable
-ENV VLLM_NCCL_SO_PATH="/usr/lib/x86_64-linux-gnu/libnccl.so.2"
-
-
-# Copy built files from the build stage
-COPY --from=build /vllm-installation/vllm/*.so /vllm-installation/vllm/
-COPY vllm/vllm vllm
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH="/"
 
-RUN ldconfig /usr/local/cuda-$(echo "$WORKER_CUDA_VERSION" | sed 's/\.0$//')/compat/
 
 # Validate the installation
 RUN python3 -c "import vllm; print(vllm.__file__)"
