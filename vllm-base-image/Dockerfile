@@ -89,6 +89,31 @@ WORKDIR /usr/src/flash-attention-v2
 RUN pip --verbose wheel flash-attn==${FLASH_ATTN_VERSION} \
     --no-build-isolation --no-deps --no-cache-dir
 
+FROM dev as NCCL-installer
+
+# Re-declare ARG after FROM
+ARG WORKER_CUDA_VERSION
+
+# Update and install necessary libraries
+RUN apt-get update -y \
+    && apt-get install -y wget
+
+# Install NCCL library
+RUN if [ "$WORKER_CUDA_VERSION" = "11.8.0" ]; then \
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb \
+        && dpkg -i cuda-keyring_1.0-1_all.deb \
+        && apt-get update \
+        && apt install -y libnccl2=2.15.5-1+cuda11.8 libnccl-dev=2.15.5-1+cuda11.8; \
+    elif [ "$WORKER_CUDA_VERSION" = "12.1.0" ]; then \
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb \
+        && dpkg -i cuda-keyring_1.0-1_all.deb \
+        && apt-get update \
+        && apt install -y libnccl2=2.17.1-1+cuda12.1 libnccl-dev=2.17.1-1+cuda12.1; \
+    else \
+        echo "Unsupported CUDA version: $WORKER_CUDA_VERSION"; \
+        exit 1; \
+    fi
+
 FROM nvidia/cuda:${WORKER_CUDA_VERSION}-base-ubuntu22.04 AS vllm-base
 
 # Re-declare ARG after FROM
@@ -119,6 +144,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH="/"
+
+# Copy NCCL library
+COPY --from=NCCL-installer /usr/lib/x86_64-linux-gnu/libnccl.so.2 /usr/lib/x86_64-linux-gnu/libnccl.so.2
+# Set the VLLM_NCCL_SO_PATH environment variable
+ENV VLLM_NCCL_SO_PATH="/usr/lib/x86_64-linux-gnu/libnccl.so.2"
 
 
 # Validate the installation
