@@ -1,5 +1,6 @@
 ARG WORKER_CUDA_VERSION=11.8.0
-FROM runpod/worker-vllm:base-1.0.0-cuda${WORKER_CUDA_VERSION} AS vllm-base
+ARG BASE_IMAGE_VERSION=1.0.0
+FROM alpayariyakrunpod/worker-vllm:base-${BASE_IMAGE_VERSION}-cuda${WORKER_CUDA_VERSION} AS vllm-base
 
 RUN apt-get update -y \
     && apt-get install -y python3-pip
@@ -29,7 +30,7 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_HOME="${BASE_PATH}/huggingface-cache/hub" \
     HF_TRANSFER=1 
 
-ENV PYTHONPATH="/:/vllm-installation"
+ENV PYTHONPATH="/:/vllm-workspace"
 
 COPY builder/download_model.py /download_model.py
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
