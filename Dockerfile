@@ -1,5 +1,6 @@
 ARG WORKER_CUDA_VERSION=11.8.0
-FROM runpod/worker-vllm:base-0.3.2-cuda${WORKER_CUDA_VERSION} AS vllm-base
+ARG BASE_IMAGE_VERSION=1.0.0
+FROM runpod/worker-vllm:base-${BASE_IMAGE_VERSION}-cuda${WORKER_CUDA_VERSION} AS vllm-base
 
 RUN apt-get update -y \
     && apt-get install -y python3-pip
@@ -19,7 +20,7 @@ ARG MODEL_REVISION=""
 ARG TOKENIZER_REVISION=""
 
 ENV MODEL_NAME=$MODEL_NAME \
-    MODEL_REVISION=$REVISION \
+    MODEL_REVISION=$MODEL_REVISION \
     TOKENIZER_NAME=$TOKENIZER_NAME \
     TOKENIZER_REVISION=$TOKENIZER_REVISION \
     BASE_PATH=$BASE_PATH \
@@ -27,11 +28,11 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_DATASETS_CACHE="${BASE_PATH}/huggingface-cache/datasets" \
     HUGGINGFACE_HUB_CACHE="${BASE_PATH}/huggingface-cache/hub" \
     HF_HOME="${BASE_PATH}/huggingface-cache/hub" \
-    HF_TRANSFER=1 
+    HF_HUB_ENABLE_HF_TRANSFER=1 
 
-ENV PYTHONPATH="/:/vllm-installation"
+ENV PYTHONPATH="/:/vllm-workspace"
 
-COPY builder/download_model.py /download_model.py
+COPY src/download_model.py /download_model.py
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
         export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
@@ -42,7 +43,8 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
 
 # Add source files
 COPY src /src
-
+# Remove download_model.py
+RUN rm /download_model.py
 
 # Start the handler
 CMD ["python3", "/src/handler.py"]
