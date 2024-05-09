@@ -9,19 +9,26 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 ![Docker Pulls](https://img.shields.io/docker/pulls/runpod/worker-vllm?style=for-the-badge&logo=docker&label=Docker%20Pulls&link=https%3A%2F%2Fhub.docker.com%2Frepository%2Fdocker%2Frunpod%2Fworker-vllm%2Fgeneral)
 
 ![Docker Automatic Build](https://img.shields.io/github/actions/workflow/status/runpod-workers/worker-vllm/docker-build-release.yml?style=flat&label=BUILD)
-> [!NOTE]
-> Update 1.0.0preview is now available, use the image tag `runpod/worker-vllm:dev-cuda12.1.0` or `runpod/worker-vllm:dev-cuda11.8.0`.
->
-> 1. vLLM was updated from version `0.3.3` to `0.4.2` in our latest release, adding compatibility for Llama 3 and other models, as well as increasing performance.
->
-> 2. Worker vLLM is now cached on all RunPod machines, speeding up deployment.
->
-> We will soon be adding more features from the updates, such as multi-LoRA, multi-modality, and more.
+
+
 </div>
 
+# News:
 
-## NEW: UI for Deploying vLLM Worker on RunPod console:
+### 1. UI for Deploying vLLM Worker on RunPod console:
 ![Demo of Deploying vLLM Worker on RunPod console with new UI](media/ui_demo.gif)
+
+### 2. Worker vLLM `1.0.0preview` with vLLM `0.4.2` now available under `stable` tags
+Update 1.0.0preview is now available, use the image tag `runpod/worker-vllm:dev-cuda12.1.0` or `runpod/worker-vllm:dev-cuda11.8.0`.
+
+**Main Changes:**
+- vLLM was updated from version `0.3.3` to `0.4.2`, adding compatibility for Llama 3 and other models, as well as increasing performance.
+
+We will soon be adding more features from the updates, such as multi-LoRA, multi-modality, and more.
+
+
+### 3. Caching Accross RunPod Machines
+Worker vLLM is now cached on all RunPod machines, resulting in near-instant deployment! Previously, downloading and extracting the image took 3-5 minutes on average.
 
 
 ## Table of Contents
@@ -55,7 +62,12 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 # Setting up the Serverless Worker
 
-### Option 1: Deploy Any Model Using Pre-Built Docker Image from RunPod Web Console, you can also use the new UI. [Recommended]
+### Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]
+
+> [!NOTE]
+> You can now deploy from the dedicated UI on the RunPod console with all of the settings and choices listed. 
+> Try now by accessing in Explore or Serverless pages on the RunPod console!
+
 
 We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint:
 
