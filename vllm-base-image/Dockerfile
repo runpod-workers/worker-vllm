@@ -60,10 +60,6 @@ COPY vllm/pyproject.toml pyproject.toml
 COPY vllm/vllm vllm 
 
 # Set environment variables for building extensions
-ARG max_jobs=1024
-ENV MAX_JOBS=${max_jobs}
-ARG nvcc_threads=512
-ENV NVCC_THREADS=${nvcc_threads}
 ENV WORKER_CUDA_VERSION=${WORKER_CUDA_VERSION}
 ENV VLLM_INSTALL_PUNICA_KERNELS=0
 # Build extensions
@@ -77,10 +73,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 FROM dev as flash-attn-builder
 # max jobs used for build
-ARG max_jobs=512
-ENV MAX_JOBS=${max_jobs}
 # flash attention version
-ARG flash_attn_version=v2.5.6
+ARG flash_attn_version=v2.5.8
 ENV FLASH_ATTN_VERSION=${flash_attn_version}
 
 WORKDIR /usr/src/flash-attention-v2
@@ -140,7 +134,7 @@ FROM vllm-base AS runtime
 
 # install additional dependencies for openai api server
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install accelerate hf_transfer modelscope
+    pip install accelerate hf_transfer modelscope tensorizer
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH="/"

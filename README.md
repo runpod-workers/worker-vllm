@@ -1,29 +1,28 @@
 <div align="center">
 
-# vLLM Serverless Endpoint Worker
+# OpenAI-Compatible vLLM Serverless Endpoint Worker
 Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https://github.com/vllm-project/vllm) Inference Engine on RunPod Serverless with just a few clicks.
 
-![vLLM Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Frunpod-workers%2Fworker-vllm%2Fmain%2Fvllm-base-image%2Fvllm-metadata.yml&query=%24.version&style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgd2lkdGg9IjU1cHgiIGhlaWdodD0iNTZweCIgc3R5bGU9InNoYXBlLXJlbmRlcmluZzpnZW9tZXRyaWNQcmVjaXNpb247IHRleHQtcmVuZGVyaW5nOmdlb21ldHJpY1ByZWNpc2lvbjsgaW1hZ2UtcmVuZGVyaW5nOm9wdGltaXplUXVhbGl0eTsgZmlsbC1ydWxlOmV2ZW5vZGQ7IGNsaXAtcnVsZTpldmVub2RkIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI%2BCjxnPjxwYXRoIHN0eWxlPSJvcGFjaXR5OjEiIGZpbGw9IiMzN2E0ZmUiIGQ9Ik0gNTEuNSwwLjUgQyA0Ni41ODIyLDE4LjA4MzggNDEuOTE1NiwzNS43NTA1IDM3LjUsNTMuNUMgMzIuMTY2Nyw1My41IDI2LjgzMzMsNTMuNSAyMS41LDUzLjVDIDIwLjgzMzMsNTMuNSAyMC41LDUzLjE2NjcgMjAuNSw1Mi41QyAyMS4zMzgyLDUyLjE1ODMgMjEuNjcxNiw1MS40OTE2IDIxLjUsNTAuNUMgMjIuMjIyOSw0Ni44NTU1IDIzLjIyMjksNDMuMTg4OSAyNC41LDM5LjVDIDI0LjY5MTcsMzYuMzk5MiAyNS4zNTg0LDMzLjM5OTIgMjYuNSwzMC41QyAyNi4yOTA3LDI5LjkxNCAyNS45NTc0LDI5LjQxNCAyNS41LDI5QyAyNy40NDE0LDI3LjE4NDEgMjguMTA4MSwyNS4xODQxIDI3LjUsMjNDIDI5LjI0MTUsMTguNTM4NyAzMC45MDgyLDE0LjAzODcgMzIuNSw5LjVDIDM4Ljc3NTcsNi4xOTM1OCA0NS4xMDkxLDMuMTkzNTggNTEuNSwwLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC45ODQiIGZpbGw9IiNmY2I3MWQiIGQ9Ik0gMjIuNSwxMi41IEMgMjEuNTA0NiwyNC45ODkgMjEuMTcxMywzNy42NTU3IDIxLjUsNTAuNUMgMjEuNjcxNiw1MS40OTE2IDIxLjMzODIsNTIuMTU4MyAyMC41LDUyLjVDIDEzLjAzMTEsMzkuMjI4NyA2LjM2NDQxLDI1LjU2MjEgMC41LDExLjVDIDguMDE5MDUsMTEuMTc1IDE1LjM1MjQsMTEuNTA4NCAyMi41LDEyLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC4wMiIgZmlsbD0iI2Q3ZGZlOCIgZD0iTSAyMi41LDEyLjUgQyAyMy4xNjY3LDIxLjUgMjMuODMzMywzMC41IDI0LjUsMzkuNUMgMjMuMjIyOSw0My4xODg5IDIyLjIyMjksNDYuODU1NSAyMS41LDUwLjVDIDIxLjE3MTMsMzcuNjU1NyAyMS41MDQ2LDI0Ljk4OSAyMi41LDEyLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC43NTMiIGZpbGw9IiNjZmQ2ZGQiIGQ9Ik0gNTEuNSwwLjUgQyA1Mi42MTI5LDEuOTQ2MzkgNTIuNzc5NiwzLjYxMzA1IDUyLDUuNUMgNDcuODAzNiwyMi4yODg3IDQzLjMwMzYsMzguOTU1MyAzOC41LDU1LjVDIDMyLjUsNTUuNSAyNi41LDU1LjUgMjAuNSw1NS41QyAyMC44MzMzLDU0LjgzMzMgMjEuMTY2Nyw1NC4xNjY3IDIxLjUsNTMuNUMgMjYuODMzMyw1My41IDMyLjE2NjcsNTMuNSAzNy41LDUzLjVDIDQxLjkxNTYsMzUuNzUwNSA0Ni41ODIyLDE4LjA4MzggNTEuNSwwLjUgWiIvPjwvZz4KPC9zdmc%2BCg%3D%3D&label=vLLM%20Version&link=https%3A%2F%2Fgithub.com%2Fvllm-project%2Fvllm)
-![Worker Version](https://img.shields.io/github/v/tag/runpod-workers/worker-vllm?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI2LjUuMywgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAyMDAwIDIwMDAiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIwMDAgMjAwMDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiM2NzNBQjc7fQo8L3N0eWxlPgo8Zz4KCTxnPgoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMDE3Ljk1LDcxMS4wNGMtNC4yMiwyLjM2LTkuMTgsMy4wMS0xMy44NiwxLjgyTDM4Ni4xNyw1NTUuM2MtNDEuNzItMTAuNzYtODYuMDItMC42My0xMTYuNiwyOS43MwoJCQlsLTEuNCwxLjM5Yy0zNS45MiwzNS42NS0yNy41NSw5NS44LDE2Ljc0LDEyMC4zbDU4NC4zMiwzMjQuMjNjMzEuMzYsMTcuNCw1MC44Miw1MC40NSw1MC44Miw4Ni4zMnY4MDYuNzYKCQkJYzAsMzUuNDktMzguNDEsNTcuNjctNjkuMTUsMzkuOTRsLTcwMy4xNS00MDUuNjRjLTIzLjYtMTMuNjEtMzguMTMtMzguNzgtMzguMTMtNjYuMDJWNjY2LjYzYzAtODcuMjQsNDYuNDUtMTY3Ljg5LDEyMS45Mi0yMTEuNjYKCQkJTDkzMy44NSw0Mi4xNWMyMy40OC0xMy44LDUxLjQ3LTE3LjcsNzcuODMtMTAuODRsNzQ1LjcxLDE5NC4xYzMxLjUzLDguMjEsMzYuOTksNTAuNjUsOC41Niw2Ni41N0wxMDE3Ljk1LDcxMS4wNHoiLz4KCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTUyNy43NSw1MzYuMzhsMTI4Ljg5LTc5LjYzbDE4OS45MiwxMDkuMTdjMjcuMjQsMTUuNjYsNDMuOTcsNDQuNzMsNDMuODIsNzYuMTVsLTQsODU3LjYKCQkJYy0wLjExLDI0LjM5LTEzLjE1LDQ2Ljg5LTM0LjI1LDU5LjExbC03MDEuNzUsNDA2LjYxYy0zMi4zLDE4LjcxLTcyLjc0LTQuNTktNzIuNzQtNDEuOTJ2LTc5Ny40MwoJCQljMC0zOC45OCwyMS4wNi03NC45MSw1NS4wNy05My45Nmw1OTAuMTctMzMwLjUzYzE4LjIzLTEwLjIxLDE4LjY1LTM2LjMsMC43NS00Ny4wOUwxNTI3Ljc1LDUzNi4zOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTUyNC4wMSw2NjUuOTEiLz4KCTwvZz4KPC9nPgo8L3N2Zz4K&logoColor=%23ffffff&label=Worker%20Version&color=%23673ab7)
+![vLLM Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Frunpod-workers%2Fworker-vllm%2Fmain%2Fvllm-base-image%2Fvllm-metadata.yml&query=%24.version&style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgd2lkdGg9IjU1cHgiIGhlaWdodD0iNTZweCIgc3R5bGU9InNoYXBlLXJlbmRlcmluZzpnZW9tZXRyaWNQcmVjaXNpb247IHRleHQtcmVuZGVyaW5nOmdlb21ldHJpY1ByZWNpc2lvbjsgaW1hZ2UtcmVuZGVyaW5nOm9wdGltaXplUXVhbGl0eTsgZmlsbC1ydWxlOmV2ZW5vZGQ7IGNsaXAtcnVsZTpldmVub2RkIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI%2BCjxnPjxwYXRoIHN0eWxlPSJvcGFjaXR5OjEiIGZpbGw9IiMzN2E0ZmUiIGQ9Ik0gNTEuNSwwLjUgQyA0Ni41ODIyLDE4LjA4MzggNDEuOTE1NiwzNS43NTA1IDM3LjUsNTMuNUMgMzIuMTY2Nyw1My41IDI2LjgzMzMsNTMuNSAyMS41LDUzLjVDIDIwLjgzMzMsNTMuNSAyMC41LDUzLjE2NjcgMjAuNSw1Mi41QyAyMS4zMzgyLDUyLjE1ODMgMjEuNjcxNiw1MS40OTE2IDIxLjUsNTAuNUMgMjIuMjIyOSw0Ni44NTU1IDIzLjIyMjksNDMuMTg4OSAyNC41LDM5LjVDIDI0LjY5MTcsMzYuMzk5MiAyNS4zNTg0LDMzLjM5OTIgMjYuNSwzMC41QyAyNi4yOTA3LDI5LjkxNCAyNS45NTc0LDI5LjQxNCAyNS41LDI5QyAyNy40NDE0LDI3LjE4NDEgMjguMTA4MSwyNS4xODQxIDI3LjUsMjNDIDI5LjI0MTUsMTguNTM4NyAzMC45MDgyLDE0LjAzODcgMzIuNSw5LjVDIDM4Ljc3NTcsNi4xOTM1OCA0NS4xMDkxLDMuMTkzNTggNTEuNSwwLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC45ODQiIGZpbGw9IiNmY2I3MWQiIGQ9Ik0gMjIuNSwxMi41IEMgMjEuNTA0NiwyNC45ODkgMjEuMTcxMywzNy42NTU3IDIxLjUsNTAuNUMgMjEuNjcxNiw1MS40OTE2IDIxLjMzODIsNTIuMTU4MyAyMC41LDUyLjVDIDEzLjAzMTEsMzkuMjI4NyA2LjM2NDQxLDI1LjU2MjEgMC41LDExLjVDIDguMDE5MDUsMTEuMTc1IDE1LjM1MjQsMTEuNTA4NCAyMi41LDEyLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC4wMiIgZmlsbD0iI2Q3ZGZlOCIgZD0iTSAyMi41LDEyLjUgQyAyMy4xNjY3LDIxLjUgMjMuODMzMywzMC41IDI0LjUsMzkuNUMgMjMuMjIyOSw0My4xODg5IDIyLjIyMjksNDYuODU1NSAyMS41LDUwLjVDIDIxLjE3MTMsMzcuNjU1NyAyMS41MDQ2LDI0Ljk4OSAyMi41LDEyLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC43NTMiIGZpbGw9IiNjZmQ2ZGQiIGQ9Ik0gNTEuNSwwLjUgQyA1Mi42MTI5LDEuOTQ2MzkgNTIuNzc5NiwzLjYxMzA1IDUyLDUuNUMgNDcuODAzNiwyMi4yODg3IDQzLjMwMzYsMzguOTU1MyAzOC41LDU1LjVDIDMyLjUsNTUuNSAyNi41LDU1LjUgMjAuNSw1NS41QyAyMC44MzMzLDU0LjgzMzMgMjEuMTY2Nyw1NC4xNjY3IDIxLjUsNTMuNUMgMjYuODMzMyw1My41IDMyLjE2NjcsNTMuNSAzNy41LDUzLjVDIDQxLjkxNTYsMzUuNzUwNSA0Ni41ODIyLDE4LjA4MzggNTEuNSwwLjUgWiIvPjwvZz4KPC9zdmc%2BCg%3D%3D&label=STABLE%20vLLM%20Version&link=https%3A%2F%2Fgithub.com%2Fvllm-project%2Fvllm)
+![Worker Version](https://img.shields.io/github/v/tag/runpod-workers/worker-vllm?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI2LjUuMywgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAyMDAwIDIwMDAiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDIwMDAgMjAwMDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiM2NzNBQjc7fQo8L3N0eWxlPgo8Zz4KCTxnPgoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMDE3Ljk1LDcxMS4wNGMtNC4yMiwyLjM2LTkuMTgsMy4wMS0xMy44NiwxLjgyTDM4Ni4xNyw1NTUuM2MtNDEuNzItMTAuNzYtODYuMDItMC42My0xMTYuNiwyOS43MwoJCQlsLTEuNCwxLjM5Yy0zNS45MiwzNS42NS0yNy41NSw5NS44LDE2Ljc0LDEyMC4zbDU4NC4zMiwzMjQuMjNjMzEuMzYsMTcuNCw1MC44Miw1MC40NSw1MC44Miw4Ni4zMnY4MDYuNzYKCQkJYzAsMzUuNDktMzguNDEsNTcuNjctNjkuMTUsMzkuOTRsLTcwMy4xNS00MDUuNjRjLTIzLjYtMTMuNjEtMzguMTMtMzguNzgtMzguMTMtNjYuMDJWNjY2LjYzYzAtODcuMjQsNDYuNDUtMTY3Ljg5LDEyMS45Mi0yMTEuNjYKCQkJTDkzMy44NSw0Mi4xNWMyMy40OC0xMy44LDUxLjQ3LTE3LjcsNzcuODMtMTAuODRsNzQ1LjcxLDE5NC4xYzMxLjUzLDguMjEsMzYuOTksNTAuNjUsOC41Niw2Ni41N0wxMDE3Ljk1LDcxMS4wNHoiLz4KCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTUyNy43NSw1MzYuMzhsMTI4Ljg5LTc5LjYzbDE4OS45MiwxMDkuMTdjMjcuMjQsMTUuNjYsNDMuOTcsNDQuNzMsNDMuODIsNzYuMTVsLTQsODU3LjYKCQkJYy0wLjExLDI0LjM5LTEzLjE1LDQ2Ljg5LTM0LjI1LDU5LjExbC03MDEuNzUsNDA2LjYxYy0zMi4zLDE4LjcxLTcyLjc0LTQuNTktNzIuNzQtNDEuOTJ2LTc5Ny40MwoJCQljMC0zOC45OCwyMS4wNi03NC45MSw1NS4wNy05My45Nmw1OTAuMTctMzMwLjUzYzE4LjIzLTEwLjIxLDE4LjY1LTM2LjMsMC43NS00Ny4wOUwxNTI3Ljc1LDUzNi4zOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTUyNC4wMSw2NjUuOTEiLz4KCTwvZz4KPC9nPgo8L3N2Zz4K&logoColor=%23ffffff&label=STABLE%20Worker%20Version&color=%23673ab7)
+![vLLM Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Frunpod-workers%2Fworker-vllm%2Fmain%2Fvllm-base-image%2Fvllm-metadata.yml&query=%24.dev_version&style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgd2lkdGg9IjU1cHgiIGhlaWdodD0iNTZweCIgc3R5bGU9InNoYXBlLXJlbmRlcmluZzpnZW9tZXRyaWNQcmVjaXNpb247IHRleHQtcmVuZGVyaW5nOmdlb21ldHJpY1ByZWNpc2lvbjsgaW1hZ2UtcmVuZGVyaW5nOm9wdGltaXplUXVhbGl0eTsgZmlsbC1ydWxlOmV2ZW5vZGQ7IGNsaXAtcnVsZTpldmVub2RkIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI%2BCjxnPjxwYXRoIHN0eWxlPSJvcGFjaXR5OjEiIGZpbGw9IiMzN2E0ZmUiIGQ9Ik0gNTEuNSwwLjUgQyA0Ni41ODIyLDE4LjA4MzggNDEuOTE1NiwzNS43NTA1IDM3LjUsNTMuNUMgMzIuMTY2Nyw1My41IDI2LjgzMzMsNTMuNSAyMS41LDUzLjVDIDIwLjgzMzMsNTMuNSAyMC41LDUzLjE2NjcgMjAuNSw1Mi41QyAyMS4zMzgyLDUyLjE1ODMgMjEuNjcxNiw1MS40OTE2IDIxLjUsNTAuNUMgMjIuMjIyOSw0Ni44NTU1IDIzLjIyMjksNDMuMTg4OSAyNC41LDM5LjVDIDI0LjY5MTcsMzYuMzk5MiAyNS4zNTg0LDMzLjM5OTIgMjYuNSwzMC41QyAyNi4yOTA3LDI5LjkxNCAyNS45NTc0LDI5LjQxNCAyNS41LDI5QyAyNy40NDE0LDI3LjE4NDEgMjguMTA4MSwyNS4xODQxIDI3LjUsMjNDIDI5LjI0MTUsMTguNTM4NyAzMC45MDgyLDE0LjAzODcgMzIuNSw5LjVDIDM4Ljc3NTcsNi4xOTM1OCA0NS4xMDkxLDMuMTkzNTggNTEuNSwwLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC45ODQiIGZpbGw9IiNmY2I3MWQiIGQ9Ik0gMjIuNSwxMi41IEMgMjEuNTA0NiwyNC45ODkgMjEuMTcxMywzNy42NTU3IDIxLjUsNTAuNUMgMjEuNjcxNiw1MS40OTE2IDIxLjMzODIsNTIuMTU4MyAyMC41LDUyLjVDIDEzLjAzMTEsMzkuMjI4NyA2LjM2NDQxLDI1LjU2MjEgMC41LDExLjVDIDguMDE5MDUsMTEuMTc1IDE1LjM1MjQsMTEuNTA4NCAyMi41LDEyLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC4wMiIgZmlsbD0iI2Q3ZGZlOCIgZD0iTSAyMi41LDEyLjUgQyAyMy4xNjY3LDIxLjUgMjMuODMzMywzMC41IDI0LjUsMzkuNUMgMjMuMjIyOSw0My4xODg5IDIyLjIyMjksNDYuODU1NSAyMS41LDUwLjVDIDIxLjE3MTMsMzcuNjU1NyAyMS41MDQ2LDI0Ljk4OSAyMi41LDEyLjUgWiIvPjwvZz4KPGc%2BPHBhdGggc3R5bGU9Im9wYWNpdHk6MC43NTMiIGZpbGw9IiNjZmQ2ZGQiIGQ9Ik0gNTEuNSwwLjUgQyA1Mi42MTI5LDEuOTQ2MzkgNTIuNzc5NiwzLjYxMzA1IDUyLDUuNUMgNDcuODAzNiwyMi4yODg3IDQzLjMwMzYsMzguOTU1MyAzOC41LDU1LjVDIDMyLjUsNTUuNSAyNi41LDU1LjUgMjAuNSw1NS41QyAyMC44MzMzLDU0LjgzMzMgMjEuMTY2Nyw1NC4xNjY3IDIxLjUsNTMuNUMgMjYuODMzMyw1My41IDMyLjE2NjcsNTMuNSAzNy41LDUzLjVDIDQxLjkxNTYsMzUuNzUwNSA0Ni41ODIyLDE4LjA4MzggNTEuNSwwLjUgWiIvPjwvZz4KPC9zdmc%2BCg%3D%3D&label=DEV%20vLLM%20Version%20&link=https%3A%2F%2Fgithub.com%2Fvllm-project%2Fvllm)\
 ![Docker Pulls](https://img.shields.io/docker/pulls/runpod/worker-vllm?style=for-the-badge&logo=docker&label=Docker%20Pulls&link=https%3A%2F%2Fhub.docker.com%2Frepository%2Fdocker%2Frunpod%2Fworker-vllm%2Fgeneral)
 
 ![Docker Automatic Build](https://img.shields.io/github/actions/workflow/status/runpod-workers/worker-vllm/docker-build-release.yml?style=flat&label=BUILD)
-
+> [!NOTE]
+> Update 1.0.0preview is now available, use the image tag `runpod/worker-vllm:dev-cuda12.1.0` or `runpod/worker-vllm:1.0.0preview-cuda11.8.0`.
+>
+> 1. vLLM was updated from version `0.3.3` to `0.4.2` in our latest release, adding compatibility for Llama 3 and other models, as well as increasing performance.
+>
+> 2. Worker vLLM is now cached on all RunPod machines, speeding up deployment.
+>
+> We will soon be adding more features from the updates, such as multi-LoRA, multi-modality, and more.
 </div>
 
-### Worker vLLM 0.3.0: What's New since 0.2.0:
-- **🚀 Full OpenAI Compatibility 🚀**
 
-  You may now use your deployment with any OpenAI Codebase by changing **only 3 lines** in total. The supported routes are <ins>Chat Completions</ins>, <ins>Completions</ins>, and <ins>Models</ins> - with both streaming and non-streaming.
-- **Dynamic Batch Size** - time-to-first token(TTFT) as fast no batching, while maintaining the performance of batched token streaming throughout the request.
-- vLLM 0.2.7 -> 0.3.2
-  - Gemma, DeepSeek MoE and OLMo support.
-  - FP8 KV Cache support
-  - New supported parameters
-  - We're working on adding support for Multi-LoRA ⚙️
-- Support for a wide range of new settings for your endpoint, such as Custom chat templates.
-- Fixed Tensor Parallelism, baking model into images, and more bugs.
-- Refactors and general improvements.
+## NEW: UI for Deploying vLLM Worker on RunPod console:
+![Demo of Deploying vLLM Worker on RunPod console with new UI](media/ui_demo.gif)
+
 
 ## Table of Contents
 - [Setting up the Serverless Worker](#setting-up-the-serverless-worker)
@@ -56,11 +55,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 # Setting up the Serverless Worker
 
-### Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]
-> [!TIP]
-> This is the quickest and easiest way to tes your model, as it does not require you to build a Docker image, upload heavy models to DockerHub and wait for workers to download them. You can use this option to deploy your model in a few clicks. For even more convenience, attach a network storage volume to your Endpoint, which will download the model once and share it across all workers.
-> 
-> However, for actual deployment, it is recommended that you build an image with the model baked in, which is described in Option 2 - this will ensure the fastest load speeds.
+### Option 1: Deploy Any Model Using Pre-Built Docker Image from RunPod Web Console, you can also use the new UI. [Recommended]
 
 We now offer a pre-built Docker Image for the vLLM Worker that you can configure entirely with Environment Variables when creating the RunPod Serverless Endpoint:
 
@@ -82,7 +77,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 #### Prerequisites
 - RunPod Account
 
-#### Environment Variables
+#### Environment Variables/Settings
 > Note:  `0` is equivalent to `False` and `1` is equivalent to `True` for boolean values.
 
 | Name                                | Default              | Type/Choices                              | Description |
@@ -176,6 +171,8 @@ Below are all supported model architectures (and examples of each) that you can 
 - Baichuan & Baichuan2 (`baichuan-inc/Baichuan2-13B-Chat`, `baichuan-inc/Baichuan-7B`, etc.)
 - BLOOM (`bigscience/bloom`, `bigscience/bloomz`, etc.)
 - ChatGLM (`THUDM/chatglm2-6b`, `THUDM/chatglm3-6b`, etc.)
+- Command-R (`CohereForAI/c4ai-command-r-v01`, etc.)
+- DBRX (`databricks/dbrx-base`, `databricks/dbrx-instruct` etc.)
 - DeciLM (`Deci/DeciLM-7B`, `Deci/DeciLM-7B-instruct`, etc.)
 - Falcon (`tiiuae/falcon-7b`, `tiiuae/falcon-40b`, `tiiuae/falcon-rw-7b`, etc.)
 - Gemma (`google/gemma-2b`, `google/gemma-7b`, etc.)
@@ -185,16 +182,23 @@ Below are all supported model architectures (and examples of each) that you can 
 - GPT-NeoX (`EleutherAI/gpt-neox-20b`, `databricks/dolly-v2-12b`, `stabilityai/stablelm-tuned-alpha-7b`, etc.)
 - InternLM (`internlm/internlm-7b`, `internlm/internlm-chat-7b`, etc.)
 - InternLM2 (`internlm/internlm2-7b`, `internlm/internlm2-chat-7b`, etc.)
-- LLaMA & LLaMA-2 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
+- Jais (`core42/jais-13b`, `core42/jais-13b-chat`, `core42/jais-30b-v3`, `core42/jais-30b-chat-v3`, etc.)
+- LLaMA, Llama 2, and Meta Llama 3 (`meta-llama/Meta-Llama-3-8B-Instruct`, `meta-llama/Meta-Llama-3-70B-Instruct`, `meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
+- MiniCPM (`openbmb/MiniCPM-2B-sft-bf16`, `openbmb/MiniCPM-2B-dpo-bf16`, etc.)
 - Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
-- Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, etc.)
+- Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, `mistral-community/Mixtral-8x22B-v0.1`, etc.)
 - MPT (`mosaicml/mpt-7b`, `mosaicml/mpt-30b`, etc.)
-- OLMo (`allenai/OLMo-1B`, `allenai/OLMo-7B`, etc.)
+- OLMo (`allenai/OLMo-1B-hf`, `allenai/OLMo-7B-hf`, etc.)
 - OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
+- Orion (`OrionStarAI/Orion-14B-Base`, `OrionStarAI/Orion-14B-Chat`, etc.)
 - Phi (`microsoft/phi-1_5`, `microsoft/phi-2`, etc.)
+- Phi-3 (`microsoft/Phi-3-mini-4k-instruct`, `microsoft/Phi-3-mini-128k-instruct`, etc.)
 - Qwen (`Qwen/Qwen-7B`, `Qwen/Qwen-7B-Chat`, etc.)
-- Qwen2 (`Qwen/Qwen2-7B-beta`, `Qwen/Qwen-7B-Chat-beta`, etc.)
+- Qwen2 (`Qwen/Qwen1.5-7B`, `Qwen/Qwen1.5-7B-Chat`, etc.)
+- Qwen2MoE (`Qwen/Qwen1.5-MoE-A2.7B`, `Qwen/Qwen1.5-MoE-A2.7B-Chat`, etc.)
 - StableLM(`stabilityai/stablelm-3b-4e1t`, `stabilityai/stablelm-base-alpha-7b-v2`, etc.)
+- Starcoder2(`bigcode/starcoder2-3b`, `bigcode/starcoder2-7b`, `bigcode/starcoder2-15b`, etc.)
+- Xverse (`xverse/XVERSE-7B-Chat`, `xverse/XVERSE-13B-Chat`, `xverse/XVERSE-65B-Chat`, etc.)
 - Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
 
 # Usage: OpenAI Compatibility

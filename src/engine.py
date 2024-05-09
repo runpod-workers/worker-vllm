@@ -5,6 +5,7 @@ import json
 from dotenv import load_dotenv
 from torch.cuda import device_count
 from typing import AsyncGenerator
+import time
 
 from vllm import AsyncLLMEngine, AsyncEngineArgs
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
@@ -100,7 +101,11 @@ class vLLMEngine:
 
     def _initialize_llm(self):
         try:
-            return AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.config))
+            start = time.time()
+            engine = AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.config))
+            end = time.time()
+            logging.info(f"Initialized vLLM engine in {end - start:.2f}s")
+            return engine
         except Exception as e:
             logging.error("Error initializing vLLM engine: %s", e)
             raise e

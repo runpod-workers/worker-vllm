@@ -1,5 +1,5 @@
 variable "PUSH" {
-  default = "false"
+  default = "true"
 }
 
 variable "REPOSITORY" {
@@ -7,7 +7,7 @@ variable "REPOSITORY" {
 }
 
 variable "BASE_IMAGE_VERSION" {
-  default = "1.0.0"
+  default = "1.0.0preview"
 }
 
 group "all" {
@@ -15,14 +15,14 @@ group "all" {
 }
 
 group "base" {
-  targets = ["base-11.8.0", "base-12.1.0"]
+  targets = ["base-1180", "base-1210"]
 }
 
 group "main" {
-  targets = ["worker-11.8.0", "worker-12.1.0"]
+  targets = ["worker-1180", "worker-1210"]
 }
 
-target "base-11.8.0" {
+target "base-1180" {
   tags = ["${REPOSITORY}/worker-vllm:base-${BASE_IMAGE_VERSION}-cuda11.8.0"]
   context = "vllm-base-image"
   dockerfile = "Dockerfile"
@@ -32,7 +32,7 @@ target "base-11.8.0" {
   output = ["type=docker,push=${PUSH}"]
 }
 
-target "base-12.1.0" {
+target "base-1210" {
   tags = ["${REPOSITORY}/worker-vllm:base-${BASE_IMAGE_VERSION}-cuda12.1.0"]
   context = "vllm-base-image"
   dockerfile = "Dockerfile"
@@ -42,7 +42,7 @@ target "base-12.1.0" {
   output = ["type=docker,push=${PUSH}"]
 }
 
-target "worker-11.8.0" {
+target "worker-1180" {
   tags = ["${REPOSITORY}/worker-vllm:worker-${BASE_IMAGE_VERSION}-cuda11.8.0"]
   context = "."
   dockerfile = "Dockerfile"
@@ -53,7 +53,7 @@ target "worker-11.8.0" {
   output = ["type=docker,push=${PUSH}"]
 }
 
-target "worker-12.1.0" {
+target "worker-1210" {
   tags = ["${REPOSITORY}/worker-vllm:worker-${BASE_IMAGE_VERSION}-cuda12.1.0"]
   context = "."
   dockerfile = "Dockerfile"
