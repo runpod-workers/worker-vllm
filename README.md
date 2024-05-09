@@ -104,7 +104,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `QUANTIZATION`                      | `None`               | `awq`, `squeezellm`, `gptq`              |Quantization of given model. The model must already be quantized. |
 | `TRUST_REMOTE_CODE`                 | `0`                  | boolean as `int`                                         |Trust remote code for Hugging Face models. Can help with Mixtral 8x7B, Quantized models, and unusual models/architectures.
 | `SEED`                              | `0`                  | `int`                                         |Sets random seed for operations. |
-| `KV_CACHE_DTYPE`                    | `auto`               | `auto`,  `fp8_e5m2`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
+| `KV_CACHE_DTYPE`                    | `auto`               | `auto`,  `fp8`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
 | `DTYPE`                             | `auto`               | `auto`, `half`, `float16`, `bfloat16`, `float`, `float32` |Sets datatype/precision for model weights and activations. |
 **Tokenizer Settings**
 | `TOKENIZER_NAME`                    | `None`               | `str`                                         |Tokenizer repository to use a different tokenizer than the model's default. |
