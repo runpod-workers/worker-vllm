@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from torch.cuda import device_count
 import os
+import logging
 
 class EngineConfig:
     def __init__(self):
@@ -49,5 +50,7 @@ class EngineConfig:
             "disable_custom_all_reduce": bool(int(os.getenv("DISABLE_CUSTOM_ALL_REDUCE", 0))),
             "enforce_eager": bool(int(os.getenv("ENFORCE_EAGER", 0)))
         }
-        
+        if args["kv_cache_dtype"] == "fp8_e5m2":
+            args["kv_cache_dtype"] = "fp8"
+            logging.warning("Using fp8_e5m2 is deprecated. Please use fp8 instead.")
         return {k: v for k, v in args.items() if v is not None}
