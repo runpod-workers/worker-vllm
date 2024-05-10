@@ -43,7 +43,7 @@ target "base-1210" {
 }
 
 target "worker-1180" {
-  tags = ["${REPOSITORY}/worker-vllm:worker-${BASE_IMAGE_VERSION}-cuda11.8.0"]
+  tags = ["${REPOSITORY}/worker-vllm:${BASE_IMAGE_VERSION}-cuda11.8.0"]
   context = "."
   dockerfile = "Dockerfile"
   args = {
@@ -54,7 +54,7 @@ target "worker-1180" {
 }
 
 target "worker-1210" {
-  tags = ["${REPOSITORY}/worker-vllm:worker-${BASE_IMAGE_VERSION}-cuda12.1.0"]
+  tags = ["${REPOSITORY}/worker-vllm:${BASE_IMAGE_VERSION}-cuda12.1.0"]
   context = "."
   dockerfile = "Dockerfile"
   args = {
