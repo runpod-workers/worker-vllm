@@ -1,30 +1,31 @@
 import os
+import json
+import logging
 from dotenv import load_dotenv
 from torch.cuda import device_count
-import os
-import logging
+from utils import get_int_bool_env
 
 class EngineConfig:
     def __init__(self):
         load_dotenv()
-        self.model_name_or_path, self.hf_home, self.model_revision = self._get_local_or_env("/local_model_path.txt", "MODEL_NAME")
-        self.tokenizer_name_or_path, _, self.tokenizer_revision = self._get_local_or_env("/local_tokenizer_path.txt", "TOKENIZER_NAME")
-        self.tokenizer_name_or_path = self.tokenizer_name_or_path or self.model_name_or_path
-        self.quantization = self._get_quantization()
-        self.config = self._initialize_config()
-
-    def _get_local_or_env(self, local_path, env_var):
-        if os.path.exists(local_path):
+        self.hf_home = os.getenv("HF_HOME")
+        # Check if /local_metadata.json exists
+        local_metadata = {}
+        if os.path.exists("/local_metadata.json"):
+            with open("/local_metadata.json", "r") as f:
+                local_metadata = json.load(f)
+            if local_metadata.get("model_name") is None:
+                raise ValueError("Model name is not found in /local_metadata.json, there was a problem when you baked the model in.")
+            logging.info("Using baked-in model")
             os.environ["TRANSFORMERS_OFFLINE"] = "1"
             os.environ["HF_HUB_OFFLINE"] = "1"
-            with open(local_path, "r") as file:
-                return file.read().strip(), None, None
-        return os.getenv(env_var), os.getenv("HF_HOME"), os.getenv(f"{env_var.split('_')[0]}_REVISION") or None
-
-    def _get_quantization(self):
-        quantization = os.getenv("QUANTIZATION", "").lower()
-        return quantization if quantization in ["awq", "squeezellm", "gptq"] else None
-
+            
+        self.model_name_or_path = local_metadata.get("model_name", os.getenv("MODEL_NAME"))
+        self.model_revision = local_metadata.get("revision", os.getenv("MODEL_REVISION")) 
+        self.tokenizer_name_or_path = local_metadata.get("tokenizer_name", os.getenv("TOKENIZER_NAME")) or self.model_name_or_path
+        self.tokenizer_revision = local_metadata.get("tokenizer_revision", os.getenv("TOKENIZER_REVISION"))  
+        self.quantization = local_metadata.get("quantization", os.getenv("QUANTIZATION"))
+        self.config = self._initialize_config()
     def _initialize_config(self):
         args = {
             "model": self.model_name_or_path,
@@ -35,9 +36,9 @@ class EngineConfig:
             "dtype": os.getenv("DTYPE", "half" if self.quantization else "auto"),
             "tokenizer": self.tokenizer_name_or_path,
             "tokenizer_revision": self.tokenizer_revision,
-            "disable_log_stats": bool(int(os.getenv("DISABLE_LOG_STATS", 1))),
-            "disable_log_requests": bool(int(os.getenv("DISABLE_LOG_REQUESTS", 1))),
-            "trust_remote_code": bool(int(os.getenv("TRUST_REMOTE_CODE", 0))),
+            "disable_log_stats": get_int_bool_env("DISABLE_LOG_STATS", True),
+            "disable_log_requests": get_int_bool_env("DISABLE_LOG_REQUESTS", True),
+            "trust_remote_code": get_int_bool_env("TRUST_REMOTE_CODE", False),
             "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.95)),
             "max_parallel_loading_workers": None if device_count() > 1 or not os.getenv("MAX_PARALLEL_LOADING_WORKERS") else int(os.getenv("MAX_PARALLEL_LOADING_WORKERS")),
             "max_model_len": int(os.getenv("MAX_MODEL_LEN")) if os.getenv("MAX_MODEL_LEN") else None,
@@ -47,10 +48,10 @@ class EngineConfig:
             "block_size": int(os.getenv("BLOCK_SIZE")) if os.getenv("BLOCK_SIZE") else None,
             "swap_space": int(os.getenv("SWAP_SPACE")) if os.getenv("SWAP_SPACE") else None,
             "max_context_len_to_capture": int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE")) if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE") else None,
-            "disable_custom_all_reduce": bool(int(os.getenv("DISABLE_CUSTOM_ALL_REDUCE", 0))),
-            "enforce_eager": bool(int(os.getenv("ENFORCE_EAGER", 0)))
+            "disable_custom_all_reduce": get_int_bool_env("DISABLE_CUSTOM_ALL_REDUCE", False),
+            "enforce_eager": get_int_bool_env("ENFORCE_EAGER", False)
         }
         if args["kv_cache_dtype"] == "fp8_e5m2":
             args["kv_cache_dtype"] = "fp8"
             logging.warning("Using fp8_e5m2 is deprecated. Please use fp8 instead.")
-        return {k: v for k, v in args.items() if v is not None}
+        return {k: v for k, v in args.items() if v not in [None, ""]}

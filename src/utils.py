@@ -1,3 +1,4 @@
+import os
 import logging
 from http import HTTPStatus
 from vllm.utils import random_uuid
@@ -64,4 +65,9 @@ def create_error_response(message: str, err_type: str = "BadRequestError", statu
                             type=err_type,
                             code=status_code.value)
     
-    
+def get_int_bool_env(env_var: str, default: bool) -> bool:
+    return int(os.getenv(env_var, int(default))) == 1
+
+
+        
+
