@@ -1,8 +1,8 @@
 import os
 import shutil
-from tensorize import serialize_model
+# from tensorize import serialize_model # TODO: Add back when tensorizer is implemented
 from huggingface_hub import snapshot_download
-from vllm.model_executor.weight_utils import prepare_hf_model_weights, Disabledtqdm
+from vllm.model_executor.utils import prepare_hf_model_weights, Disabledtqdm
 
 def download_extras_or_tokenizer(model_name, cache_dir, revision, extras=False):
     """Download model or tokenizer and prepare its weights, returning the local folder path."""
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     model_extras_folder = download_extras_or_tokenizer(model, download_dir, revisions["model"], extras=True)
     move_files(model_extras_folder, model_folder)
     
-    if os.environ.get("TENSORIZE_MODEL"):
+    # if os.environ.get("TENSORIZE_MODEL"): TODO: Add back when tensorizer is implemented
         
         
 
