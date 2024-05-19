@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 from torch.cuda import device_count
-import os
 import logging
 
 class EngineConfig:
@@ -48,7 +47,11 @@ class EngineConfig:
             "swap_space": int(os.getenv("SWAP_SPACE")) if os.getenv("SWAP_SPACE") else None,
             "max_context_len_to_capture": int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE")) if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE") else None,
             "disable_custom_all_reduce": bool(int(os.getenv("DISABLE_CUSTOM_ALL_REDUCE", 0))),
-            "enforce_eager": bool(int(os.getenv("ENFORCE_EAGER", 0)))
+            "enforce_eager": bool(int(os.getenv("ENFORCE_EAGER", 0))),
+            "image_input_type": os.getenv("IMAGE_INPUT_TYPE"),
+            "image_token_id": int(os.getenv("IMAGE_TOKEN_ID")) if os.getenv("IMAGE_TOKEN_ID") else None,
+            "image_input_shape": os.getenv("IMAGE_INPUT_SHAPE"),
+            "image_feature_size": int(os.getenv("IMAGE_FEATURE_SIZE")) if os.getenv("IMAGE_FEATURE_SIZE") else None
         }
         if args["kv_cache_dtype"] == "fp8_e5m2":
             args["kv_cache_dtype"] = "fp8"

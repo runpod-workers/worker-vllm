@@ -27,6 +27,8 @@ def count_physical_cores():
 class JobInput:
     def __init__(self, job):
         self.llm_input = job.get("messages", job.get("prompt"))
+        self.base64_image = job.get("base64_image")
+        self.image_url = job.get("image_url")
         self.stream = job.get("stream", False)
         self.max_batch_size = job.get("max_batch_size")
         self.apply_chat_template = job.get("apply_chat_template", False)
@@ -63,5 +65,4 @@ def create_error_response(message: str, err_type: str = "BadRequestError", statu
     return ErrorResponse(message=message,
                             type=err_type,
                             code=status_code.value)
-    
     

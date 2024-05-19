@@ -11,8 +11,10 @@ from vllm import AsyncLLMEngine, AsyncEngineArgs
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
+from vllm.sequence import MultiModalData
 
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
+from multimodal import MultiModalProcessor
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
 from tokenizer import TokenizerWrapper
 from config import EngineConfig
@@ -27,6 +29,7 @@ class vLLMEngine:
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
         self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", DEFAULT_BATCH_SIZE_GROWTH_FACTOR))
         self.min_batch_size = int(os.getenv("MIN_BATCH_SIZE", DEFAULT_MIN_BATCH_SIZE))
+        self.processor = MultiModalProcessor(self.config) if os.getenv("ENABLE_MULTIMODAL", "0") == "1" else None
 
     def dynamic_batch_size(self, current_batch_size, batch_size_growth_factor):
         return min(current_batch_size*batch_size_growth_factor, self.default_batch_size)
@@ -35,6 +38,8 @@ class vLLMEngine:
         try:
             async for batch in self._generate_vllm(
                 llm_input=job_input.llm_input,
+                base64_image=job_input.base64_image,
+                image_url=job_input.image_url,
                 validated_sampling_params=job_input.sampling_params,
                 batch_size=job_input.max_batch_size,
                 stream=job_input.stream,
@@ -47,10 +52,21 @@ class vLLMEngine:
         except Exception as e:
             yield {"error": create_error_response(str(e)).model_dump()}
 
-    async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, batch_size_growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
+    async def _generate_vllm(self, llm_input, base64_image, image_url, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, batch_size_growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
         if apply_chat_template or isinstance(llm_input, list):
             llm_input = self.tokenizer.apply_chat_template(llm_input)
-        results_generator = self.llm.generate(llm_input, validated_sampling_params, request_id)
+        
+        image_tensor = None
+        if image_url:
+            base64_image = self.processor.url_to_base64(image_url)
+        if base64_image:
+            image_tensor = self.processor.base64_to_pixel_values(base64_image)
+    
+            
+        results_generator = self.llm.generate(llm_input, 
+                                              multi_modal_data=MultiModalData(type=MultiModalData.Type.IMAGE, data=image_tensor) if image_tensor is not None else None,
+                                              sampling_params=validated_sampling_params, 
+                                              request_id=request_id)
         n_responses, n_input_tokens, is_first_output = validated_sampling_params.n, 0, True
         last_output_texts, token_counters = ["" for _ in range(n_responses)], {"batch": 0, "total": 0}
 
