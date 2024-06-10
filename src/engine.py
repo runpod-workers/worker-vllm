@@ -141,6 +141,9 @@ class OpenAIvLLMEngine:
     
     async def _handle_model_request(self):
         models = await self.chat_engine.show_available_models()
+        fixed_model = models.data[0]
+        fixed_model.id = self.served_model_name
+        models.data = [fixed_model]
         return models.model_dump()
     
     async def _handle_chat_or_completion_request(self, openai_request: JobInput):
