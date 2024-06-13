@@ -47,11 +47,16 @@ class EngineConfig:
             "kv_cache_dtype": os.getenv("KV_CACHE_DTYPE"),
             "block_size": int(os.getenv("BLOCK_SIZE")) if os.getenv("BLOCK_SIZE") else None,
             "swap_space": int(os.getenv("SWAP_SPACE")) if os.getenv("SWAP_SPACE") else None,
-            "max_context_len_to_capture": int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE")) if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE") else None,
+            "max_seq_len_to_capture": int(os.getenv("MAX_SEQ_LEN_TO_CAPTURE")) if os.getenv("MAX_SEQ_LEN_TO_CAPTURE") else None,
             "disable_custom_all_reduce": get_int_bool_env("DISABLE_CUSTOM_ALL_REDUCE", False),
             "enforce_eager": get_int_bool_env("ENFORCE_EAGER", False)
         }
         if args["kv_cache_dtype"] == "fp8_e5m2":
             args["kv_cache_dtype"] = "fp8"
             logging.warning("Using fp8_e5m2 is deprecated. Please use fp8 instead.")
+        if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"):
+            args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
+            logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
+            
+            
         return {k: v for k, v in args.items() if v not in [None, ""]}
