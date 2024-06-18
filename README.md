@@ -97,6 +97,8 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `MODEL_NAME`**\***                        | -                    | `str`                                         | Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`). |
 | `MODEL_REVISION`                    | `None`               | `str`                                         |Model revision(branch) to load. |
 | `MAX_MODEL_LEN`                  | Model's maximum      | `int`                                         |Maximum number of tokens for the engine to handle per request. |
+| `ROPE_SCALING`                  | `None`      | json as `str`                                         | RoPE scaling configuration in JSON format. For example, `{"type":"dynamic","factor":2.0}` |
+| `ROPE_THETA`                  | `None`      | `float`                                         | RoPE theta. Use with rope_scaling. In some cases, changing the RoPE theta improves the performance of the scaled model. |
 | `BASE_PATH`                         | `/runpod-volume`     | `str`                                         |Storage directory for Huggingface cache and model. Utilizes network storage if attached when pointed at `/runpod-volume`, which will have only one worker download the model once, which all workers will be able to load. If no network volume is present, creates a local directory within each worker. |
 | `LOAD_FORMAT`                       | `auto`               | `str`                                         |Format to load model in. |
 | `HF_TOKEN`                          | -                    | `str`                                         |Hugging Face token for private and gated models. |
