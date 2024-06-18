@@ -49,7 +49,9 @@ class EngineConfig:
             "swap_space": int(os.getenv("SWAP_SPACE")) if os.getenv("SWAP_SPACE") else None,
             "max_seq_len_to_capture": int(os.getenv("MAX_SEQ_LEN_TO_CAPTURE")) if os.getenv("MAX_SEQ_LEN_TO_CAPTURE") else None,
             "disable_custom_all_reduce": get_int_bool_env("DISABLE_CUSTOM_ALL_REDUCE", False),
-            "enforce_eager": get_int_bool_env("ENFORCE_EAGER", False)
+            "enforce_eager": get_int_bool_env("ENFORCE_EAGER", False),
+            "rope_scaling": str(os.getenv("ROPE_SCALING", None)),
+            "rope_theta": float(os.getenv("ROPE_THETA")) if os.getenv("ROPE_SCALING") else None
         }
         if args["kv_cache_dtype"] == "fp8_e5m2":
             args["kv_cache_dtype"] = "fp8"
