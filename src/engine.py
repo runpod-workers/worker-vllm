@@ -124,9 +124,13 @@ class OpenAIvLLMEngine:
         self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
 
     def _initialize_engines(self):
+        chat_template = self.tokenizer.tokenizer.chat_template
+        if isinstance(chat_template, dict):
+            # "default" key should be present in a valid dict chat template
+            chat_template = chat_template["default"]
         self.chat_engine = OpenAIServingChat(
             self.llm, self.served_model_name, self.response_role,
-            chat_template=self.tokenizer.tokenizer.chat_template
+            chat_template=chat_template
         )
         self.completion_engine = OpenAIServingCompletion(self.llm, self.served_model_name)
     
