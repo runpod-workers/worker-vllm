@@ -1,15 +1,19 @@
-ARG WORKER_CUDA_VERSION=11.8.0
-ARG BASE_IMAGE_VERSION=1.0.0
-FROM runpod/worker-vllm:base-${BASE_IMAGE_VERSION}-cuda${WORKER_CUDA_VERSION} AS vllm-base
+FROM nvidia/cuda:12.1.0-base-ubuntu22.04 
 
 RUN apt-get update -y \
     && apt-get install -y python3-pip
+
+RUN ldconfig /usr/local/cuda-12.1/compat/
 
 # Install Python dependencies
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade -r /requirements.txt
+
+# Install vLLM (switching back to pip installs since issues that required building fork are fixed and space optimization is not as important since caching) and FlashInfer 
+RUN python3 -m pip install vllm==0.5.1 && \
+    python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3
 
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
@@ -32,19 +36,15 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
-COPY src/download_model.py /download_model.py
+
+COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
         export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
     fi && \
     if [ -n "$MODEL_NAME" ]; then \
-        python3 /download_model.py; \
+        python3 /src/download_model.py; \
     fi
-
-# Add source files
-COPY src /src
-# Remove download_model.py
-RUN rm /download_model.py
 
 # Start the handler
 CMD ["python3", "/src/handler.py"]

@@ -3,42 +3,75 @@ import json
 import logging
 from torch.cuda import device_count
 from vllm import AsyncEngineArgs
+from vllm.model_executor.model_loader.tensorizer import TensorizerConfig
 
-env_to_args_map = {
+RENAME_ARGS_MAP = {
     "MODEL_NAME": "model",
     "MODEL_REVISION": "revision",
     "TOKENIZER_NAME": "tokenizer",
-    "TOKENIZER_REVISION": "tokenizer_revision",
-    "QUANTIZATION": "quantization"
+    "MAX_CONTEXT_LEN_TO_CAPTURE": "max_seq_len_to_capture"
 }
-    
-def get_local_args():
-    if os.path.exists("/local_metadata.json"):
-        with open("/local_metadata.json", "r") as f:
-            local_metadata = json.load(f)
-        if local_metadata.get("model_name") is None:
-            raise ValueError("Model name is not found in /local_metadata.json, there was a problem when baking the model in.")
-        else:
-            local_args = {env_to_args_map[k.upper()]: v for k, v in local_metadata.items() if k in env_to_args_map}
-            os.environ["TRANSFORMERS_OFFLINE"] = "1"
-            os.environ["HF_HUB_OFFLINE"] = "1"
-    return local_args
 
+DEFAULT_ARGS = {
+    "disable_log_stats": True,
+    "disable_log_requests": True,
+    "gpu_memory_utilization": 0.9,
+}
+
+def match_vllm_args(args):
+    """Rename args to match vllm by:
+    1. Renaming keys to lower case
+    2. Renaming keys to match vllm
+    3. Filtering args to match vllm's AsyncEngineArgs
+
+    Args:
+        args (dict): Dictionary of args
+
+    Returns:
+        dict: Dictionary of args with renamed keys
+    """
+    renamed_args = {RENAME_ARGS_MAP.get(k, k): v for k, v in args.items()}
+    matched_args = {k: v for k, v in renamed_args.items() if k in AsyncEngineArgs.__dataclass_fields__}
+    return {k: v for k, v in matched_args.items() if v not in [None, ""]}
+def get_local_args():
+    """
+    Retrieve local arguments from a JSON file.
+
+    Returns:
+        dict: Local arguments.
+    """
+    if not os.path.exists("/local_model_args.json"):
+        return {}
+
+    with open("/local_model_args.json", "r") as f:
+        local_args = json.load(f)
+
+    if local_args.get("MODEL_NAME") is None:
+        raise ValueError("Model name not found in /local_model_args.json. There was a problem when baking the model in.")
+
+    logging.info(f"Using baked in model with args: {local_args}")
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    os.environ["HF_HUB_OFFLINE"] = "1"
+
+    return local_args
 def get_engine_args():
     # Start with default args
-    args = {
-        "disable_log_stats": True,
-        "disable_log_requests": True,
-        "gpu_memory_utilization": float(os.getenv("GPU_MEMORY_UTILIZATION", 0.9)),
-    }
+    args = DEFAULT_ARGS
     
     # Get env args that match keys in AsyncEngineArgs
-    env_args = {k.lower(): v for k, v in dict(os.environ).items() if k.lower() in AsyncEngineArgs.__dataclass_fields__}
-    args.update(env_args)
+    args.update(os.environ)
     
     # Get local args if model is baked in and overwrite env args
-    local_args = get_local_args()
-    args.update(local_args)
+    args.update(get_local_args())
+    
+    # if args.get("TENSORIZER_URI"): TODO: add back once tensorizer is ready
+    #     args["load_format"] = "tensorizer"
+    #     args["model_loader_extra_config"] = TensorizerConfig(tensorizer_uri=args["TENSORIZER_URI"], num_readers=None)
+    #     logging.info(f"Using tensorized model from {args['TENSORIZER_URI']}")
+    
+    
+    # Rename and match to vllm args
+    args = match_vllm_args(args)
     
     # Set tensor parallel size and max parallel loading workers if more than 1 GPU is available
     num_gpus = device_count()
@@ -49,10 +82,15 @@ def get_engine_args():
             logging.warning("Overriding MAX_PARALLEL_LOADING_WORKERS with None because more than 1 GPU is available.")
     
     # Deprecated env args backwards compatibility
-    if args["kv_cache_dtype"] == "fp8_e5m2":
+    if args.get("kv_cache_dtype") == "fp8_e5m2":
         args["kv_cache_dtype"] = "fp8"
         logging.warning("Using fp8_e5m2 is deprecated. Please use fp8 instead.")
     if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"):
         args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
         logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
+        
+    if "gemma-2" in args.get("model", "").lower():
+        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
+        logging.info("Using FLASHINFER for gemma-2 model.")
+        
     return AsyncEngineArgs(**args)
