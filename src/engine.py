@@ -130,13 +130,18 @@ class OpenAIvLLMEngine(vLLMEngine):
             model_config=self.model_config,
             served_model_names=[self.served_model_name], 
             response_role=self.response_role,
-            chat_template=self.tokenizer.tokenizer.chat_template
+            chat_template=self.tokenizer.tokenizer.chat_template,
+            lora_modules=None,
+            prompt_adapters=None,
+            request_logger=None
         )
         self.completion_engine = OpenAIServingCompletion(
             engine=self.llm, 
             model_config=self.model_config,
             served_model_names=[self.served_model_name],
-            lora_modules=[]
+            lora_modules=[],
+            prompt_adapters=None,
+            request_logger=None
         )
     
     async def generate(self, openai_request: JobInput):
