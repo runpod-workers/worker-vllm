@@ -176,7 +176,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             yield create_error_response(str(e)).model_dump()
             return
         
-        response_generator = await generator_function(request, DummyRequest())
+        response_generator = await generator_function(request, raw_request=None)
 
         if not openai_request.openai_input.get("stream") or isinstance(response_generator, ErrorResponse):
             yield response_generator.model_dump()
