@@ -105,6 +105,83 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `SEED`                              | `0`                  | `int`                                         |Sets random seed for operations. |
 | `KV_CACHE_DTYPE`                    | `auto`               | `auto`,  `fp8`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
 | `DTYPE`                             | `auto`               | `auto`, `half`, `float16`, `bfloat16`, `float`, `float32` |Sets datatype/precision for model weights and activations. |
+| `LOAD_FORMAT`                       | `auto`               | `str`                                      | Format to load model in. |
+| `DISABLE_LOG_STATS`                 | `True`               | `bool`                                     | Disable logging statistics. |
+| `DISABLE_LOG_REQUESTS`              | `True`               | `bool`                                     | Disable logging requests. |
+| `GPU_MEMORY_UTILIZATION`            | `0.9`                | `float`                                    | GPU memory utilization ratio. |
+| `PIPELINE_PARALLEL_SIZE`            | `1`                  | `int`                                      | Pipeline parallel size. |
+| `TENSOR_PARALLEL_SIZE`              | `1`                  | `int`                                      | Tensor parallel size. |
+| `SERVED_MODEL_NAME`                 | `None`               | `str`                                      | Name of the served model. |
+| `TOKENIZER`                         | `None`               | `str`                                      | Tokenizer to use. |
+| `SKIP_TOKENIZER_INIT`               | `False`              | `bool`                                     | Skip tokenizer initialization. |
+| `TOKENIZER_MODE`                    | `auto`               | `str`                                      | Tokenizer mode. |
+| `TRUST_REMOTE_CODE`                 | `False`              | `bool`                                     | Trust remote code. |
+| `DOWNLOAD_DIR`                      | `None`               | `str`                                      | Directory to download files to. |
+| `LOAD_FORMAT`                       | `auto`               | `str`                                      | Format to load model in. |
+| `DTYPE`                             | `auto`               | `str`                                      | Data type for computations. |
+| `KV_CACHE_DTYPE`                    | `auto`               | `str`                                      | Data type for key-value cache. |
+| `QUANTIZATION_PARAM_PATH`           | `None`               | `str`                                      | Path to quantization parameters. |
+| `SEED`                              | `0`                  | `int`                                      | Random seed. |
+| `MAX_MODEL_LEN`                    | `None`               | `int`                                      | Maximum number of tokens for the engine to handle per request. |
+| `WORKER_USE_RAY`                    | `False`              | `bool`                                     | Whether to use Ray for workers. |
+| `DISTRIBUTED_EXECUTOR_BACKEND`      | `None`               | `str`                                      | Backend for distributed execution. |
+| `MAX_PARALLEL_LOADING_WORKERS`      | `None`               | `int`                                      | Maximum number of parallel loading workers. |
+| `BLOCK_SIZE`                        | `16`                 | `int`                                      | Block size. |
+| `ENABLE_PREFIX_CACHING`             | `False`              | `bool`                                     | Enable prefix caching. |
+| `DISABLE_SLIDING_WINDOW`            | `False`              | `bool`                                     | Disable sliding window. |
+| `USE_V2_BLOCK_MANAGER`              | `False`              | `bool`                                     | Use V2 block manager. |
+| `SWAP_SPACE`                        | `4`                  | `int`                                      | Swap space in GiB. |
+| `CPU_OFFLOAD_GB`                    | `0`                  | `int`                                      | CPU offload space in GiB. |
+| `MAX_NUM_BATCHED_TOKENS`            | `None`               | `int`                                      | Maximum number of batched tokens. |
+| `MAX_NUM_SEQS`                      | `256`                | `int`                                      | Maximum number of sequences. |
+| `MAX_LOGPROBS`                      | `20`                 | `int`                                      | Maximum number of log probabilities. |
+| `REVISION`                          | `None`               | `str`                                      | Revision of the model. |
+| `CODE_REVISION`                     | `None`               | `str`                                      | Revision of the code. |
+| `ROPE_SCALING`                      | `None`               | `str`                                      | ROPE scaling factor. |
+| `ROPE_THETA`                        | `0`                  | `float`                                    | ROPE theta value. |
+| `TOKENIZER_REVISION`                | `None`               | `str`                                      | Revision of the tokenizer. |
+| `QUANTIZATION`                      | `None`               | `str`                                      | Quantization type. |
+| `ENFORCE_EAGER`                     | `False`              | `bool`                                     | Enforce eager execution. |
+| `MAX_CONTEXT_LEN_TO_CAPTURE`        | `None`               | `int`                                      | Maximum context length to capture. |
+| `MAX_SEQ_LEN_TO_CAPTURE`            | `8192`               | `int`                                      | Maximum sequence length to capture. |
+| `DISABLE_CUSTOM_ALL_REDUCE`         | `False`              | `bool`                                     | Disable custom all-reduce. |
+| `TOKENIZER_POOL_SIZE`               | `0`                  | `int`                                      | Size of the tokenizer pool. |
+| `TOKENIZER_POOL_TYPE`               | `ray`                | `str`                                      | Type of tokenizer pool. |
+| `TOKENIZER_POOL_EXTRA_CONFIG`       | `None`               | `str`                                      | Extra configuration for the tokenizer pool. |
+| `ENABLE_LORA`                       | `False`              | `bool`                                     | Enable LoRA. |
+| `MAX_LORAS`                         | `1`                  | `int`                                      | Maximum number of LoRAs. |
+| `MAX_LORA_RANK`                     | `16`                 | `int`                                      | Maximum rank of LoRA. |
+| `ENABLE_PROMPT_ADAPTER`             | `False`              | `bool`                                     | Enable prompt adapter. |
+| `MAX_PROMPT_ADAPTERS`               | `1`                  | `int`                                      | Maximum number of prompt adapters. |
+| `MAX_PROMPT_ADAPTER_TOKEN`          | `0`                  | `int`                                      | Maximum number of prompt adapter tokens. |
+| `FULLY_SHARDED_LORAS`               | `False`              | `bool`                                     | Fully sharded LoRAs. |
+| `LORA_EXTRA_VOCAB_SIZE`             | `256`                | `int`                                      | Extra vocabulary size for LoRA. |
+| `LONG_LORA_SCALING_FACTORS`         | `None`               | `tuple`                                    | Scaling factors for long LoRA. |
+| `LORA_DTYPE`                        | `auto`               | `str`                                      | Data type for LoRA. |
+| `MAX_CPU_LORAS`                     | `None`               | `int`                                      | Maximum number of CPU LoRAs. |
+| `DEVICE`                            | `auto`               | `str`                                      | Device to use. |
+| `RAY_WORKERS_USE_NSIGHT`            | `False`              | `bool`                                     | Whether Ray workers use Nsight. |
+| `NUM_GPU_BLOCKS_OVERRIDE`           | `None`               | `int`                                      | Number of GPU blocks to override. |
+| `NUM_LOOKAHEAD_SLOTS`               | `0`                  | `int`                                      | Number of lookahead slots. |
+| `MODEL_LOADER_EXTRA_CONFIG`         | `None`               | `str`                                      | Extra configuration for model loader. |
+| `IGNORE_PATTERNS`                   | `None`               | `str`                                      | Patterns to ignore. |
+| `PREEMPTION_MODE`                   | `None`               | `str`                                      | Preemption mode. |
+| `SCHEDULER_DELAY_FACTOR`            | `0.0`                | `float`                                    | Scheduler delay factor. |
+| `ENABLE_CHUNKED_PREFILL`            | `None`               | `str`                                      | Enable chunked prefill. |
+| `GUIDED_DECODING_BACKEND`           | `outlines`           | `str`                                      | Guided decoding backend. |
+| `SPECULATIVE_MODEL`                 | `None`               | `str`                                      | Speculative model. |
+| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE` | `None`          | `int`                                      | Speculative draft tensor parallel size. |
+| `NUM_SPECULATIVE_TOKENS`            | `None`               | `int`                                      | Number of speculative tokens. |
+| `SPECULATIVE_MAX_MODEL_LEN`         | `None`               | `int`                                      | Speculative maximum model length. |
+| `SPECULATIVE_DISABLE_BY_BATCH_SIZE` | `None`               | `int`                                      | Speculative disable by batch size. |
+| `NGRAM_PROMPT_LOOKUP_MAX`           | `None`               | `int`                                      | N-gram prompt lookup maximum. |
+| `NGRAM_PROMPT_LOOKUP_MIN`           | `None`               | `int`                                      | N-gram prompt lookup minimum. |
+| `SPEC_DECODING_ACCEPTANCE_METHOD`   | `rejection_sampler`  | `str`                                      | Speculative decoding acceptance method. |
+| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD` | `None`   | `float`                                    | Typical acceptance sampler posterior threshold. |
+| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA` | `None`      | `float`                                    | Typical acceptance sampler posterior alpha. |
+| `QLORA_ADAPTER_NAME_OR_PATH`        | `None`               | `str`                                      | QLoRA adapter name or path. |
+| `DISABLE_LOGPROBS_DURING_SPEC_DECODING` | `None`            | `str`                                      | Disable log probabilities during speculative decoding. |
+| `OTLP_TRACES_ENDPOINT`              | `None`               | `str`                                      | OTLP traces endpoint. |
 **Tokenizer Settings**
 | `TOKENIZER_NAME`                    | `None`               | `str`                                         |Tokenizer repository to use a different tokenizer than the model's default. |
 | `TOKENIZER_REVISION`                | `None`               | `str`                                         |Tokenizer revision to load. |
