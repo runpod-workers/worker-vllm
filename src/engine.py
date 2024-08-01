@@ -1,13 +1,13 @@
 import os
 import logging
 import json
+import asyncio
 
 from dotenv import load_dotenv
-from torch.cuda import device_count
 from typing import AsyncGenerator
 import time
 
-from vllm import AsyncLLMEngine, AsyncEngineArgs
+from vllm import AsyncLLMEngine
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
@@ -15,14 +15,17 @@ from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRe
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
 from tokenizer import TokenizerWrapper
-from config import EngineConfig
+from engine_args import get_engine_args
 
 class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
-        self.config = EngineConfig().config
-        self.tokenizer = TokenizerWrapper(self.config.get("tokenizer"), self.config.get("tokenizer_revision"), self.config.get("trust_remote_code"))
-        self.llm = self._initialize_llm() if engine is None else engine
+        self.engine_args = get_engine_args()
+        logging.info(f"Engine args: {self.engine_args}")
+        self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
+                                          self.engine_args.tokenizer_revision, 
+                                          self.engine_args.trust_remote_code)
+        self.llm = self._initialize_llm() if engine is None else engine.llm
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
         self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", DEFAULT_BATCH_SIZE_GROWTH_FACTOR))
@@ -102,7 +105,7 @@ class vLLMEngine:
     def _initialize_llm(self):
         try:
             start = time.time()
-            engine = AsyncLLMEngine.from_engine_args(AsyncEngineArgs(**self.config))
+            engine = AsyncLLMEngine.from_engine_args(self.engine_args)
             end = time.time()
             logging.info(f"Initialized vLLM engine in {end - start:.2f}s")
             return engine
@@ -111,24 +114,35 @@ class vLLMEngine:
             raise e
 
 
-class OpenAIvLLMEngine:
+class OpenAIvLLMEngine(vLLMEngine):
     def __init__(self, vllm_engine):
-        self.config = vllm_engine.config
-        self.llm = vllm_engine.llm
-        self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.config["model"]
+        super().__init__(vllm_engine)
+        self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
-        self.tokenizer = vllm_engine.tokenizer
-        self.default_batch_size = vllm_engine.default_batch_size
-        self.batch_size_growth_factor, self.min_batch_size = vllm_engine.batch_size_growth_factor, vllm_engine.min_batch_size
-        self._initialize_engines()
+        asyncio.run(self._initialize_engines())
         self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
 
-    def _initialize_engines(self):
+    async def _initialize_engines(self):
+        self.model_config = await self.llm.get_model_config()
+        
         self.chat_engine = OpenAIServingChat(
-            self.llm, self.served_model_name, self.response_role,
-            chat_template=self.tokenizer.tokenizer.chat_template
+            engine=self.llm, 
+            model_config=self.model_config,
+            served_model_names=[self.served_model_name], 
+            response_role=self.response_role,
+            chat_template=self.tokenizer.tokenizer.chat_template,
+            lora_modules=None,
+            prompt_adapters=None,
+            request_logger=None
         )
-        self.completion_engine = OpenAIServingCompletion(self.llm, self.served_model_name)
+        self.completion_engine = OpenAIServingCompletion(
+            engine=self.llm, 
+            model_config=self.model_config,
+            served_model_names=[self.served_model_name],
+            lora_modules=[],
+            prompt_adapters=None,
+            request_logger=None
+        )
     
     async def generate(self, openai_request: JobInput):
         if openai_request.openai_route == "/v1/models":
@@ -162,7 +176,7 @@ class OpenAIvLLMEngine:
             yield create_error_response(str(e)).model_dump()
             return
         
-        response_generator = await generator_function(request, DummyRequest())
+        response_generator = await generator_function(request, raw_request=None)
 
         if not openai_request.openai_input.get("stream") or isinstance(response_generator, ErrorResponse):
             yield response_generator.model_dump()

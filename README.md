@@ -91,20 +91,76 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 #### Environment Variables/Settings
 > Note:  `0` is equivalent to `False` and `1` is equivalent to `True` for boolean values.
 
-| Name                                | Default              | Type/Choices                              | Description |
-|-------------------------------------|----------------------|-------------------------------------------|-------------|
-**LLM Settings**
-| `MODEL_NAME`**\***                        | -                    | `str`                                         | Hugging Face Model Repository (e.g., `openchat/openchat-3.5-1210`). |
-| `MODEL_REVISION`                    | `None`               | `str`                                         |Model revision(branch) to load. |
-| `MAX_MODEL_LEN`                  | Model's maximum      | `int`                                         |Maximum number of tokens for the engine to handle per request. |
-| `BASE_PATH`                         | `/runpod-volume`     | `str`                                         |Storage directory for Huggingface cache and model. Utilizes network storage if attached when pointed at `/runpod-volume`, which will have only one worker download the model once, which all workers will be able to load. If no network volume is present, creates a local directory within each worker. |
-| `LOAD_FORMAT`                       | `auto`               | `str`                                         |Format to load model in. |
-| `HF_TOKEN`                          | -                    | `str`                                         |Hugging Face token for private and gated models. |
-| `QUANTIZATION`                      | `None`               | `awq`, `squeezellm`, `gptq`              |Quantization of given model. The model must already be quantized. |
-| `TRUST_REMOTE_CODE`                 | `0`                  | boolean as `int`                                         |Trust remote code for Hugging Face models. Can help with Mixtral 8x7B, Quantized models, and unusual models/architectures.
-| `SEED`                              | `0`                  | `int`                                         |Sets random seed for operations. |
-| `KV_CACHE_DTYPE`                    | `auto`               | `auto`,  `fp8`                                         |Data type for kv cache storage. Uses `DTYPE` if set to `auto`. |
-| `DTYPE`                             | `auto`               | `auto`, `half`, `float16`, `bfloat16`, `float`, `float32` |Sets datatype/precision for model weights and activations. |
+| `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
+|-------------------------------------------|-----------------------|--------------------------------------------|---------------|
+| `MODEL`                                   | 'facebook/opt-125m'   | `str`                                      | Name or path of the Hugging Face model to use. |
+| `TOKENIZER`                               | None                  | `str`                                      | Name or path of the Hugging Face tokenizer to use. |
+| `SKIP_TOKENIZER_INIT`                     | False                 | `bool`                                     | Skip initialization of tokenizer and detokenizer. |
+| `TOKENIZER_MODE`                          | 'auto'                | ['auto', 'slow']                           | The tokenizer mode. |
+| `TRUST_REMOTE_CODE`                       | False                 | `bool`                                     | Trust remote code from Hugging Face. |
+| `DOWNLOAD_DIR`                            | None                  | `str`                                      | Directory to download and load the weights. |
+| `LOAD_FORMAT`                             | 'auto'                | ['auto', 'pt', 'safetensors', 'npcache', 'dummy', 'tensorizer', 'bitsandbytes'] | The format of the model weights to load. |
+| `DTYPE`                                   | 'auto'                | ['auto', 'half', 'float16', 'bfloat16', 'float', 'float32'] | Data type for model weights and activations. |
+| `KV_CACHE_DTYPE`                          | 'auto'                | ['auto', 'fp8', 'fp8_e5m2', 'fp8_e4m3']    | Data type for KV cache storage. |
+| `QUANTIZATION_PARAM_PATH`                 | None                  | `str`                                      | Path to the JSON file containing the KV cache scaling factors. |
+| `MAX_MODEL_LEN`                           | None                  | `int`                                      | Model context length. |
+| `GUIDED_DECODING_BACKEND`                 | 'outlines'            | ['outlines', 'lm-format-enforcer']         | Which engine will be used for guided decoding by default. |
+| `DISTRIBUTED_EXECUTOR_BACKEND`            | None                  | ['ray', 'mp']                              | Backend to use for distributed serving. |
+| `WORKER_USE_RAY`                          | False                 | `bool`                                     | Deprecated, use --distributed-executor-backend=ray. |
+| `PIPELINE_PARALLEL_SIZE`                  | 1                     | `int`                                      | Number of pipeline stages. |
+| `TENSOR_PARALLEL_SIZE`                    | 1                     | `int`                                      | Number of tensor parallel replicas. |
+| `MAX_PARALLEL_LOADING_WORKERS`            | None                  | `int`                                      | Load model sequentially in multiple batches. |
+| `RAY_WORKERS_USE_NSIGHT`                  | False                 | `bool`                                     | If specified, use nsight to profile Ray workers. |
+| `BLOCK_SIZE`                              | 16                    | [8, 16, 32]                                | Token block size for contiguous chunks of tokens. |
+| `ENABLE_PREFIX_CACHING`                   | False                 | `bool`                                     | Enables automatic prefix caching. |
+| `DISABLE_SLIDING_WINDOW`                  | False                 | `bool`                                     | Disables sliding window, capping to sliding window size. |
+| `USE_V2_BLOCK_MANAGER`                    | False                 | `bool`                                     | Use BlockSpaceMangerV2. |
+| `NUM_LOOKAHEAD_SLOTS`                     | 0                     | `int`                                      | Experimental scheduling config necessary for speculative decoding. |
+| `SEED`                                    | 0                     | `int`                                      | Random seed for operations. |
+| `SWAP_SPACE`                              | 4                     | `int`                                      | CPU swap space size (GiB) per GPU. |
+| `GPU_MEMORY_UTILIZATION`                  | 0.90                  | `float`                                    | The fraction of GPU memory to be used for the model executor. |
+| `NUM_GPU_BLOCKS_OVERRIDE`                 | None                  | `int`                                      | If specified, ignore GPU profiling result and use this number of GPU blocks. |
+| `MAX_NUM_BATCHED_TOKENS`                  | None                  | `int`                                      | Maximum number of batched tokens per iteration. |
+| `MAX_NUM_SEQS`                            | 256                   | `int`                                      | Maximum number of sequences per iteration. |
+| `MAX_LOGPROBS`                            | 20                    | `int`                                      | Max number of log probs to return when logprobs is specified in SamplingParams. |
+| `DISABLE_LOG_STATS`                       | False                 | `bool`                                     | Disable logging statistics. |
+| `QUANTIZATION`                            | None                  | [*QUANTIZATION_METHODS, None]              | Method used to quantize the weights. |
+| `ROPE_SCALING`                            | None                  | `dict`                                     | RoPE scaling configuration in JSON format. |
+| `ROPE_THETA`                              | None                  | `float`                                    | RoPE theta. Use with rope_scaling. |
+| `ENFORCE_EAGER`                           | False                 | `bool`                                     | Always use eager-mode PyTorch. |
+| `MAX_CONTEXT_LEN_TO_CAPTURE`              | None                  | `int`                                      | Maximum context length covered by CUDA graphs. |
+| `MAX_SEQ_LEN_TO_CAPTURE`                  | 8192                  | `int`                                      | Maximum sequence length covered by CUDA graphs. |
+| `DISABLE_CUSTOM_ALL_REDUCE`               | False                 | `bool`                                     | See ParallelConfig. |
+| `TOKENIZER_POOL_SIZE`                     | 0                     | `int`                                      | Size of tokenizer pool to use for asynchronous tokenization. |
+| `TOKENIZER_POOL_TYPE`                     | 'ray'                 | `str`                                      | Type of tokenizer pool to use for asynchronous tokenization. |
+| `TOKENIZER_POOL_EXTRA_CONFIG`             | None                  | `dict`                                     | Extra config for tokenizer pool. |
+| `ENABLE_LORA`                             | False                 | `bool`                                     | If True, enable handling of LoRA adapters. |
+| `MAX_LORAS`                               | 1                     | `int`                                      | Max number of LoRAs in a single batch. |
+| `MAX_LORA_RANK`                           | 16                    | `int`                                      | Max LoRA rank. |
+| `LORA_EXTRA_VOCAB_SIZE`                   | 256                   | `int`                                      | Maximum size of extra vocabulary for LoRA adapters. |
+| `LORA_DTYPE`                              | 'auto'                | ['auto', 'float16', 'bfloat16', 'float32'] | Data type for LoRA. |
+| `LONG_LORA_SCALING_FACTORS`               | None                  | `tuple`                                    | Specify multiple scaling factors for LoRA adapters. |
+| `MAX_CPU_LORAS`                           | None                  | `int`                                      | Maximum number of LoRAs to store in CPU memory. |
+| `FULLY_SHARDED_LORAS`                     | False                 | `bool`                                     | Enable fully sharded LoRA layers. |
+| `DEVICE`                                  | 'auto'                | ['auto', 'cuda', 'neuron', 'cpu', 'openvino', 'tpu', 'xpu'] | Device type for vLLM execution. |
+| `SCHEDULER_DELAY_FACTOR`                  | 0.0                   | `float`                                    | Apply a delay before scheduling next prompt. |
+| `ENABLE_CHUNKED_PREFILL`                  | False                 | `bool`                                     | Enable chunked prefill requests. |
+| `SPECULATIVE_MODEL`                       | None                  | `str`                                      | The name of the draft model to be used in speculative decoding. |
+| `NUM_SPECULATIVE_TOKENS`                  | None                  | `int`                                      | The number of speculative tokens to sample from the draft model. |
+| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE`  | None                  | `int`                                      | Number of tensor parallel replicas for the draft model. |
+| `SPECULATIVE_MAX_MODEL_LEN`               | None                  | `int`                                      | The maximum sequence length supported by the draft model. |
+| `SPECULATIVE_DISABLE_BY_BATCH_SIZE`       | None                  | `int`                                      | Disable speculative decoding if the number of enqueue requests is larger than this value. |
+| `NGRAM_PROMPT_LOOKUP_MAX`                 | None                  | `int`                                      | Max size of window for ngram prompt lookup in speculative decoding. |
+| `NGRAM_PROMPT_LOOKUP_MIN`                 | None                  | `int`                                      | Min size of window for ngram prompt lookup in speculative decoding. |
+| `SPEC_DECODING_ACCEPTANCE_METHOD`         | 'rejection_sampler'   | ['rejection_sampler', 'typical_acceptance_sampler'] | Specify the acceptance method for draft token verification in speculative decoding. |
+| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD` | None              | `float`                                    | Set the lower bound threshold for the posterior probability of a token to be accepted. |
+| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA`     | None              | `float`                                    | A scaling factor for the entropy-based threshold for token acceptance. |
+| `MODEL_LOADER_EXTRA_CONFIG`               | None                  | `dict`                                     | Extra config for model loader. |
+| `PREEMPTION_MODE`                         | None                  | `str`                                      | If 'recompute', the engine performs preemption-aware recomputation. If 'save', the engine saves activations into the CPU memory as preemption happens. |
+| `PREEMPTION_CHECK_PERIOD`                 | 1.0                   | `float`                                    | How frequently the engine checks if a preemption happens. |
+| `PREEMPTION_CPU_CAPACITY`                 | 2                     | `float`                                    | The percentage of CPU memory used for the saved activations. |
+| `DISABLE_LOGGING_REQUEST`                 | False                 | `bool`                                     | Disable logging requests. |
+| `MAX_LOG_LEN`                             | None                  | `int`                                      | Max number of prompt characters or prompt ID numbers being printed in log. |
 **Tokenizer Settings**
 | `TOKENIZER_NAME`                    | `None`               | `str`                                         |Tokenizer repository to use a different tokenizer than the model's default. |
 | `TOKENIZER_REVISION`                | `None`               | `str`                                         |Tokenizer revision to load. |
@@ -149,7 +205,7 @@ To build an image with the model baked in, you must specify the following docker
   - `MODEL_REVISION`: Model revision to load (default: `main`).
   - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
   - `QUANTIZATION`
-  - `WORKER_CUDA_VERSION`: `11.8.0` or `12.1.0` (default: `11.8.0` due to a small number of workers not having CUDA 12.1 support yet. `12.1.0` is recommended for optimal performance).
+  - `WORKER_CUDA_VERSION`: `12.1.0` (`12.1.0` is recommended for optimal performance).
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
   - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `main`).
 
