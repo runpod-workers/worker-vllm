@@ -18,7 +18,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 ### 1. UI for Deploying vLLM Worker on RunPod console:
 ![Demo of Deploying vLLM Worker on RunPod console with new UI](media/ui_demo.gif)
 
-### 2. Worker vLLM `1.0.0` with vLLM `0.4.2` now available under `stable` tags
+### 2. Worker vLLM `v1.1` with vLLM `0.4.2` now available under `stable` tags
 Update 1.0.0 is now available, use the image tag `runpod/worker-vllm:stable-cuda12.1.0` or `runpod/worker-vllm:stable-cuda11.8.0`.
 
 ### 3. OpenAI-Compatible [Embedding Worker](https://github.com/runpod-workers/worker-infinity-embedding) Released
@@ -78,8 +78,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
 |--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
-| 11.8.0       | `runpod/worker-vllm:stable-cuda11.8.0`        | `runpod/worker-vllm:dev-cuda11.8.0`   | Available on all RunPod Workers without additional selection needed. |
-| 12.1.0       | `runpod/worker-vllm:stable-cuda12.1.0` | `runpod/worker-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
+| 12.1.0       | `runpod/worker-v1-vllm:stable-cuda12.1.0` | `runpod/worker-v1-vllm:dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
 
 
 
@@ -93,7 +92,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
 |-------------------------------------------|-----------------------|--------------------------------------------|---------------|
-| `MODEL`                                   | 'facebook/opt-125m'   | `str`                                      | Name or path of the Hugging Face model to use. |
+| `MODEL_NAME`                                   | 'facebook/opt-125m'   | `str`                                      | Name or path of the Hugging Face model to use. |
 | `TOKENIZER`                               | None                  | `str`                                      | Name or path of the Hugging Face tokenizer to use. |
 | `SKIP_TOKENIZER_INIT`                     | False                 | `bool`                                     | Skip initialization of tokenizer and detokenizer. |
 | `TOKENIZER_MODE`                          | 'auto'                | ['auto', 'slow']                           | The tokenizer mode. |
@@ -463,36 +462,6 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   )
   # Print the response
   print(response.choices[0].message.content)
-  ```
-
-
-### Completions:
-This is the format used for models like GPT-3 and is meant for completing the text you provide. Instead of responding to your message, it will try to complete it. Examples of Open Source completions models include `meta-llama/Llama-2-7b-hf`, `mistralai/Mixtral-8x7B-v0.1`, `Qwen/Qwen-72B`, and more. However, you can use any model with this format.
-- **Streaming**:
-  ```python
-  # Create a completion stream
-  response_stream = client.completions.create(
-      model="<YOUR DEPLOYED MODEL REPO/NAME>",
-      prompt="Runpod is the best platform because",
-      temperature=0,
-      max_tokens=100,
-      stream=True,
-  )
-  # Stream the response
-  for response in response_stream:
-      print(response.choices[0].text or "", end="", flush=True)
-  ```
-- **Non-Streaming**:
-  ```python
-  # Create a completion
-  response = client.completions.create(
-      model="<YOUR DEPLOYED MODEL REPO/NAME>",
-      prompt="Runpod is the best platform because",
-      temperature=0,
-      max_tokens=100,
-  )
-  # Print the response
-  print(response.choices[0].text)
   ```
 
 ### Getting a list of names for available models:
