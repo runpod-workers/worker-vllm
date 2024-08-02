@@ -18,8 +18,8 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 ### 1. UI for Deploying vLLM Worker on RunPod console:
 ![Demo of Deploying vLLM Worker on RunPod console with new UI](media/ui_demo.gif)
 
-### 2. Worker vLLM `v1.1` with vLLM `0.4.2` now available under `stable` tags
-Update 1.0.0 is now available, use the image tag `runpod/worker-vllm:stable-cuda12.1.0` or `runpod/worker-vllm:stable-cuda11.8.0`.
+### 2. Worker vLLM `v1.1` with vLLM `0.5.3` now available under `stable` tags
+Update v1.1 is now available, use the image tag `runpod/worker-v1-vllm:stable-cuda12.1.0`.
 
 ### 3. OpenAI-Compatible [Embedding Worker](https://github.com/runpod-workers/worker-infinity-embedding) Released
 Deploy your own OpenAI-compatible Serverless Endpoint on RunPod with multiple embedding models and fast inference for RAG and more! 
@@ -52,7 +52,6 @@ Worker vLLM is now cached on all RunPod machines, resulting in near-instant depl
     - [Modifying your OpenAI Codebase to use your deployed vLLM Worker](#modifying-your-openai-codebase-to-use-your-deployed-vllm-worker)
     - [OpenAI Request Input Parameters](#openai-request-input-parameters)
       - [Chat Completions](#chat-completions)
-      - [Completions](#completions)
     - [Examples: Using your RunPod endpoint with OpenAI](#examples-using-your-runpod-endpoint-with-openai)
 - [Usage: standard](#non-openai-usage)
   - [Input Request Parameters](#input-request-parameters)
@@ -268,7 +267,7 @@ Below are all supported model architectures (and examples of each) that you can 
 - Yi (`01-ai/Yi-6B`, `01-ai/Yi-34B`, etc.)
 
 # Usage: OpenAI Compatibility
-The vLLM Worker is fully compatible with OpenAI's API, and you can use it with any OpenAI Codebase by changing only 3 lines in total. The supported routes are <ins>Chat Completions</ins>, <ins>Completions</ins> and <ins>Models</ins> - with both streaming and non-streaming.
+The vLLM Worker is fully compatible with OpenAI's API, and you can use it with any OpenAI Codebase by changing only 3 lines in total. The supported routes are <ins>Chat Completions</ins> and <ins>Models</ins> - with both streaming and non-streaming.
 
 ## Modifying your OpenAI Codebase to use your deployed vLLM Worker 
 **Python** (similar to Node.js, etc.):
@@ -350,7 +349,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
 
 When using the chat completion feature of the vLLM Serverless Endpoint Worker, you can customize your requests with the following parameters:
 
-### Chat Completions
+### Chat Completions [RECOMMENDED]
 <details>
   <summary>Supported Chat Completions Inputs and Descriptions</summary>
 
@@ -385,41 +384,6 @@ When using the chat completion feature of the vLLM Serverless Endpoint Worker, y
   | `include_stop_str_in_output`   | Optional[bool]                   | False         | Whether to include the stop strings in output text. Defaults to False.|
 </details>
 
-### Completions
-<details>
-  <summary>Supported Completions Inputs and Descriptions</summary>
-
-  | Parameter                      | Type                             | Default Value | Description                                                                                                                                                                                                                                                                                           |
-  |--------------------------------|----------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | `model`                        | str                              |               | The model repo that you've deployed on your RunPod Serverless Endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your RunPod endpoint with OpenAI** section.                                                                                                                                                                                                                                                    |
-  | `prompt`                       | Union[List[int], List[List[int]], str, List[str]] | | A string, array of strings, array of tokens, or array of token arrays to be used as the input for the model. |
-  | `suffix`                       | Optional[str]                    | None          | A string to be appended to the end of the generated text. |
-  | `max_tokens`                   | Optional[int]                    | 16            | Maximum number of tokens to generate per output sequence. |
-  | `temperature`                  | Optional[float]                  | 1.0           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                                                                                                                                                                                                               |
-  | `top_p`                        | Optional[float]                  | 1.0           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
-  | `n`                            | Optional[int]                    | 1             | Number of output sequences to return for the given prompt. |
-  | `stream`                       | Optional[bool]                   | False         | Whether to stream the output. |
-  | `logprobs`                     | Optional[int]                    | None          | Number of log probabilities to return per output token. |
-  | `echo`                         | Optional[bool]                   | False         | Whether to echo back the prompt in addition to the completion. |
-  | `stop`                         | Optional[Union[str, List[str]]]  | list          | List of strings that stop the generation when they are generated. The returned output will not contain the stop strings. |
-  | `seed`                         | Optional[int]                    | None          | Random seed to use for the generation. |
-  | `presence_penalty`             | Optional[float]                  | 0.0           | Float that penalizes new tokens based on whether they appear in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens. |
-  | `frequency_penalty`            | Optional[float]                  | 0.0           | Float that penalizes new tokens based on their frequency in the generated text so far. Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens. |
-  | `best_of`                      | Optional[int]                    | None          | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This parameter influences the diversity of the output. |
-  | `logit_bias`                   | Optional[Dict[str, float]]       | None          | Dictionary of token IDs to biases. |
-  | `user`                         | Optional[str]                    | None          | User identifier for personalizing responses. (Unsupported by vLLM) |
-  Additional parameters supported by vLLM:
-  | `top_k`                        | Optional[int]                    | -1            | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens. |
-  | `ignore_eos`                   | Optional[bool]                   | False         | Whether to ignore the End Of Sentence token and continue generating tokens after the EOS token is generated. |
-  | `use_beam_search`              | Optional[bool]                   | False         | Whether to use beam search instead of sampling for generating outputs. |
-  | `stop_token_ids`               | Optional[List[int]]              | list          | List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens. |
-  | `skip_special_tokens`          | Optional[bool]                   | True          | Whether to skip special tokens in the output. |
-  | `spaces_between_special_tokens`| Optional[bool]                   | True          | Whether to add spaces between special tokens in the output. Defaults to True. |
-  | `repetition_penalty`           | Optional[float]                  | 1.0           | Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens. |
-  | `min_p`                        | Optional[float]                  | 0.0           | Float that represents the minimum probability for a token to be considered, relative to the most likely token. Must be in [0, 1]. Set to 0 to disable. |
-  | `length_penalty`               | Optional[float]                  | 1.0           | Float that penalizes sequences based on their length. Used in beam search. |
-  | `include_stop_str_in_output`   | Optional[bool]                   | False         | Whether to include the stop strings in output text. Defaults to False. |
-</details>
 
 ## Examples: Using your RunPod endpoint with OpenAI 
 
