@@ -97,7 +97,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `TOKENIZER_MODE`                          | 'auto'                | ['auto', 'slow']                           | The tokenizer mode. |
 | `TRUST_REMOTE_CODE`                       | False                 | `bool`                                     | Trust remote code from Hugging Face. |
 | `DOWNLOAD_DIR`                            | None                  | `str`                                      | Directory to download and load the weights. |
-| `LOAD_FORMAT`                             | 'auto'                | ['auto', 'pt', 'safetensors', 'npcache', 'dummy', 'bitsandbytes'] | The format of the model weights to load. |
+| `LOAD_FORMAT`                             | 'auto'                | `str`                                      | The format of the model weights to load. |
 | `DTYPE`                                   | 'auto'                | ['auto', 'half', 'float16', 'bfloat16', 'float', 'float32'] | Data type for model weights and activations. |
 | `KV_CACHE_DTYPE`                          | 'auto'                | ['auto', 'fp8', 'fp8_e5m2', 'fp8_e4m3']    | Data type for KV cache storage. |
 | `QUANTIZATION_PARAM_PATH`                 | None                  | `str`                                      | Path to the JSON file containing the KV cache scaling factors. |
