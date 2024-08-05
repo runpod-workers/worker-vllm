@@ -95,11 +95,12 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `TOKENIZER`                               | None                  | `str`                                      | Name or path of the Hugging Face tokenizer to use. |
 | `SKIP_TOKENIZER_INIT`                     | False                 | `bool`                                     | Skip initialization of tokenizer and detokenizer. |
 | `TOKENIZER_MODE`                          | 'auto'                | ['auto', 'slow']                           | The tokenizer mode. |
-| `TRUST_REMOTE_CODE`                       | False                 | `bool`                                     | Trust remote code from Hugging Face. |
+| `TRUST_REMOTE_CODE`                       | `0`                     | `bool` as int                              | Trust remote code from Hugging Face. |
 | `DOWNLOAD_DIR`                            | None                  | `str`                                      | Directory to download and load the weights. |
-| `LOAD_FORMAT`                             | 'auto'                | ['auto', 'pt', 'safetensors', 'npcache', 'dummy', 'tensorizer', 'bitsandbytes'] | The format of the model weights to load. |
+| `LOAD_FORMAT`                             | 'auto'                | `str`                                      | The format of the model weights to load. |
+| `HF_TOKEN`                                | -                     | `str`                                      | Hugging Face token for private and gated models.|
 | `DTYPE`                                   | 'auto'                | ['auto', 'half', 'float16', 'bfloat16', 'float', 'float32'] | Data type for model weights and activations. |
-| `KV_CACHE_DTYPE`                          | 'auto'                | ['auto', 'fp8', 'fp8_e5m2', 'fp8_e4m3']    | Data type for KV cache storage. |
+| `KV_CACHE_DTYPE`                          | 'auto'                | ['auto', 'fp8']                            | Data type for KV cache storage. |
 | `QUANTIZATION_PARAM_PATH`                 | None                  | `str`                                      | Path to the JSON file containing the KV cache scaling factors. |
 | `MAX_MODEL_LEN`                           | None                  | `int`                                      | Model context length. |
 | `GUIDED_DECODING_BACKEND`                 | 'outlines'            | ['outlines', 'lm-format-enforcer']         | Which engine will be used for guided decoding by default. |
@@ -109,26 +110,19 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `TENSOR_PARALLEL_SIZE`                    | 1                     | `int`                                      | Number of tensor parallel replicas. |
 | `MAX_PARALLEL_LOADING_WORKERS`            | None                  | `int`                                      | Load model sequentially in multiple batches. |
 | `RAY_WORKERS_USE_NSIGHT`                  | False                 | `bool`                                     | If specified, use nsight to profile Ray workers. |
-| `BLOCK_SIZE`                              | 16                    | [8, 16, 32]                                | Token block size for contiguous chunks of tokens. |
 | `ENABLE_PREFIX_CACHING`                   | False                 | `bool`                                     | Enables automatic prefix caching. |
 | `DISABLE_SLIDING_WINDOW`                  | False                 | `bool`                                     | Disables sliding window, capping to sliding window size. |
 | `USE_V2_BLOCK_MANAGER`                    | False                 | `bool`                                     | Use BlockSpaceMangerV2. |
 | `NUM_LOOKAHEAD_SLOTS`                     | 0                     | `int`                                      | Experimental scheduling config necessary for speculative decoding. |
 | `SEED`                                    | 0                     | `int`                                      | Random seed for operations. |
-| `SWAP_SPACE`                              | 4                     | `int`                                      | CPU swap space size (GiB) per GPU. |
-| `GPU_MEMORY_UTILIZATION`                  | 0.90                  | `float`                                    | The fraction of GPU memory to be used for the model executor. |
 | `NUM_GPU_BLOCKS_OVERRIDE`                 | None                  | `int`                                      | If specified, ignore GPU profiling result and use this number of GPU blocks. |
 | `MAX_NUM_BATCHED_TOKENS`                  | None                  | `int`                                      | Maximum number of batched tokens per iteration. |
 | `MAX_NUM_SEQS`                            | 256                   | `int`                                      | Maximum number of sequences per iteration. |
 | `MAX_LOGPROBS`                            | 20                    | `int`                                      | Max number of log probs to return when logprobs is specified in SamplingParams. |
 | `DISABLE_LOG_STATS`                       | False                 | `bool`                                     | Disable logging statistics. |
-| `QUANTIZATION`                            | None                  | [*QUANTIZATION_METHODS, None]              | Method used to quantize the weights. |
+| `QUANTIZATION`                            | None                  | ['awq', 'squeezellm', 'gptq']              | Method used to quantize the weights. |
 | `ROPE_SCALING`                            | None                  | `dict`                                     | RoPE scaling configuration in JSON format. |
 | `ROPE_THETA`                              | None                  | `float`                                    | RoPE theta. Use with rope_scaling. |
-| `ENFORCE_EAGER`                           | False                 | `bool`                                     | Always use eager-mode PyTorch. |
-| `MAX_CONTEXT_LEN_TO_CAPTURE`              | None                  | `int`                                      | Maximum context length covered by CUDA graphs. |
-| `MAX_SEQ_LEN_TO_CAPTURE`                  | 8192                  | `int`                                      | Maximum sequence length covered by CUDA graphs. |
-| `DISABLE_CUSTOM_ALL_REDUCE`               | False                 | `bool`                                     | See ParallelConfig. |
 | `TOKENIZER_POOL_SIZE`                     | 0                     | `int`                                      | Size of tokenizer pool to use for asynchronous tokenization. |
 | `TOKENIZER_POOL_TYPE`                     | 'ray'                 | `str`                                      | Type of tokenizer pool to use for asynchronous tokenization. |
 | `TOKENIZER_POOL_EXTRA_CONFIG`             | None                  | `dict`                                     | Extra config for tokenizer pool. |
@@ -140,7 +134,6 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `LONG_LORA_SCALING_FACTORS`               | None                  | `tuple`                                    | Specify multiple scaling factors for LoRA adapters. |
 | `MAX_CPU_LORAS`                           | None                  | `int`                                      | Maximum number of LoRAs to store in CPU memory. |
 | `FULLY_SHARDED_LORAS`                     | False                 | `bool`                                     | Enable fully sharded LoRA layers. |
-| `DEVICE`                                  | 'auto'                | ['auto', 'cuda', 'neuron', 'cpu', 'openvino', 'tpu', 'xpu'] | Device type for vLLM execution. |
 | `SCHEDULER_DELAY_FACTOR`                  | 0.0                   | `float`                                    | Apply a delay before scheduling next prompt. |
 | `ENABLE_CHUNKED_PREFILL`                  | False                 | `bool`                                     | Enable chunked prefill requests. |
 | `SPECULATIVE_MODEL`                       | None                  | `str`                                      | The name of the draft model to be used in speculative decoding. |
