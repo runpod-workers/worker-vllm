@@ -87,7 +87,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 - RunPod Account
 
 #### Environment Variables/Settings
-> Note:  `0` is equivalent to `False` and `1` is equivalent to `True` for boolean values.
+> Note:  `0` is equivalent to `False` and `1` is equivalent to `True` for boolean as int values.
 
 | `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
 |-------------------------------------------|-----------------------|--------------------------------------------|---------------|
