@@ -161,7 +161,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `MAX_PARALLEL_LOADING_WORKERS`      | `None`               | `int`                                         |Load model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models. |
 | `BLOCK_SIZE`                        | `16`                 | `8`, `16`, `32`                           |Token block size for contiguous chunks of tokens. |
 | `SWAP_SPACE`                        | `4`                  | `int`                                         |CPU swap space size (GiB) per GPU. |
-| `ENFORCE_EAGER`                     | `0`                  | boolean as `int`                                         |Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. |
+| `ENFORCE_EAGER`                     | False                  | `bool`                                         |Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. |
 | `MAX_SEQ_LEN_TO_CAPTURE`        | `8192`               | `int`                                     |Maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode.|
 | `DISABLE_CUSTOM_ALL_REDUCE`         | `0`                  | `int`                                         |Enables or disables custom all reduce. |
 **Streaming Batch Size Settings**:  
@@ -175,8 +175,8 @@ The way this works is that the first request will have a batch size of `DEFAULT_
 | `OPENAI_RESPONSE_ROLE`              | `assistant`          | `str`                       |Role of the LLM's Response in OpenAI Chat Completions. |
 **Serverless Settings**
 | `MAX_CONCURRENCY`                   | `300`                | `int`                                         |Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency |
-| `DISABLE_LOG_STATS`                 | `1`                  | boolean as `int`                                         |Enables or disables vLLM stats logging. |
-| `DISABLE_LOG_REQUESTS`              | `1`                  | boolean as `int`                                         |Enables or disables vLLM request logging. |
+| `DISABLE_LOG_STATS`                 | False                  | `bool`                                         |Enables or disables vLLM stats logging. |
+| `DISABLE_LOG_REQUESTS`              | False                  | `bool`                                         |Enables or disables vLLM request logging. |
 
 > [!TIP]
 > If you are facing issues when using Mixtral 8x7B, Quantized models, or handling unusual models/architectures, try setting `TRUST_REMOTE_CODE` to `1`.
