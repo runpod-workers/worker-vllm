@@ -95,7 +95,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `TOKENIZER`                               | None                  | `str`                                      | Name or path of the Hugging Face tokenizer to use. |
 | `SKIP_TOKENIZER_INIT`                     | False                 | `bool`                                     | Skip initialization of tokenizer and detokenizer. |
 | `TOKENIZER_MODE`                          | 'auto'                | ['auto', 'slow']                           | The tokenizer mode. |
-| `TRUST_REMOTE_CODE`                       | `0`                     | `bool` as int                              | Trust remote code from Hugging Face. |
+| `TRUST_REMOTE_CODE`                       | `False`               | `bool`                                  | Trust remote code from Hugging Face. |
 | `DOWNLOAD_DIR`                            | None                  | `str`                                      | Directory to download and load the weights. |
 | `LOAD_FORMAT`                             | 'auto'                | `str`                                      | The format of the model weights to load. |
 | `HF_TOKEN`                                | -                     | `str`                                      | Hugging Face token for private and gated models.|
