@@ -15,7 +15,7 @@ RENAME_ARGS_MAP = {
 DEFAULT_ARGS = {
     "disable_log_stats": os.getenv('DISABLE_LOG_STATS', 'False').lower() == 'true',
     "disable_log_requests": os.getenv('DISABLE_LOG_REQUESTS', 'False').lower() == 'true',
-    "gpu_memory_utilization": int(os.getenv('GPU_MEMORY_UTILIZATION', 0.9)),
+    "gpu_memory_utilization": float(os.getenv('GPU_MEMORY_UTILIZATION', 0.95)),
     "pipeline_parallel_size": int(os.getenv('PIPELINE_PARALLEL_SIZE', 1)),
     "tensor_parallel_size": int(os.getenv('TENSOR_PARALLEL_SIZE', 1)),
     "served_model_name": os.getenv('SERVED_MODEL_NAME', None),
