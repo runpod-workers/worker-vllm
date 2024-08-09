@@ -13,9 +13,9 @@ RENAME_ARGS_MAP = {
 }
 
 DEFAULT_ARGS = {
-    "disable_log_stats": True,
-    "disable_log_requests": True,
-    "gpu_memory_utilization": 0.9,
+    "disable_log_stats": os.getenv('DISABLE_LOG_STATS', 'False').lower() == 'true',
+    "disable_log_requests": os.getenv('DISABLE_LOG_REQUESTS', 'False').lower() == 'true',
+    "gpu_memory_utilization": float(os.getenv('GPU_MEMORY_UTILIZATION', 0.95)),
     "pipeline_parallel_size": int(os.getenv('PIPELINE_PARALLEL_SIZE', 1)),
     "tensor_parallel_size": int(os.getenv('TENSOR_PARALLEL_SIZE', 1)),
     "served_model_name": os.getenv('SERVED_MODEL_NAME', None),
@@ -162,8 +162,8 @@ def get_engine_args():
         args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
         logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
         
-    if "gemma-2" in args.get("model", "").lower():
-        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
-        logging.info("Using FLASHINFER for gemma-2 model.")
+    # if "gemma-2" in args.get("model", "").lower():
+    #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
+    #     logging.info("Using FLASHINFER for gemma-2 model.")
         
     return AsyncEngineArgs(**args)

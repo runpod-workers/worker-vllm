@@ -126,7 +126,7 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.model_config = await self.llm.get_model_config()
         
         self.chat_engine = OpenAIServingChat(
-            engine=self.llm, 
+            async_engine_client=self.llm, 
             model_config=self.model_config,
             served_model_names=[self.served_model_name], 
             response_role=self.response_role,
@@ -136,7 +136,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             request_logger=None
         )
         self.completion_engine = OpenAIServingCompletion(
-            engine=self.llm, 
+            async_engine_client=self.llm, 
             model_config=self.model_config,
             served_model_names=[self.served_model_name],
             lora_modules=[],
