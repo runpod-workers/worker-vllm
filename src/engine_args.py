@@ -162,8 +162,4 @@ def get_engine_args():
         args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
         logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
         
-    if "gemma-2" in args.get("model", "").lower():
-        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
-        logging.info("Using FLASHINFER for gemma-2 model.")
-        
     return AsyncEngineArgs(**args)
