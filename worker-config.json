@@ -2,6 +2,7 @@
     "versions": {
       "0.5.4": {
         "imageName": "runpod/worker-v1-vllm:v1.2.0stable-cuda12.1.0",
+        "minimum_cuda_version": "12.1",
         "categories": [
           {
             "title": "LLM Settings",
@@ -61,6 +62,7 @@
       },
       "0.5.3": {
         "imageName": "runpod/worker-v1-vllm:stable-cuda12.1.0",
+        "minimum_cuda_version": "12.1",
         "categories": [
           {
             "title": "LLM Settings",
@@ -120,6 +122,7 @@
       },
       "0.4.2": {
         "imageName": "runpod/worker-vllm:stable-cuda12.1.0",
+        "minimum_cuda_version": "12.1",
         "categories": [
           {
             "title": "LLM Settings",
