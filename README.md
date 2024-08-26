@@ -57,6 +57,10 @@ Worker vLLM is now cached on all RunPod machines, resulting in near-instant depl
   - [Input Request Parameters](#input-request-parameters)
     - [Text Input Formats](#text-input-formats)
     - [Sampling Parameters](#sampling-parameters)
+- [Worker Config](#worker-config)
+  - [Writing your worker-config.json](#writing-your-worker-configjson)
+  - [Example of schema](#example-of-schema)
+  - [Example of versions](#example-of-versions)
 
 # Setting up the Serverless Worker
 
@@ -512,11 +516,13 @@ Your list can contain any number of messages, and each message usually can have 
         }
       ]
     ```
+
 </details>
 
 # Worker Config
-## Description
 The worker config is a JSON file that is used to build the form that helps users configure their serverless endpoint on the RunPod Web Interface.
+
+Note: This is a new feature and only works for workers that use one model 
 
 ## Writing your worker-config.json
 The JSON consists of two main parts, schema and versions.
