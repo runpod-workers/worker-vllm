@@ -1,0 +1,860 @@
+{
+    "versions": {
+      "0.5.4": {
+        "imageName": "runpod/worker-v1-vllm:v1.2.0stable-cuda12.1.0",
+        "minimumCudaVersion": "12.1",
+        "categories": [
+          {
+            "title": "LLM Settings",
+            "settings": [
+              "TOKENIZER", "TOKENIZER_MODE", "SKIP_TOKENIZER_INIT", "TRUST_REMOTE_CODE",
+              "DOWNLOAD_DIR", "LOAD_FORMAT", "DTYPE", "KV_CACHE_DTYPE", "QUANTIZATION_PARAM_PATH",
+              "MAX_MODEL_LEN", "GUIDED_DECODING_BACKEND", "DISTRIBUTED_EXECUTOR_BACKEND",
+              "WORKER_USE_RAY", "RAY_WORKERS_USE_NSIGHT", "PIPELINE_PARALLEL_SIZE",
+              "TENSOR_PARALLEL_SIZE", "MAX_PARALLEL_LOADING_WORKERS", "ENABLE_PREFIX_CACHING",
+              "DISABLE_SLIDING_WINDOW", "USE_V2_BLOCK_MANAGER", "NUM_LOOKAHEAD_SLOTS",
+              "SEED", "NUM_GPU_BLOCKS_OVERRIDE", "MAX_NUM_BATCHED_TOKENS", "MAX_NUM_SEQS",
+              "MAX_LOGPROBS", "DISABLE_LOG_STATS", "QUANTIZATION", "ROPE_SCALING", "ROPE_THETA",
+              "TOKENIZER_POOL_SIZE", "TOKENIZER_POOL_TYPE", "TOKENIZER_POOL_EXTRA_CONFIG",
+              "ENABLE_LORA", "MAX_LORAS", "MAX_LORA_RANK", "LORA_EXTRA_VOCAB_SIZE",
+              "LORA_DTYPE", "LONG_LORA_SCALING_FACTORS", "MAX_CPU_LORAS", "FULLY_SHARDED_LORAS",
+              "DEVICE", "SCHEDULER_DELAY_FACTOR", "ENABLE_CHUNKED_PREFILL", "SPECULATIVE_MODEL",
+              "NUM_SPECULATIVE_TOKENS", "SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE",
+              "SPECULATIVE_MAX_MODEL_LEN", "SPECULATIVE_DISABLE_BY_BATCH_SIZE",
+              "NGRAM_PROMPT_LOOKUP_MAX", "NGRAM_PROMPT_LOOKUP_MIN", "SPEC_DECODING_ACCEPTANCE_METHOD",
+              "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD", "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
+              "MODEL_LOADER_EXTRA_CONFIG", "PREEMPTION_MODE", "PREEMPTION_CHECK_PERIOD",
+              "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST"
+            ]
+          },
+          {
+            "title": "Tokenizer Settings",
+            "settings": [
+              "TOKENIZER_NAME", "TOKENIZER_REVISION", "CUSTOM_CHAT_TEMPLATE"
+            ]
+          },
+          {
+            "title": "System Settings",
+            "settings": [
+              "GPU_MEMORY_UTILIZATION", "MAX_PARALLEL_LOADING_WORKERS", "BLOCK_SIZE",
+              "SWAP_SPACE", "ENFORCE_EAGER", "MAX_SEQ_LEN_TO_CAPTURE", "DISABLE_CUSTOM_ALL_REDUCE"
+            ]
+          },
+          {
+            "title": "Streaming Settings",
+            "settings": [
+              "DEFAULT_BATCH_SIZE", "DEFAULT_MIN_BATCH_SIZE", "DEFAULT_BATCH_SIZE_GROWTH_FACTOR"
+            ]
+          },
+          {
+            "title": "OpenAI Settings",
+            "settings": [
+              "RAW_OPENAI_OUTPUT", "OPENAI_RESPONSE_ROLE", "OPENAI_SERVED_MODEL_NAME_OVERRIDE"
+            ]
+          },
+          {
+            "title": "Serverless Settings",
+            "settings": [
+              "MAX_CONCURRENCY", "DISABLE_LOG_STATS", "DISABLE_LOG_REQUESTS"
+            ]
+          }
+        ]
+      },
+      "0.5.3": {
+        "imageName": "runpod/worker-v1-vllm:stable-cuda12.1.0",
+        "minimumCudaVersion": "12.1",
+        "categories": [
+          {
+            "title": "LLM Settings",
+            "settings": [
+              "TOKENIZER", "TOKENIZER_MODE", "SKIP_TOKENIZER_INIT", "TRUST_REMOTE_CODE",
+              "DOWNLOAD_DIR", "LOAD_FORMAT", "DTYPE", "KV_CACHE_DTYPE", "QUANTIZATION_PARAM_PATH",
+              "MAX_MODEL_LEN", "GUIDED_DECODING_BACKEND", "DISTRIBUTED_EXECUTOR_BACKEND",
+              "WORKER_USE_RAY", "RAY_WORKERS_USE_NSIGHT", "PIPELINE_PARALLEL_SIZE",
+              "TENSOR_PARALLEL_SIZE", "MAX_PARALLEL_LOADING_WORKERS", "ENABLE_PREFIX_CACHING",
+              "DISABLE_SLIDING_WINDOW", "USE_V2_BLOCK_MANAGER", "NUM_LOOKAHEAD_SLOTS",
+              "SEED", "NUM_GPU_BLOCKS_OVERRIDE", "MAX_NUM_BATCHED_TOKENS", "MAX_NUM_SEQS",
+              "MAX_LOGPROBS", "DISABLE_LOG_STATS", "QUANTIZATION", "ROPE_SCALING", "ROPE_THETA",
+              "TOKENIZER_POOL_SIZE", "TOKENIZER_POOL_TYPE", "TOKENIZER_POOL_EXTRA_CONFIG",
+              "ENABLE_LORA", "MAX_LORAS", "MAX_LORA_RANK", "LORA_EXTRA_VOCAB_SIZE",
+              "LORA_DTYPE", "LONG_LORA_SCALING_FACTORS", "MAX_CPU_LORAS", "FULLY_SHARDED_LORAS",
+              "DEVICE", "SCHEDULER_DELAY_FACTOR", "ENABLE_CHUNKED_PREFILL", "SPECULATIVE_MODEL",
+              "NUM_SPECULATIVE_TOKENS", "SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE",
+              "SPECULATIVE_MAX_MODEL_LEN", "SPECULATIVE_DISABLE_BY_BATCH_SIZE",
+              "NGRAM_PROMPT_LOOKUP_MAX", "NGRAM_PROMPT_LOOKUP_MIN", "SPEC_DECODING_ACCEPTANCE_METHOD",
+              "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD", "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
+              "MODEL_LOADER_EXTRA_CONFIG", "PREEMPTION_MODE", "PREEMPTION_CHECK_PERIOD",
+              "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST"
+            ]
+          },
+          {
+            "title": "Tokenizer Settings",
+            "settings": [
+              "TOKENIZER_NAME", "TOKENIZER_REVISION", "CUSTOM_CHAT_TEMPLATE"
+            ]
+          },
+          {
+            "title": "System Settings",
+            "settings": [
+              "GPU_MEMORY_UTILIZATION", "MAX_PARALLEL_LOADING_WORKERS", "BLOCK_SIZE",
+              "SWAP_SPACE", "ENFORCE_EAGER", "MAX_SEQ_LEN_TO_CAPTURE", "DISABLE_CUSTOM_ALL_REDUCE"
+            ]
+          },
+          {
+            "title": "Streaming Settings",
+            "settings": [
+              "DEFAULT_BATCH_SIZE", "DEFAULT_MIN_BATCH_SIZE", "DEFAULT_BATCH_SIZE_GROWTH_FACTOR"
+            ]
+          },
+          {
+            "title": "OpenAI Settings",
+            "settings": [
+              "RAW_OPENAI_OUTPUT", "OPENAI_RESPONSE_ROLE", "OPENAI_SERVED_MODEL_NAME_OVERRIDE"
+            ]
+          },
+          {
+            "title": "Serverless Settings",
+            "settings": [
+              "MAX_CONCURRENCY", "DISABLE_LOG_STATS", "DISABLE_LOG_REQUESTS"
+            ]
+          }
+        ]
+      },
+      "0.4.2": {
+        "imageName": "runpod/worker-vllm:stable-cuda12.1.0",
+        "minimumCudaVersion": "12.1",
+        "categories": [
+          {
+            "title": "LLM Settings",
+            "settings": [
+              "MODEL_REVISION", "MAX_MODEL_LEN", "BASE_PATH", "LOAD_FORMAT", "QUANTIZATION",
+              "TRUST_REMOTE_CODE", "SEED", "KV_CACHE_DTYPE", "DTYPE"
+            ]
+          },
+          {
+            "title": "Tokenizer Settings",
+            "settings": [
+              "TOKENIZER_NAME", "TOKENIZER_REVISION", "CUSTOM_CHAT_TEMPLATE"
+            ]
+          },
+          {
+            "title": "System Settings",
+            "settings": [
+              "GPU_MEMORY_UTILIZATION", "MAX_PARALLEL_LOADING_WORKERS", "BLOCK_SIZE",
+              "SWAP_SPACE", "ENFORCE_EAGER", "MAX_SEQ_LEN_TO_CAPTURE", "DISABLE_CUSTOM_ALL_REDUCE"
+            ]
+          },
+          {
+            "title": "Streaming Settings",
+            "settings": [
+              "DEFAULT_BATCH_SIZE", "DEFAULT_MIN_BATCH_SIZE", "DEFAULT_BATCH_SIZE_GROWTH_FACTOR"
+            ]
+          },
+          {
+            "title": "OpenAI Settings",
+            "settings": [
+              "RAW_OPENAI_OUTPUT", "OPENAI_RESPONSE_ROLE", "OPENAI_SERVED_MODEL_NAME_OVERRIDE"
+            ]
+          },
+          {
+            "title": "Serverless Settings",
+            "settings": [
+              "MAX_CONCURRENCY", "DISABLE_LOG_STATS", "DISABLE_LOG_REQUESTS"
+            ]
+          }
+        ]
+      }
+    },
+    "schema": {
+      "TOKENIZER": {
+        "env_var_name": "TOKENIZER",
+        "value": "",
+        "title": "Tokenizer",
+        "description": "Name or path of the Hugging Face tokenizer to use.",
+        "required": false,
+        "type": "text"
+      },
+      "TOKENIZER_MODE": {
+        "env_var_name": "TOKENIZER_MODE",
+        "value": "auto",
+        "title": "Tokenizer Mode",
+        "description": "The tokenizer mode.",
+        "required": false,
+        "type": "select",
+        "options": [
+          { "value": "auto", "label": "auto" },
+          { "value": "slow", "label": "slow" }
+        ]
+      },
+      "SKIP_TOKENIZER_INIT": {
+        "env_var_name": "SKIP_TOKENIZER_INIT",
+        "value": false,
+        "title": "Skip Tokenizer Init",
+        "description": "Skip initialization of tokenizer and detokenizer.",
+        "required": false,
+        "type": "toggle"
+      },
+      "TRUST_REMOTE_CODE": {
+        "env_var_name": "TRUST_REMOTE_CODE",
+        "value": false,
+        "title": "Trust Remote Code",
+        "description": "Trust remote code from Hugging Face.",
+        "required": false,
+        "type": "toggle"
+      },
+      "DOWNLOAD_DIR": {
+        "env_var_name": "DOWNLOAD_DIR",
+        "value": "",
+        "title": "Download Directory",
+        "description": "Directory to download and load the weights.",
+        "required": false,
+        "type": "text"
+      },
+      "LOAD_FORMAT": {
+        "env_var_name": "LOAD_FORMAT",
+        "value": "auto",
+        "title": "Load Format",
+        "description": "The format of the model weights to load.",
+        "required": false,
+        "type": "select",
+        "options": [
+          { "value": "auto", "label": "auto" },
+          { "value": "pt", "label": "pt" },
+          { "value": "safetensors", "label": "safetensors" },
+          { "value": "npcache", "label": "npcache" },
+          { "value": "dummy", "label": "dummy" },
+          { "value": "tensorizer", "label": "tensorizer" },
+          { "value": "bitsandbytes", "label": "bitsandbytes" }
+        ]
+      },
+      "DTYPE": {
+        "env_var_name": "DTYPE",
+        "value": "auto",
+        "title": "Data Type",
+        "description": "Data type for model weights and activations.",
+        "required": false,
+        "type": "select",
+        "options": [
+          { "value": "auto", "label": "auto" },
+          { "value": "half", "label": "half" },
+          { "value": "float16", "label": "float16" },
+          { "value": "bfloat16", "label": "bfloat16" },
+          { "value": "float", "label": "float" },
+          { "value": "float32", "label": "float32" }
+        ]
+      },
+      "KV_CACHE_DTYPE": {
+        "env_var_name": "KV_CACHE_DTYPE",
+        "value": "auto",
+        "title": "KV Cache Data Type",
+        "description": "Data type for KV cache storage.",
+        "required": false,
+        "type": "select",
+        "options": [
+          { "value": "auto", "label": "auto" },
+          { "value": "fp8", "label": "fp8" }
+        ]
+      },
+      "QUANTIZATION_PARAM_PATH": {
+        "env_var_name": "QUANTIZATION_PARAM_PATH",
+        "value": "",
+        "title": "Quantization Param Path",
+        "description": "Path to the JSON file containing the KV cache scaling factors.",
+        "required": false,
+        "type": "text"
+      },
+      "MAX_MODEL_LEN": {
+        "env_var_name": "MAX_MODEL_LEN",
+        "value": "",
+        "title": "Max Model Length",
+        "description": "Model context length.",
+        "required": false,
+        "type": "number"
+      },
+      "GUIDED_DECODING_BACKEND": {
+        "env_var_name": "GUIDED_DECODING_BACKEND",
+        "value": "outlines",
+        "title": "Guided Decoding Backend",
+        "description": "Which engine will be used for guided decoding by default.",
+        "required": false,
+        "type": "select",
+        "options": [
+          { "value": "outlines", "label": "outlines" },
+          { "value": "lm-format-enforcer", "label": "lm-format-enforcer" }
+        ]
+      },
+      "DISTRIBUTED_EXECUTOR_BACKEND": {
+      "env_var_name": "DISTRIBUTED_EXECUTOR_BACKEND",
+      "value": "",
+      "title": "Distributed Executor Backend",
+      "description": "Backend to use for distributed serving.",
+      "required": false,
+      "type": "select",
+      "options": [
+        { "value": "ray", "label": "ray" },
+        { "value": "mp", "label": "mp" }
+      ]
+    },
+    "WORKER_USE_RAY": {
+      "env_var_name": "WORKER_USE_RAY",
+      "value": false,
+      "title": "Worker Use Ray",
+      "description": "Deprecated, use --distributed-executor-backend=ray.",
+      "required": false,
+      "type": "toggle"
+    },
+    "RAY_WORKERS_USE_NSIGHT": {
+      "env_var_name": "RAY_WORKERS_USE_NSIGHT",
+      "value": false,
+      "title": "Ray Workers Use Nsight",
+      "description": "If specified, use nsight to profile Ray workers.",
+      "required": false,
+      "type": "toggle"
+    },
+    "PIPELINE_PARALLEL_SIZE": {
+      "env_var_name": "PIPELINE_PARALLEL_SIZE",
+      "value": 1,
+      "title": "Pipeline Parallel Size",
+      "description": "Number of pipeline stages.",
+      "required": false,
+      "type": "number"
+    },
+    "TENSOR_PARALLEL_SIZE": {
+      "env_var_name": "TENSOR_PARALLEL_SIZE",
+      "value": 1,
+      "title": "Tensor Parallel Size",
+      "description": "Number of tensor parallel replicas.",
+      "required": false,
+      "type": "number"
+    },
+    "MAX_PARALLEL_LOADING_WORKERS": {
+      "env_var_name": "MAX_PARALLEL_LOADING_WORKERS",
+      "value": "",
+      "title": "Max Parallel Loading Workers",
+      "description": "Load model sequentially in multiple batches.",
+      "required": false,
+      "type": "number"
+    },
+    "ENABLE_PREFIX_CACHING": {
+      "env_var_name": "ENABLE_PREFIX_CACHING",
+      "value": false,
+      "title": "Enable Prefix Caching",
+      "description": "Enables automatic prefix caching.",
+      "required": false,
+      "type": "toggle"
+    },
+    "DISABLE_SLIDING_WINDOW": {
+      "env_var_name": "DISABLE_SLIDING_WINDOW",
+      "value": false,
+      "title": "Disable Sliding Window",
+      "description": "Disables sliding window, capping to sliding window size.",
+      "required": false,
+      "type": "toggle"
+    },
+    "USE_V2_BLOCK_MANAGER": {
+      "env_var_name": "USE_V2_BLOCK_MANAGER",
+      "value": false,
+      "title": "Use V2 Block Manager",
+      "description": "Use BlockSpaceMangerV2.",
+      "required": false,
+      "type": "toggle"
+    },
+    "NUM_LOOKAHEAD_SLOTS": {
+      "env_var_name": "NUM_LOOKAHEAD_SLOTS",
+      "value": 0,
+      "title": "Num Lookahead Slots",
+      "description": "Experimental scheduling config necessary for speculative decoding.",
+      "required": false,
+      "type": "number"
+    },
+    "SEED": {
+      "env_var_name": "SEED",
+      "value": 0,
+      "title": "Seed",
+      "description": "Random seed for operations.",
+      "required": false,
+      "type": "number"
+    },
+    "NUM_GPU_BLOCKS_OVERRIDE": {
+      "env_var_name": "NUM_GPU_BLOCKS_OVERRIDE",
+      "value": "",
+      "title": "Num GPU Blocks Override",
+      "description": "If specified, ignore GPU profiling result and use this number of GPU blocks.",
+      "required": false,
+      "type": "number"
+    },
+    "MAX_NUM_BATCHED_TOKENS": {
+      "env_var_name": "MAX_NUM_BATCHED_TOKENS",
+      "value": "",
+      "title": "Max Num Batched Tokens",
+      "description": "Maximum number of batched tokens per iteration.",
+      "required": false,
+      "type": "number"
+    },
+    "MAX_NUM_SEQS": {
+      "env_var_name": "MAX_NUM_SEQS",
+      "value": 256,
+      "title": "Max Num Seqs",
+      "description": "Maximum number of sequences per iteration.",
+      "required": false,
+      "type": "number"
+    },
+    "MAX_LOGPROBS": {
+      "env_var_name": "MAX_LOGPROBS",
+      "value": 20,
+      "title": "Max Logprobs",
+      "description": "Max number of log probs to return when logprobs is specified in SamplingParams.",
+      "required": false,
+      "type": "number"
+    },
+    "DISABLE_LOG_STATS": {
+      "env_var_name": "DISABLE_LOG_STATS",
+      "value": false,
+      "title": "Disable Log Stats",
+      "description": "Disable logging statistics.",
+      "required": false,
+      "type": "toggle"
+    },
+    "QUANTIZATION": {
+      "env_var_name": "QUANTIZATION",
+      "value": "",
+      "title": "Quantization",
+      "description": "Method used to quantize the weights.",
+      "required": false,
+      "type": "select",
+      "options": [
+        { "value": "None", "label": "None" },
+        { "value": "awq", "label": "AWQ" },
+        { "value": "squeezellm", "label": "SqueezeLLM" },
+        { "value": "gptq", "label": "GPTQ" }
+      ]
+    },
+    "ROPE_SCALING": {
+      "env_var_name": "ROPE_SCALING",
+      "value": "",
+      "title": "RoPE Scaling",
+      "description": "RoPE scaling configuration in JSON format.",
+      "required": false,
+      "type": "text"
+    },
+    "ROPE_THETA": {
+      "env_var_name": "ROPE_THETA",
+      "value": "",
+      "title": "RoPE Theta",
+      "description": "RoPE theta. Use with rope_scaling.",
+      "required": false,
+      "type": "number"
+    },
+    "TOKENIZER_POOL_SIZE": {
+      "env_var_name": "TOKENIZER_POOL_SIZE",
+      "value": 0,
+      "title": "Tokenizer Pool Size",
+      "description": "Size of tokenizer pool to use for asynchronous tokenization.",
+      "required": false,
+      "type": "number"
+    },
+    "TOKENIZER_POOL_TYPE": {
+      "env_var_name": "TOKENIZER_POOL_TYPE",
+      "value": "ray",
+      "title": "Tokenizer Pool Type",
+      "description": "Type of tokenizer pool to use for asynchronous tokenization.",
+      "required": false,
+      "type": "text"
+    },
+    "TOKENIZER_POOL_EXTRA_CONFIG": {
+      "env_var_name": "TOKENIZER_POOL_EXTRA_CONFIG",
+      "value": "",
+      "title": "Tokenizer Pool Extra Config",
+      "description": "Extra config for tokenizer pool.",
+      "required": false,
+      "type": "text"
+    },
+    "ENABLE_LORA": {
+      "env_var_name": "ENABLE_LORA",
+      "value": false,
+      "title": "Enable LoRA",
+      "description": "If True, enable handling of LoRA adapters.",
+      "required": false,
+      "type": "toggle"
+    },
+    "MAX_LORAS": {
+      "env_var_name": "MAX_LORAS",
+      "value": 1,
+      "title": "Max LoRAs",
+      "description": "Max number of LoRAs in a single batch.",
+      "required": false,
+      "type": "number"
+    },
+    "MAX_LORA_RANK": {
+      "env_var_name": "MAX_LORA_RANK",
+      "value": 16,
+      "title": "Max LoRA Rank",
+      "description": "Max LoRA rank.",
+      "required": false,
+      "type": "number"
+    },
+    "LORA_EXTRA_VOCAB_SIZE": {
+      "env_var_name": "LORA_EXTRA_VOCAB_SIZE",
+      "value": 256,
+      "title": "LoRA Extra Vocab Size",
+      "description": "Maximum size of extra vocabulary for LoRA adapters.",
+      "required": false,
+      "type": "number"
+    },
+    "LORA_DTYPE": {
+      "env_var_name": "LORA_DTYPE",
+      "value": "auto",
+      "title": "LoRA Data Type",
+      "description": "Data type for LoRA.",
+      "required": false,
+      "type": "select",
+      "options": [
+        { "value": "auto", "label": "auto" },
+        { "value": "float16", "label": "float16" },
+        { "value": "bfloat16", "label": "bfloat16" },
+        { "value": "float32", "label": "float32" }
+      ]
+    },
+    "LONG_LORA_SCALING_FACTORS": {
+      "env_var_name": "LONG_LORA_SCALING_FACTORS",
+      "value": "",
+      "title": "Long LoRA Scaling Factors",
+      "description": "Specify multiple scaling factors for LoRA adapters.",
+      "required": false,
+      "type": "text"
+    },
+    "MAX_CPU_LORAS": {
+      "env_var_name": "MAX_CPU_LORAS",
+      "value": "",
+      "title": "Max CPU LoRAs",
+      "description": "Maximum number of LoRAs to store in CPU memory.",
+      "required": false,
+      "type": "number"
+    },
+    "FULLY_SHARDED_LORAS": {
+      "env_var_name": "FULLY_SHARDED_LORAS",
+      "value": false,
+      "title": "Fully Sharded LoRAs",
+      "description": "Enable fully sharded LoRA layers.",
+      "required": false,
+      "type": "toggle"
+    },
+    "DEVICE": {
+      "env_var_name": "DEVICE",
+      "value": "auto",
+      "title": "Device",
+      "description": "Device type for vLLM execution.",
+      "required": false,
+      "type": "select",
+      "options": [
+        { "value": "auto", "label": "auto" },
+        { "value": "cuda", "label": "cuda" },
+        { "value": "neuron", "label": "neuron" },
+        { "value": "cpu", "label": "cpu" },
+        { "value": "openvino", "label": "openvino" },
+        { "value": "tpu", "label": "tpu" },
+        { "value": "xpu", "label": "xpu" }
+      ]
+    },
+    "SCHEDULER_DELAY_FACTOR": {
+      "env_var_name": "SCHEDULER_DELAY_FACTOR",
+      "value": 0.0,
+      "title": "Scheduler Delay Factor",
+      "description": "Apply a delay before scheduling next prompt.",
+      "required": false,
+      "type": "number"
+    },
+    "ENABLE_CHUNKED_PREFILL": {
+      "env_var_name": "ENABLE_CHUNKED_PREFILL",
+      "value": false,
+      "title": "Enable Chunked Prefill",
+      "description": "Enable chunked prefill requests.",
+      "required": false,
+      "type": "toggle"
+    },
+    "SPECULATIVE_MODEL": {
+      "env_var_name": "SPECULATIVE_MODEL",
+      "value": "",
+      "title": "Speculative Model",
+      "description": "The name of the draft model to be used in speculative decoding.",
+      "required": false,
+      "type": "text"
+    },
+    "NUM_SPECULATIVE_TOKENS": {
+      "env_var_name": "NUM_SPECULATIVE_TOKENS",
+      "value": "",
+      "title": "Num Speculative Tokens",
+      "description": "The number of speculative tokens to sample from the draft model.",
+      "required": false,
+      "type": "number"
+    },
+    "SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE": {
+      "env_var_name": "SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE",
+      "value": "",
+      "title": "Speculative Draft Tensor Parallel Size",
+      "description": "Number of tensor parallel replicas for the draft model.",
+      "required": false,
+      "type": "number"
+    },
+    "SPECULATIVE_MAX_MODEL_LEN": {
+      "env_var_name": "SPECULATIVE_MAX_MODEL_LEN",
+      "value": "",
+      "title": "Speculative Max Model Length",
+      "description": "The maximum sequence length supported by the draft model.",
+      "required": false,
+      "type": "number"
+    },
+    "SPECULATIVE_DISABLE_BY_BATCH_SIZE": {
+      "env_var_name": "SPECULATIVE_DISABLE_BY_BATCH_SIZE",
+      "value": "",
+      "title": "Speculative Disable by Batch Size",
+      "description": "Disable speculative decoding if the number of enqueue requests is larger than this value.",
+      "required": false,
+      "type": "number"
+    },
+    "NGRAM_PROMPT_LOOKUP_MAX": {
+      "env_var_name": "NGRAM_PROMPT_LOOKUP_MAX",
+      "value": "",
+      "title": "Ngram Prompt Lookup Max",
+      "description": "Max size of window for ngram prompt lookup in speculative decoding.",
+      "required": false,
+      "type": "number"
+    },
+    "NGRAM_PROMPT_LOOKUP_MIN": {
+      "env_var_name": "NGRAM_PROMPT_LOOKUP_MIN",
+      "value": "",
+      "title": "Ngram Prompt Lookup Min",
+      "description": "Min size of window for ngram prompt lookup in speculative decoding.",
+      "required": false,
+      "type": "number"
+    },
+    "SPEC_DECODING_ACCEPTANCE_METHOD": {
+      "env_var_name": "SPEC_DECODING_ACCEPTANCE_METHOD",
+      "value": "rejection_sampler",
+      "title": "Speculative Decoding Acceptance Method",
+      "description": "Specify the acceptance method for draft token verification in speculative decoding.",
+      "required": false,
+      "type": "select",
+      "options": [
+        { "value": "rejection_sampler", "label": "rejection_sampler" },
+        { "value": "typical_acceptance_sampler", "label": "typical_acceptance_sampler" }
+      ]
+    },
+    "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD": {
+      "env_var_name": "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD",
+      "value": "",
+      "title": "Typical Acceptance Sampler Posterior Threshold",
+      "description": "Set the lower bound threshold for the posterior probability of a token to be accepted.",
+      "required": false,
+      "type": "number"
+    },
+    "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA": {
+      "env_var_name": "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
+      "value": "",
+      "title": "Typical Acceptance Sampler Posterior Alpha",
+      "description": "A scaling factor for the entropy-based threshold for token acceptance.",
+      "required": false,
+      "type": "number"
+    },
+    "MODEL_LOADER_EXTRA_CONFIG": {
+      "env_var_name": "MODEL_LOADER_EXTRA_CONFIG",
+      "value": "",
+      "title": "Model Loader Extra Config",
+      "description": "Extra config for model loader.",
+      "required": false,
+      "type": "text"
+    },
+    "PREEMPTION_MODE": {
+      "env_var_name": "PREEMPTION_MODE",
+      "value": "",
+      "title": "Preemption Mode",
+      "description": "If 'recompute', the engine performs preemption-aware recomputation. If 'save', the engine saves activations into the CPU memory as preemption happens.",
+      "required": false,
+      "type": "text"
+    },
+    "PREEMPTION_CHECK_PERIOD": {
+      "env_var_name": "PREEMPTION_CHECK_PERIOD",
+      "value": 1.0,
+      "title": "Preemption Check Period",
+      "description": "How frequently the engine checks if a preemption happens.",
+      "required": false,
+      "type": "number"
+    },
+    "PREEMPTION_CPU_CAPACITY": {
+      "env_var_name": "PREEMPTION_CPU_CAPACITY",
+      "value": 2,
+      "title": "Preemption CPU Capacity",
+      "description": "The percentage of CPU memory used for the saved activations.",
+      "required": false,
+      "type": "number"
+    },
+    "MAX_LOG_LEN": {
+      "env_var_name": "MAX_LOG_LEN",
+      "value": "",
+      "title": "Max Log Length",
+      "description": "Max number of characters or ID numbers being printed in log.",
+      "required": false,
+      "type": "number"
+    },
+    "DISABLE_LOGGING_REQUEST": {
+      "env_var_name": "DISABLE_LOGGING_REQUEST",
+      "value": false,
+      "title": "Disable Logging Request",
+      "description": "Disable logging requests.",
+      "required": false,
+      "type": "toggle"
+    },
+    "TOKENIZER_NAME": {
+      "env_var_name": "TOKENIZER_NAME",
+      "value": "",
+      "title": "Tokenizer Name",
+      "description": "Tokenizer repo to use a different tokenizer than the model's default",
+      "required": false,
+      "type": "text"
+    },
+    "TOKENIZER_REVISION": {
+      "env_var_name": "TOKENIZER_REVISION",
+      "value": "",
+      "title": "Tokenizer Revision",
+      "description": "Tokenizer revision to load",
+      "required": false,
+      "type": "text"
+    },
+    "CUSTOM_CHAT_TEMPLATE": {
+      "env_var_name": "CUSTOM_CHAT_TEMPLATE",
+      "value": "",
+      "title": "Custom Chat Template",
+      "description": "Custom chat jinja template",
+      "required": false,
+      "type": "text"
+    },
+    "GPU_MEMORY_UTILIZATION": {
+      "env_var_name": "GPU_MEMORY_UTILIZATION",
+      "value": "0.95",
+      "title": "GPU Memory Utilization",
+      "description": "Sets GPU VRAM utilization",
+      "required": false,
+      "type": "number"
+    },
+    "BLOCK_SIZE": {
+      "env_var_name": "BLOCK_SIZE",
+      "value": "16",
+      "title": "Block Size",
+      "description": "Token block size for contiguous chunks of tokens",
+      "required": false,
+      "type": "number"
+    },
+    "SWAP_SPACE": {
+      "env_var_name": "SWAP_SPACE",
+      "value": "4",
+      "title": "Swap Space",
+      "description": "CPU swap space size (GiB) per GPU",
+      "required": false,
+      "type": "number"
+    },
+    "ENFORCE_EAGER": {
+      "env_var_name": "ENFORCE_EAGER",
+      "value": false,
+      "title": "Enforce Eager",
+      "description": "Always use eager-mode PyTorch. If False (0), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility",
+      "required": false,
+      "type": "toggle"
+    },
+    "MAX_SEQ_LEN_TO_CAPTURE": {
+      "env_var_name": "MAX_SEQ_LEN_TO_CAPTURE",
+      "value": "8192",
+      "title": "CUDA Graph Max Content Length",
+      "description": "Maximum context length covered by CUDA graphs. If a sequence has context length larger than this, we fall back to eager mode",
+      "required": false,
+      "type": "number"
+    },
+    "DISABLE_CUSTOM_ALL_REDUCE": {
+      "env_var_name": "DISABLE_CUSTOM_ALL_REDUCE",
+      "value": false,
+      "title": "Disable Custom All Reduce",
+      "description": "Enables or disables custom all reduce",
+      "required": false,
+      "type": "toggle"
+    },
+    "DEFAULT_BATCH_SIZE": {
+      "env_var_name": "DEFAULT_BATCH_SIZE",
+      "value": "50",
+      "title": "Default Final Batch Size",
+      "description": "Default and Maximum batch size for token streaming to reduce HTTP calls",
+      "required": false,
+      "type": "number"
+    },
+    "DEFAULT_MIN_BATCH_SIZE": {
+      "env_var_name": "DEFAULT_MIN_BATCH_SIZE",
+      "value": "1",
+      "title": "Default Starting Batch Size",
+      "description": "Batch size for the first request, which will be multiplied by the growth factor every subsequent request",
+      "required": false,
+      "type": "number"
+    },
+    "DEFAULT_BATCH_SIZE_GROWTH_FACTOR": {
+      "env_var_name": "DEFAULT_BATCH_SIZE_GROWTH_FACTOR",
+      "value": "3",
+      "title": "Default Batch Size Growth Factor",
+      "description": "Growth factor for dynamic batch size",
+      "required": false,
+      "type": "number"
+    },
+    "RAW_OPENAI_OUTPUT": {
+      "env_var_name": "RAW_OPENAI_OUTPUT",
+      "value": true,
+      "title": "Raw OpenAI Output",
+      "description": "Raw OpenAI output instead of just the text",
+      "required": false,
+      "type": "toggle"
+    },
+    "OPENAI_RESPONSE_ROLE": {
+      "env_var_name": "OPENAI_RESPONSE_ROLE",
+      "value": "assistant",
+      "title": "OpenAI Response Role",
+      "description": "Role of the LLM's Response in OpenAI Chat Completions",
+      "required": false,
+      "type": "text"
+    },
+    "OPENAI_SERVED_MODEL_NAME_OVERRIDE": {
+      "env_var_name": "OPENAI_SERVED_MODEL_NAME_OVERRIDE",
+      "value": "",
+      "title": "OpenAI Served Model Name Override",
+      "description": "Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests",
+      "required": false,
+      "type": "text"
+    },
+    "MAX_CONCURRENCY": {
+      "env_var_name": "MAX_CONCURRENCY",
+      "value": "300",
+      "title": "Max Concurrency",
+      "description": "Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency",
+      "required": false,
+      "type": "number"
+    },
+    "MODEL_REVISION": {
+      "env_var_name": "MODEL_REVISION",
+      "value": "",
+      "title": "Model Revision",
+      "description": "Model revision (branch) to load",
+      "required": false,
+      "type": "text"
+    },
+    "BASE_PATH": {
+      "env_var_name": "BASE_PATH",
+      "value": "/runpod-volume",
+      "title": "Base Path",
+      "description": "Storage directory for Huggingface cache and model",
+      "required": false,
+      "type": "text"
+    },
+    "DISABLE_LOG_REQUESTS": {
+      "env_var_name": "DISABLE_LOG_REQUESTS",
+      "value": true,
+      "title": "Disable Log Requests",
+      "description": "Enables or disables vLLM request logging",
+      "required": false,
+      "type": "toggle"
+    }
+  }
+}

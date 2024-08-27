@@ -58,6 +58,10 @@ Worker vLLM is now cached on all RunPod machines, resulting in near-instant depl
   - [Input Request Parameters](#input-request-parameters)
     - [Text Input Formats](#text-input-formats)
     - [Sampling Parameters](#sampling-parameters)
+- [Worker Config](#worker-config)
+  - [Writing your worker-config.json](#writing-your-worker-configjson)
+  - [Example of schema](#example-of-schema)
+  - [Example of versions](#example-of-versions)
 
 # Setting up the Serverless Worker
 
@@ -514,3 +518,86 @@ Your list can contain any number of messages, and each message usually can have 
       ]
     ```
 
+</details>
+
+# Worker Config
+The worker config is a JSON file that is used to build the form that helps users configure their serverless endpoint on the RunPod Web Interface.
+
+Note: This is a new feature and only works for workers that use one model 
+
+## Writing your worker-config.json
+The JSON consists of two main parts, schema and versions.
+- `schema`: Here you specify the form fields that will be displayed to the user.
+  - `env_var_name`: The name of the environment variable that is being set using the form field.
+  - `value`: This is the default value of the form field. It will be shown in the UI as such unless the user changes it.
+  - `title`: This is the title of the form field in the UI.
+  - `description`: This is the description of the form field in the UI.
+  - `required`: This is a boolean that specifies if the form field is required.
+  - `type`: This is the type of the form field. Options are:
+    - `text`: Environment variable is a string so user inputs text in form field.
+    - `select`: User selects one option from the dropdown. You must provide the `options` key value pair after type if using this.
+    - `toggle`: User toggles between true and false.
+    - `number`: User inputs a number in the form field.
+  - `options`: Specify the options the user can select from if the type is `select`. DO NOT include this unless the `type` is `select`.
+- `versions`: This is where you call the form fields specified in `schema` and organize them into categories.
+  - `imageName`: This is the name of the Docker image that will be used to run the serverless endpoint.
+  - `minimumCudaVersion`: This is the minimum CUDA version that is required to run the serverless endpoint.
+  - `categories`: This is where you call the keys of the form fields specified in `schema` and organize them into categories. Each category is a toggle list of forms on the Web UI.
+    - `title`: This is the title of the category in the UI.
+    - `settings`: This is the array of settings schemas specified in `schema` associated with the category.
+
+## Example of schema
+```json
+{
+  "schema": {
+    "TOKENIZER": {
+      "env_var_name": "TOKENIZER",
+      "value": "",
+      "title": "Tokenizer",
+      "description": "Name or path of the Hugging Face tokenizer to use.",
+      "required": false,
+      "type": "text"
+    }, 
+    "TOKENIZER_MODE": {
+      "env_var_name": "TOKENIZER_MODE",
+      "value": "auto",
+      "title": "Tokenizer Mode",
+      "description": "The tokenizer mode.",
+      "required": false,
+      "type": "select",
+      "options": [
+        { "value": "auto", "label": "auto" },
+        { "value": "slow", "label": "slow" }
+      ]
+    },
+    ...
+  }
+}
+```
+
+## Example of versions
+```json
+{
+  "versions": {
+    "0.5.4": {
+      "imageName": "runpod/worker-v1-vllm:v1.2.0stable-cuda12.1.0",
+      "minimumCudaVersion": "12.1",
+      "categories": [
+        {
+          "title": "LLM Settings",
+          "settings": [
+            "TOKENIZER", "TOKENIZER_MODE", "OTHER_SETTINGS_SCHEMA_KEYS_YOU_HAVE_SPECIFIED_0", ...
+          ]
+        },
+        {
+          "title": "Tokenizer Settings",
+          "settings": [
+            "OTHER_SETTINGS_SCHEMA_KEYS_0", "OTHER_SETTINGS_SCHEMA_KEYS_1", ...
+          ]
+        },
+        ...
+      ]
+    }
+  }
+}
+```
