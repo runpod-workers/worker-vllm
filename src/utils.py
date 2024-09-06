@@ -49,9 +49,11 @@ class JobInput:
         self.openai_input = job.get("openai_input")
 
 class DummyRequest:
+    def __init__(self):
+        self.headers = {}
     async def is_disconnected(self):
         return False
-    
+
 class BatchSize:
     def __init__(self, max_batch_size, min_batch_size, batch_size_growth_factor):
         self.max_batch_size = max_batch_size
