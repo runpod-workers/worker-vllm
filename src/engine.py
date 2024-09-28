@@ -11,6 +11,7 @@ from vllm import AsyncLLMEngine
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
+from vllm.entrypoints.openai.serving_engine import BaseModelPath
 
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
@@ -121,14 +122,16 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
         asyncio.run(self._initialize_engines())
         self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
-
+        
     async def _initialize_engines(self):
         self.model_config = await self.llm.get_model_config()
-        
+        self.base_model_paths = [
+            BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
+        ]
         self.chat_engine = OpenAIServingChat(
-            async_engine_client=self.llm, 
+            engine_client=self.llm, 
             model_config=self.model_config,
-            served_model_names=[self.served_model_name], 
+            base_model_paths=self.base_model_paths,
             response_role=self.response_role,
             chat_template=self.tokenizer.tokenizer.chat_template,
             lora_modules=None,
@@ -136,9 +139,9 @@ class OpenAIvLLMEngine(vLLMEngine):
             request_logger=None
         )
         self.completion_engine = OpenAIServingCompletion(
-            async_engine_client=self.llm, 
+            engine_client=self.llm, 
             model_config=self.model_config,
-            served_model_names=[self.served_model_name],
+            base_model_paths=self.base_model_paths,
             lora_modules=[],
             prompt_adapters=None,
             request_logger=None
