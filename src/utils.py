@@ -3,6 +3,7 @@ import logging
 from http import HTTPStatus
 from functools import wraps
 from time import time
+from vllm.entrypoints.openai.protocol import RequestResponseMetadata
 
 try:
     from vllm.utils import random_uuid
@@ -47,10 +48,14 @@ class JobInput:
         self.min_batch_size = int(min_batch_size) if min_batch_size else None 
         self.openai_route = job.get("openai_route")
         self.openai_input = job.get("openai_input")
-
+class DummyState:
+    def __init__(self):
+        self.request_metadata = None
+        
 class DummyRequest:
     def __init__(self):
         self.headers = {}
+        self.state = DummyState()
     async def is_disconnected(self):
         return False
 
