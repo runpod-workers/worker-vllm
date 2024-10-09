@@ -11,7 +11,8 @@ from vllm import AsyncLLMEngine
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
-from vllm.entrypoints.openai.serving_engine import BaseModelPath
+from vllm.entrypoints.openai.serving_engine import BaseModelPath, LoRAModulePath
+
 
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
@@ -128,13 +129,23 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.base_model_paths = [
             BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
         ]
+
+        lora_modules = os.getenv('LORA_MODULES', None)
+        if lora_modules is not None:
+            try:
+                lora_modules = json.loads(lora_modules)
+                lora_modules = LoRAModulePath(**lora_modules)
+            except:
+                lora_modules = None
+
+
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             model_config=self.model_config,
             base_model_paths=self.base_model_paths,
             response_role=self.response_role,
             chat_template=self.tokenizer.tokenizer.chat_template,
-            lora_modules=None,
+            lora_modules=[lora_modules],
             prompt_adapters=None,
             request_logger=None
         )
@@ -142,7 +153,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             engine_client=self.llm, 
             model_config=self.model_config,
             base_model_paths=self.base_model_paths,
-            lora_modules=[],
+            lora_modules=[lora_modules],
             prompt_adapters=None,
             request_logger=None
         )
@@ -158,9 +169,6 @@ class OpenAIvLLMEngine(vLLMEngine):
     
     async def _handle_model_request(self):
         models = await self.chat_engine.show_available_models()
-        fixed_model = models.data[0]
-        fixed_model.id = self.served_model_name
-        models.data = [fixed_model]
         return models.model_dump()
     
     async def _handle_chat_or_completion_request(self, openai_request: JobInput):
