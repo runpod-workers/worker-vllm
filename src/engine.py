@@ -134,9 +134,10 @@ class OpenAIvLLMEngine(vLLMEngine):
         if lora_modules is not None:
             try:
                 lora_modules = json.loads(lora_modules)
-                lora_modules = LoRAModulePath(**lora_modules)
+                lora_modules = [LoRAModulePath(**lora_modules)]
             except:
                 lora_modules = None
+
 
 
         self.chat_engine = OpenAIServingChat(
@@ -145,7 +146,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             base_model_paths=self.base_model_paths,
             response_role=self.response_role,
             chat_template=self.tokenizer.tokenizer.chat_template,
-            lora_modules=[lora_modules],
+            lora_modules=lora_modules,
             prompt_adapters=None,
             request_logger=None
         )
@@ -153,7 +154,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             engine_client=self.llm, 
             model_config=self.model_config,
             base_model_paths=self.base_model_paths,
-            lora_modules=[lora_modules],
+            lora_modules=lora_modules,
             prompt_adapters=None,
             request_logger=None
         )
