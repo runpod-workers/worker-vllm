@@ -82,7 +82,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
 |--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
-| 12.1.0       | `runpod/worker-v1-vllm:v15.0stable-cuda12.1.0` | `runpod/worker-v1-vllm:v1.5.0dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
+| 12.1.0       | `runpod/worker-v1-vllm:v1.5.0stable-cuda12.1.0` | `runpod/worker-v1-vllm:v1.5.0dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
 
 
 
