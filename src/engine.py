@@ -133,8 +133,13 @@ class OpenAIvLLMEngine(vLLMEngine):
         lora_modules = os.getenv('LORA_MODULES', None)
         if lora_modules is not None:
             try:
-                lora_modules = json.loads(lora_modules)
-                lora_modules = [LoRAModulePath(**lora_modules)]
+                lora_modules_dict = json.loads(lora_modules)
+                if type(lora_modules_dict) == list:
+                    lora_modules = []
+                    for adapter in lora_modules_dict:
+                        lora_modules.append(LoRAModulePath(**adapter))
+                else:
+                    lora_modules = [LoRAModulePath(**lora_modules_dict)]
             except:
                 lora_modules = None
 
