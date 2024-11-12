@@ -132,6 +132,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `TOKENIZER_POOL_TYPE`                     | 'ray'                 | `str`                                      | Type of tokenizer pool to use for asynchronous tokenization. |
 | `TOKENIZER_POOL_EXTRA_CONFIG`             | None                  | `dict`                                     | Extra config for tokenizer pool. |
 | `ENABLE_LORA`                             | False                 | `bool`                                     | If True, enable handling of LoRA adapters. |
+|`LORA_MODULES`                             | None                  | `dict`                                     | Add lora adapter from huggingface {"name": "xxx", "path": "xxx/xxxx", "base_model_name": "xxx/xxxx"}|
 | `MAX_LORAS`                               | 1                     | `int`                                      | Max number of LoRAs in a single batch. |
 | `MAX_LORA_RANK`                           | 16                    | `int`                                      | Max LoRA rank. |
 | `LORA_EXTRA_VOCAB_SIZE`                   | 256                   | `int`                                      | Maximum size of extra vocabulary for LoRA adapters. |
