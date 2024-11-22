@@ -23,7 +23,10 @@ class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
         self.engine_args = get_engine_args()
+        if os.getenv('RUNPOD_HUGGINGFACE_CACHE'):
+            self.engine_args.model = f'/runpod/cache/model/{os.getenv('RUNPOD_HUGGINGFACE_CACHE')}/main'
         logging.info(f"Engine args: {self.engine_args}")
+        
         self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
                                           self.engine_args.tokenizer_revision, 
                                           self.engine_args.trust_remote_code)
