@@ -1,7 +1,7 @@
 {
   "versions": {
     "0.6.4": {
-      "imageName": "runpod/worker-v1-vllm:v1.6.0stable-cuda12.1.0",
+      "imageName": "runpod/worker-v1-vllm:v1.7.0stable-cuda12.1.0",
       "minimumCudaVersion": "12.1",
       "categories": [
         {
