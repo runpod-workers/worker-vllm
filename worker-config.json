@@ -24,7 +24,8 @@
             "NGRAM_PROMPT_LOOKUP_MAX", "NGRAM_PROMPT_LOOKUP_MIN", "SPEC_DECODING_ACCEPTANCE_METHOD",
             "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD", "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
             "MODEL_LOADER_EXTRA_CONFIG", "PREEMPTION_MODE", "PREEMPTION_CHECK_PERIOD",
-            "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST"
+            "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST",
+            "ENABLE_AUTO_TOOL_CHOICE", "TOOL_CALL_PARSER"
           ]
         },
         {
@@ -84,7 +85,8 @@
             "NGRAM_PROMPT_LOOKUP_MAX", "NGRAM_PROMPT_LOOKUP_MIN", "SPEC_DECODING_ACCEPTANCE_METHOD",
             "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD", "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
             "MODEL_LOADER_EXTRA_CONFIG", "PREEMPTION_MODE", "PREEMPTION_CHECK_PERIOD",
-            "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST"
+            "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST",
+            "ENABLE_AUTO_TOOL_CHOICE", "TOOL_CALL_PARSER"
           ]
         },
         {
@@ -991,6 +993,30 @@
     "description": "Enables or disables vLLM request logging",
     "required": false,
     "type": "toggle"
+  },
+  "ENABLE_AUTO_TOOL_CHOICE": {
+    "env_var_name": "ENABLE_AUTO_TOOL_CHOICE",
+    "value": false,
+    "title": "Enable Auto Tool Choice",
+    "description": "Enables or disables auto tool choice",
+    "required": false,
+    "type": "toggle"
+  },
+  "TOOL_CALL_PARSER": {
+    "env_var_name": "TOOL_CALL_PARSER",
+    "value": "",
+    "title": "Tool Call Parser",
+    "description": "Tool call parser",
+    "required": false,
+    "type": "select",
+    "options": [
+      { "value": "", "label": "None" },
+      { "value": "hermes", "label": "Hermes" },
+      { "value": "mistral", "label": "Mistral" },
+      { "value": "llama3_json", "label": "Llama3 JSON" },
+      { "value": "pythonic", "label": "Pythonic" },
+      { "value": "internlm", "label": "InternLM" }
+    ]
   }
 }
 }
