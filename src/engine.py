@@ -17,7 +17,7 @@ from vllm.entrypoints.openai.serving_engine import BaseModelPath, LoRAModulePath
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
 from tokenizer import TokenizerWrapper
-from engine_args import get_engine_args, DEFAULT_ARGS
+from engine_args import get_engine_args
 
 class vLLMEngine:
     def __init__(self, engine = None):
