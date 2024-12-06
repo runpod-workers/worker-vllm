@@ -564,7 +564,8 @@
       { "value": "None", "label": "None" },
       { "value": "awq", "label": "AWQ" },
       { "value": "squeezellm", "label": "SqueezeLLM" },
-      { "value": "gptq", "label": "GPTQ" }
+      { "value": "gptq", "label": "GPTQ" },
+      { "value": "bitsandbytes", "label": "BitsAndBytes" }
     ]
   },
   "ROPE_SCALING": {
