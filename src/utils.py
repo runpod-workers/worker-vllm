@@ -74,13 +74,11 @@ class BatchSize:
         if self.is_dynamic:
             self.current_batch_size = min(self.current_batch_size*self.batch_size_growth_factor, self.max_batch_size)
         
-# def create_error_response(message: str, err_type: str = "BadRequestError", status_code: HTTPStatus = HTTPStatus.BAD_REQUEST) -> ErrorResponse:
-#     return ErrorResponse(message=message,
-#                             type=err_type,
-#                             code=status_code.value)
+def create_error_response(message: str, err_type: str = "BadRequestError", status_code: HTTPStatus = HTTPStatus.BAD_REQUEST) -> ErrorResponse:
+    return ErrorResponse(message=message,
+                            type=err_type,
+                            code=status_code.value)
 
-def create_error_response(message: str, err_type: str = "BadRequestError", status_code: HTTPStatus = HTTPStatus.BAD_REQUEST) -> dict:
-    return {"error": message}
     
 def get_int_bool_env(env_var: str, default: bool) -> bool:
     return int(os.getenv(env_var, int(default))) == 1
