@@ -12,7 +12,11 @@ async def handler(job):
         engine = OpenAIvLLMEngine if job_input.openai_route else vllm_engine
         results_generator = engine.generate(job_input)
         async for batch in results_generator:
-            yield batch
+            # If there's any kind of error in the batch, format it
+            if isinstance(batch, dict) and 'error' in batch:
+                yield {"error": str(batch)}
+            else:
+                yield batch
     except Exception as e:
         yield {"error": str(e)}
         return 
