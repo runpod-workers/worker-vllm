@@ -113,7 +113,7 @@ class vLLMEngine:
             return engine
         except Exception as e:
             logging.error("Error initializing vLLM engine: %s", e)
-            raise RuntimeError({"error": str(e)})
+            raise 
 
 
 class OpenAIvLLMEngine(vLLMEngine):
