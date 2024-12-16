@@ -146,6 +146,8 @@ class OpenAIvLLMEngine(vLLMEngine):
             base_model_paths=self.base_model_paths,
             response_role=self.response_role,
             chat_template=self.tokenizer.tokenizer.chat_template,
+            enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
+            tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
             lora_modules=lora_modules,
             prompt_adapters=None,
             request_logger=None
