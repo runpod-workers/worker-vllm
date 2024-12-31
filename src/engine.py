@@ -150,6 +150,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
             lora_modules=lora_modules,
             prompt_adapters=None,
+            chat_template_content_format="auto",
             request_logger=None
         )
         self.completion_engine = OpenAIServingCompletion(
