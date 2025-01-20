@@ -121,29 +121,34 @@ class OpenAIvLLMEngine(vLLMEngine):
         super().__init__(vllm_engine)
         self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
+
+        logging.info(f"---Loadinging adapter")
+        adapters = os.getenv("LORA_MODULES", [])
+
+        try:
+            adapters = json.loads(adapters)
+        except Exception as e:
+            logging.info(f"Error initializing adapter: {e}")
+            adapters = []
+
+        self.lora_adapters = []
+        for adapter in adapters:
+            try:
+                lora:LoRAModulePath = LoRAModulePath(**adapter)
+                self.lora_adapters.append(lora)
+            except Exception as e:
+                logging.info(f"Error initializing adapter: {e}")
+                continue
+
         asyncio.run(self._initialize_engines())
         self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
-        
+
+
     async def _initialize_engines(self):
         self.model_config = await self.llm.get_model_config()
         self.base_model_paths = [
             BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
         ]
-
-        lora_modules = os.getenv('LORA_MODULES', None)
-        if lora_modules is not None:
-            try:
-                lora_modules_dict = json.loads(lora_modules)
-                if type(lora_modules_dict) == list:
-                    lora_modules = []
-                    for adapter in lora_modules_dict:
-                        lora_modules.append(LoRAModulePath(**adapter))
-                else:
-                    lora_modules = [LoRAModulePath(**lora_modules_dict)]
-            except:
-                lora_modules = None
-
-
 
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
@@ -151,7 +156,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             base_model_paths=self.base_model_paths,
             response_role=self.response_role,
             chat_template=self.tokenizer.tokenizer.chat_template,
-            lora_modules=lora_modules,
+            lora_modules=self.lora_adapters,
             prompt_adapters=None,
             request_logger=None
         )
@@ -159,7 +164,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             engine_client=self.llm, 
             model_config=self.model_config,
             base_model_paths=self.base_model_paths,
-            lora_modules=lora_modules,
+            lora_modules=self.lora_adapters,
             prompt_adapters=None,
             request_logger=None
         )
