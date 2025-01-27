@@ -32,7 +32,7 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_DATASETS_CACHE="${BASE_PATH}/huggingface-cache/datasets" \
     HUGGINGFACE_HUB_CACHE="${BASE_PATH}/huggingface-cache/hub" \
     HF_HOME="${BASE_PATH}/huggingface-cache/hub" \
-    HF_HUB_ENABLE_HF_TRANSFER=1 
+    HF_HUB_ENABLE_HF_TRANSFER=0 
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
@@ -40,10 +40,10 @@ ENV PYTHONPATH="/:/vllm-workspace"
 COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
-        export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
+    export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
     fi && \
     if [ -n "$MODEL_NAME" ]; then \
-        python3 /src/download_model.py; \
+    python3 /src/download_model.py; \
     fi
 
 # Start the handler
