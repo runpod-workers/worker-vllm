@@ -15,6 +15,10 @@ except ImportError:
 
 logging.basicConfig(level=logging.INFO)
 
+def convert_limit_mm_per_prompt(input_string: str):
+    key, value = input_string.split('=')
+    return {key: int(value)}
+
 def count_physical_cores():
     with open('/proc/cpuinfo') as f:
         content = f.readlines()
