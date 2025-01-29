@@ -11,7 +11,7 @@ from vllm import AsyncLLMEngine
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
-from vllm.entrypoints.openai.serving_engine import BaseModelPath, LoRAModulePath
+from vllm.entrypoints.openai.serving_models import BaseModelPath, LoRAModulePath, OpenAIServingModels
 
 
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
@@ -138,28 +138,30 @@ class OpenAIvLLMEngine(vLLMEngine):
             except:
                 lora_modules = None
 
-
+        self.serving_models = OpenAIServingModels(
+            engine_client=self.llm,
+            model_config=self.model_config,
+            base_model_paths=self.base_model_paths,
+            lora_modules=None,
+            prompt_adapters=None,
+        )
 
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             model_config=self.model_config,
-            base_model_paths=self.base_model_paths,
+            models=self.serving_models,
             response_role=self.response_role,
             chat_template=self.tokenizer.tokenizer.chat_template,
             enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
             tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
             lora_modules=lora_modules,
-            prompt_adapters=None,
             chat_template_content_format="auto",
-            request_logger=None
         )
         self.completion_engine = OpenAIServingCompletion(
             engine_client=self.llm, 
             model_config=self.model_config,
-            base_model_paths=self.base_model_paths,
+            models=self.serving_models,
             lora_modules=lora_modules,
-            prompt_adapters=None,
-            request_logger=None
         )
     
     async def generate(self, openai_request: JobInput):
@@ -172,7 +174,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             yield create_error_response("Invalid route").model_dump()
     
     async def _handle_model_request(self):
-        models = await self.chat_engine.show_available_models()
+        models = await self.serving_models.show_available_models()
         return models.model_dump()
     
     async def _handle_chat_or_completion_request(self, openai_request: JobInput):
