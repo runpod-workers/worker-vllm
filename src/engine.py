@@ -4,10 +4,11 @@ import json
 import asyncio
 
 from dotenv import load_dotenv
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import time
 
 from vllm import AsyncLLMEngine
+from vllm.entrypoints.logger import RequestLogger
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
@@ -151,17 +152,22 @@ class OpenAIvLLMEngine(vLLMEngine):
             model_config=self.model_config,
             models=self.serving_models,
             response_role=self.response_role,
+            request_logger=None,
             chat_template=self.tokenizer.tokenizer.chat_template,
+            chat_template_content_format="auto",
+            enable_reasoning=os.getenv('ENABLE_REASONING', 'false').lower() == 'true',
+            reasoning_parser=None,
+            return_token_as_token_ids=False,
             enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
             tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
-            lora_modules=lora_modules,
-            chat_template_content_format="auto",
+            enable_prompt_tokens_details=False
         )
         self.completion_engine = OpenAIServingCompletion(
             engine_client=self.llm, 
             model_config=self.model_config,
             models=self.serving_models,
-            lora_modules=lora_modules,
+            request_logger=None,
+            return_token_as_token_ids=False,
         )
     
     async def generate(self, openai_request: JobInput):
