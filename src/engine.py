@@ -155,9 +155,9 @@ class OpenAIvLLMEngine(vLLMEngine):
             request_logger=None,
             chat_template=self.tokenizer.tokenizer.chat_template,
             chat_template_content_format="auto",
-            enable_reasoning=os.getenv('ENABLE_REASONING', 'false').lower() == 'true',
-            reasoning_parser=None,
-            return_token_as_token_ids=False,
+            # enable_reasoning=os.getenv('ENABLE_REASONING', 'false').lower() == 'true',
+            # reasoning_parser=None,
+            # return_token_as_token_ids=False,
             enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
             tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
             enable_prompt_tokens_details=False
@@ -167,7 +167,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             model_config=self.model_config,
             models=self.serving_models,
             request_logger=None,
-            return_token_as_token_ids=False,
+            # return_token_as_token_ids=False,
         )
     
     async def generate(self, openai_request: JobInput):
