@@ -18,12 +18,15 @@ from utils import DummyRequest, JobInput, BatchSize, create_error_response
 from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
 from tokenizer import TokenizerWrapper
 from engine_args import get_engine_args
+from utils import modelpaths
 class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
         self.engine_args = get_engine_args()
+        self.modelpaths = modelpaths()
         if os.getenv("RUNPOD_HUGGINGFACE_MODEL"):
-            self.engine_args.model = f"/runpod/cache/model/{os.getenv('MODEL_NAME')}/main"
+            # self.engine_args.model = f"/runpod/cache/model/{os.getenv('MODEL_NAME')}/main"
+            self.engine_args.model = self.modelpaths[0]
         logging.info(f"Engine args: {self.engine_args}")
         
         self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
