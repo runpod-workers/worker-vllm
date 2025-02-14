@@ -1,5 +1,7 @@
 
 runpod.toml
+.runpodignore
+
 *.pyc
 .env
 test/*

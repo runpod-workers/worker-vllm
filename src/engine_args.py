@@ -4,7 +4,7 @@ import logging
 from torch.cuda import device_count
 from vllm import AsyncEngineArgs
 from vllm.model_executor.model_loader.tensorizer import TensorizerConfig
-from src.utils import convert_limit_mm_per_prompt
+from utils import convert_limit_mm_per_prompt
 
 RENAME_ARGS_MAP = {
     "MODEL_NAME": "model",
@@ -132,22 +132,22 @@ def get_local_args():
 def get_engine_args():
     # Start with default args
     args = DEFAULT_ARGS
-    
+
     # Get env args that match keys in AsyncEngineArgs
     args.update(os.environ)
-    
+
     # Get local args if model is baked in and overwrite env args
     args.update(get_local_args())
-    
+
     # if args.get("TENSORIZER_URI"): TODO: add back once tensorizer is ready
     #     args["load_format"] = "tensorizer"
     #     args["model_loader_extra_config"] = TensorizerConfig(tensorizer_uri=args["TENSORIZER_URI"], num_readers=None)
     #     logging.info(f"Using tensorized model from {args['TENSORIZER_URI']}")
-    
-    
+
+
     # Rename and match to vllm args
     args = match_vllm_args(args)
-    
+
     # Set tensor parallel size and max parallel loading workers if more than 1 GPU is available
     num_gpus = device_count()
     if num_gpus > 1:
@@ -155,7 +155,7 @@ def get_engine_args():
         args["max_parallel_loading_workers"] = None
         if os.getenv("MAX_PARALLEL_LOADING_WORKERS"):
             logging.warning("Overriding MAX_PARALLEL_LOADING_WORKERS with None because more than 1 GPU is available.")
-    
+
     # Deprecated env args backwards compatibility
     if args.get("kv_cache_dtype") == "fp8_e5m2":
         args["kv_cache_dtype"] = "fp8"
@@ -163,9 +163,9 @@ def get_engine_args():
     if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"):
         args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
         logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
-        
+
     # if "gemma-2" in args.get("model", "").lower():
     #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
     #     logging.info("Using FLASHINFER for gemma-2 model.")
-        
+
     return AsyncEngineArgs(**args)

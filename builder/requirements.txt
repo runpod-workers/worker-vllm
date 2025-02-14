@@ -4,8 +4,11 @@ pyarrow
 runpod~=1.7.0
 huggingface-hub
 packaging
-typing-extensions==4.7.1
+typing-extensions==4.12.2
 pydantic
 pydantic-settings
 hf-transfer
 transformers
+vllm==0.7.2
+--extra-index-url https://flashinfer.ai/whl/cu121/torch2.3
+flashinfer
