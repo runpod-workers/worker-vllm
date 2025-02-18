@@ -7,7 +7,7 @@ variable "REPOSITORY" {
 }
 
 variable "BASE_IMAGE_VERSION" {
-  default = "stable"
+  default = "v2.0.0stable"
 }
 
 group "all" {

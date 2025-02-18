@@ -4,14 +4,15 @@ import json
 import asyncio
 
 from dotenv import load_dotenv
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import time
 
 from vllm import AsyncLLMEngine
+from vllm.entrypoints.logger import RequestLogger
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
-from vllm.entrypoints.openai.serving_engine import BaseModelPath, LoRAModulePath
+from vllm.entrypoints.openai.serving_models import BaseModelPath, LoRAModulePath, OpenAIServingModels
 
 
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
@@ -23,7 +24,10 @@ class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
         self.engine_args = get_engine_args()
+        if os.getenv("MODEL_CACHE_ENABLE"):
+            self.engine_args.model = f"/runpod/cache/model/{os.getenv('MODEL_NAME')}/main"
         logging.info(f"Engine args: {self.engine_args}")
+        
         self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
                                           self.engine_args.tokenizer_revision, 
                                           self.engine_args.trust_remote_code)
@@ -121,14 +125,13 @@ class OpenAIvLLMEngine(vLLMEngine):
         super().__init__(vllm_engine)
         self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
-
-        logging.info(f"---Loadinging adapter")
+        
         adapters = os.getenv("LORA_MODULES", [])
 
         try:
             adapters = json.loads(adapters)
         except Exception as e:
-            logging.info(f"Error initializing adapter: {e}")
+            logging.info(f"---Initialized adapter json load error: {e}")
             adapters = []
 
         self.lora_adapters = []
@@ -136,37 +139,49 @@ class OpenAIvLLMEngine(vLLMEngine):
             try:
                 lora:LoRAModulePath = LoRAModulePath(**adapter)
                 self.lora_adapters.append(lora)
+                logging.info(f"---Initialized adapter: {adapter}")
             except Exception as e:
-                logging.info(f"Error initializing adapter: {e}")
+                logging.info(f"---Initialized adapter not worked: {e}")
                 continue
-
+                
         asyncio.run(self._initialize_engines())
         self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
-
-
+        
     async def _initialize_engines(self):
         self.model_config = await self.llm.get_model_config()
         self.base_model_paths = [
             BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
         ]
 
+        self.serving_models = OpenAIServingModels(
+            engine_client=self.llm,
+            model_config=self.model_config,
+            base_model_paths=self.base_model_paths,
+            lora_modules=self.lora_adapters,
+            prompt_adapters=None,
+        )
+
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             model_config=self.model_config,
-            base_model_paths=self.base_model_paths,
+            models=self.serving_models,
             response_role=self.response_role,
+            request_logger=None,
             chat_template=self.tokenizer.tokenizer.chat_template,
-            lora_modules=self.lora_adapters,
-            prompt_adapters=None,
-            request_logger=None
+            chat_template_content_format="auto",
+            # enable_reasoning=os.getenv('ENABLE_REASONING', 'false').lower() == 'true',
+            # reasoning_parser=None,
+            # return_token_as_token_ids=False,
+            enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
+            tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
+            enable_prompt_tokens_details=False
         )
         self.completion_engine = OpenAIServingCompletion(
             engine_client=self.llm, 
             model_config=self.model_config,
-            base_model_paths=self.base_model_paths,
-            lora_modules=self.lora_adapters,
-            prompt_adapters=None,
-            request_logger=None
+            models=self.serving_models,
+            request_logger=None,
+            # return_token_as_token_ids=False,
         )
     
     async def generate(self, openai_request: JobInput):
@@ -179,7 +194,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             yield create_error_response("Invalid route").model_dump()
     
     async def _handle_model_request(self):
-        models = await self.chat_engine.show_available_models()
+        models = await self.serving_models.show_available_models()
         return models.model_dump()
     
     async def _handle_chat_or_completion_request(self, openai_request: JobInput):

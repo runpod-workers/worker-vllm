@@ -4,6 +4,7 @@ import logging
 from torch.cuda import device_count
 from vllm import AsyncEngineArgs
 from vllm.model_executor.model_loader.tensorizer import TensorizerConfig
+from src.utils import convert_limit_mm_per_prompt
 
 RENAME_ARGS_MAP = {
     "MODEL_NAME": "model",
@@ -88,7 +89,8 @@ DEFAULT_ARGS = {
     "typical_acceptance_sampler_posterior_alpha": float(os.getenv('TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA', 0)) or None,
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
     "disable_logprobs_during_spec_decoding": os.getenv('DISABLE_LOGPROBS_DURING_SPEC_DECODING', None),
-    "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None)
+    "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
+    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'true'),
 }
 
 def match_vllm_args(args):
