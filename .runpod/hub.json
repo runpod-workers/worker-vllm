@@ -1,6 +1,6 @@
 {
   "title": "vLLM",
-  "description": "An example description",
+  "description": "Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the vLLM Inference Engine on RunPod Serverless",
   "type": "serverless",
   "category": "language",
   "iconUrl": "https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/vllm-color.png",
