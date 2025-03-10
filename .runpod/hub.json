@@ -1,0 +1,29 @@
+{
+  "title": "vLLM",
+  "description": "Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the vLLM Inference Engine on RunPod Serverless",
+  "type": "serverless",
+  "category": "language",
+  "iconUrl": "https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/vllm-color.png",
+  "config": {
+    "runsOn": "GPU",
+    "containerDiskInGb": 200,
+    "presets": [
+      {
+        "name": "deepseek-ai/deepseek-r1-distill-llama-8b",
+        "defaults": {
+          "MODEL_NAME": "deepseek-ai/deepseek-r1-distill-llama-8b"
+        }
+      }
+    ],
+    "env": [
+      {
+        "key": "MODEL_NAME",
+        "input": {
+          "name": "Model Name",
+          "type": "huggingface",
+          "default": "openai-community/gpt2"
+        }
+      }
+    ]
+  }
+}
