@@ -488,7 +488,15 @@ The prompt string can be any string, and the model's chat template will not be a
 
     Example:
     ```json
-    "prompt": "..."
+    {
+      "input": {
+        "prompt": "why sky is blue?",
+        "sampling_params": {
+          "temperature": 0.7,
+          "max_tokens": 100
+        }
+      }
+    }
     ```
 2. `messages`
 Your list can contain any number of messages, and each message usually can have any role from the following list:
@@ -502,20 +510,28 @@ Your list can contain any number of messages, and each message usually can have 
 
     Example:
     ```json
-    "messages": [
-        {
-          "role": "system",
-          "content": "..."
-        },
-        {
-          "role": "user",
-          "content": "..."
-        },
-        {
-          "role": "assistant",
-          "content": "..."
+    {
+      "input": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a helpful AI assistant that provides clear and concise responses."
+          },
+          {
+            "role": "user",
+            "content": "Can you explain the difference between supervised and unsupervised learning?"
+          },
+          {
+            "role": "assistant",
+            "content": "Sure! Supervised learning uses labeled data, meaning each input has a corresponding correct output. The model learns by mapping inputs to known outputs. In contrast, unsupervised learning works with unlabeled data, where the model identifies patterns, structures, or clusters without predefined answers."
+          }
+        ],
+        "sampling_params": {
+          "temperature": 0.7,
+          "max_tokens": 100
         }
-      ]
+      }
+    }
     ```
 
 </details>
