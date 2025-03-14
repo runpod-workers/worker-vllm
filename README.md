@@ -139,6 +139,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `LONG_LORA_SCALING_FACTORS`               | None                  | `tuple`                                    | Specify multiple scaling factors for LoRA adapters. |
 | `MAX_CPU_LORAS`                           | None                  | `int`                                      | Maximum number of LoRAs to store in CPU memory. |
 | `FULLY_SHARDED_LORAS`                     | False                 | `bool`                                     | Enable fully sharded LoRA layers. |
+| `LORA_MODULES`| `[]`| `list[dict]`| Add lora adapters from Hugging Face `[{"name": "xx", "path": "xxx/xxxx", "base_model_name": "xxx/xxxx"}`|
 | `SCHEDULER_DELAY_FACTOR`                  | 0.0                   | `float`                                    | Apply a delay before scheduling next prompt. |
 | `ENABLE_CHUNKED_PREFILL`                  | False                 | `bool`                                     | Enable chunked prefill requests. |
 | `SPECULATIVE_MODEL`                       | None                  | `str`                                      | The name of the draft model to be used in speculative decoding. |
