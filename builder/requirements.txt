@@ -4,8 +4,9 @@ pyarrow
 runpod~=1.7.7
 huggingface-hub
 packaging
-typing-extensions==4.7.1
+typing-extensions>=4.8.0
 pydantic
 pydantic-settings
 hf-transfer
 transformers
+bitsandbytes>=0.45.0
