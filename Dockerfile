@@ -1,19 +1,29 @@
 FROM nvidia/cuda:12.1.0-base-ubuntu22.04 
 
 RUN apt-get update -y \
-    && apt-get install -y python3-pip
+    && apt-get install -y python3-pip git build-essential curl
+
+# Install uv using pip
+RUN pip install uv
 
 RUN ldconfig /usr/local/cuda-12.1/compat/
 
-# Install Python dependencies
+# Create virtual environment and install Python dependencies
 COPY builder/requirements.txt /requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python3 -m pip install --upgrade pip && \
-    python3 -m pip install --upgrade -r /requirements.txt
+RUN uv venv /venv
+ENV PATH="/venv/bin:$PATH"
+RUN uv pip install --upgrade pip
+RUN uv pip install --upgrade -r /requirements.txt
 
-# Install vLLM (switching back to pip installs since issues that required building fork are fixed and space optimization is not as important since caching) and FlashInfer 
-RUN python3 -m pip install vllm==0.8.2 && \
-    python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3
+# Clone and install vLLM from fork in development mode
+ENV VLLM_USE_PRECOMPILED=1
+WORKDIR /vllm-fork
+RUN git clone https://github.com/TimPietrusky/vllm.git .
+RUN uv pip install -e . 
+RUN uv pip install --system https://github.com/flashinfer-ai/flashinfer/releases/download/v0.2.1.post2/flashinfer_python-0.2.1.post2+cu124torch2.6-cp38-abi3-linux_x86_64.whl
+
+# Reset workdir to root for compatibility with the rest of the image
+WORKDIR /
 
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
@@ -36,7 +46,6 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
-
 COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
@@ -46,5 +55,8 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     python3 /src/download_model.py; \
     fi
 
-# Start the handler
-CMD ["python3", "/src/handler.py"]
+# Print all installed packages for debugging purposes and write to a file
+RUN /venv/bin/pip list > /installed_packages.txt && cat /installed_packages.txt
+
+# Start the handler with the Python from our virtual environment
+CMD ["/venv/bin/python", "/src/handler.py"]
