@@ -147,6 +147,8 @@ class OpenAIvLLMEngine(vLLMEngine):
             prompt_adapters=None,
         )
 
+        await self.serving_models.init_static_loras()
+
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             model_config=self.model_config,
