@@ -1,0 +1,47 @@
+{
+  // Test cases to validate the tool's functionality.
+  "tests": [
+    {
+      "name": "basic_inference_test",
+      // Basic inference with a simple prompt
+      "input": {
+        "prompt": "Write a short poem about artificial intelligence.",
+      },
+      "timeout": 30000
+    }
+  ],
+  // Test environment configuration settings.
+  "config": {
+    "gpuTypeId": "NVIDIA GeForce RTX 4090",
+    "gpuCount": 1,
+    "env": [
+      {
+        "key": "MODEL_NAME",
+        "value": "facebook/opt-350m"
+      },
+      {
+        "key": "HF_TOKEN",
+        "value": "hf_dummy_token_for_testing_purposes_only"
+      },
+      {
+        "key": "MAX_MODEL_LEN",
+        "value": "8192"
+      },
+      {
+        "key": "GPU_MEMORY_UTILIZATION",
+        "value": "0.95"
+      }
+    ],
+    "allowedCudaVersions": [
+      "12.7", 
+      "12.6", 
+      "12.5", 
+      "12.4", 
+      "12.3", 
+      "12.2", 
+      "12.1", 
+      "12.0", 
+      "11.7"
+    ]
+  }
+}
