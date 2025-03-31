@@ -21,7 +21,8 @@
         "input": {
           "name": "Tokenizer",
           "type": "string",
-          "description": "Name or path of the Hugging Face tokenizer to use."
+          "description": "Name or path of the Hugging Face tokenizer to use.",
+          "advanced": true
         }
       },
       {
@@ -40,7 +41,8 @@
               "value": "slow"
             }
           ],
-          "default": "auto"
+          "default": "auto",
+          "advanced": true
         }
       },
       {
@@ -49,7 +51,8 @@
           "name": "Skip Tokenizer Init",
           "type": "boolean",
           "description": "Skip initialization of tokenizer and detokenizer.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -58,7 +61,8 @@
           "name": "Trust Remote Code",
           "type": "boolean",
           "description": "Trust remote code from Hugging Face.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -66,7 +70,8 @@
         "input": {
           "name": "Download Directory",
           "type": "string",
-          "description": "Directory to download and load the weights."
+          "description": "Directory to download and load the weights.",
+          "advanced": true
         }
       },
       {
@@ -105,7 +110,8 @@
               "value": "bitsandbytes"
             }
           ],
-          "default": "auto"
+          "default": "auto",
+          "advanced": true
         }
       },
       {
@@ -140,7 +146,8 @@
               "value": "float32"
             }
           ],
-          "default": "auto"
+          "default": "auto",
+          "advanced": true
         }
       },
       {
@@ -159,7 +166,8 @@
               "value": "fp8"
             }
           ],
-          "default": "auto"
+          "default": "auto",
+          "advanced": true
         }
       },
       {
@@ -167,7 +175,8 @@
         "input": {
           "name": "Quantization Param Path",
           "type": "string",
-          "description": "Path to the JSON file containing the KV cache scaling factors."
+          "description": "Path to the JSON file containing the KV cache scaling factors.",
+          "advanced": true
         }
       },
       {
@@ -175,7 +184,8 @@
         "input": {
           "name": "Max Model Length",
           "type": "number",
-          "description": "Model context length."
+          "description": "Model context length.",
+          "advanced": true
         }
       },
       {
@@ -194,7 +204,8 @@
               "value": "lm-format-enforcer"
             }
           ],
-          "default": "outlines"
+          "default": "outlines",
+          "advanced": true
         }
       },
       {
@@ -212,7 +223,8 @@
               "label": "mp",
               "value": "mp"
             }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -221,7 +233,8 @@
           "name": "Worker Use Ray",
           "type": "boolean",
           "description": "Deprecated, use --distributed-executor-backend=ray.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -230,7 +243,8 @@
           "name": "Ray Workers Use Nsight",
           "type": "boolean",
           "description": "If specified, use nsight to profile Ray workers.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -239,7 +253,8 @@
           "name": "Pipeline Parallel Size",
           "type": "number",
           "description": "Number of pipeline stages.",
-          "default": 1
+          "default": 1,
+          "advanced": true
         }
       },
       {
@@ -248,7 +263,8 @@
           "name": "Tensor Parallel Size",
           "type": "number",
           "description": "Number of tensor parallel replicas.",
-          "default": 1
+          "default": 1,
+          "advanced": true
         }
       },
       {
@@ -256,7 +272,8 @@
         "input": {
           "name": "Max Parallel Loading Workers",
           "type": "number",
-          "description": "Load model sequentially in multiple batches."
+          "description": "Load model sequentially in multiple batches.",
+          "advanced": true
         }
       },
       {
@@ -265,7 +282,8 @@
           "name": "Enable Prefix Caching",
           "type": "boolean",
           "description": "Enables automatic prefix caching.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -274,7 +292,8 @@
           "name": "Disable Sliding Window",
           "type": "boolean",
           "description": "Disables sliding window, capping to sliding window size.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -283,7 +302,8 @@
           "name": "Use V2 Block Manager",
           "type": "boolean",
           "description": "Use BlockSpaceMangerV2.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -292,7 +312,8 @@
           "name": "Num Lookahead Slots",
           "type": "number",
           "description": "Experimental scheduling config necessary for speculative decoding.",
-          "default": 0
+          "default": 0,
+          "advanced": true
         }
       },
       {
@@ -301,7 +322,8 @@
           "name": "Seed",
           "type": "number",
           "description": "Random seed for operations.",
-          "default": 0
+          "default": 0,
+          "advanced": true
         }
       },
       {
@@ -309,7 +331,8 @@
         "input": {
           "name": "Num GPU Blocks Override",
           "type": "number",
-          "description": "If specified, ignore GPU profiling result and use this number of GPU blocks."
+          "description": "If specified, ignore GPU profiling result and use this number of GPU blocks.",
+          "advanced": true
         }
       },
       {
@@ -317,7 +340,8 @@
         "input": {
           "name": "Max Num Batched Tokens",
           "type": "number",
-          "description": "Maximum number of batched tokens per iteration."
+          "description": "Maximum number of batched tokens per iteration.",
+          "advanced": true
         }
       },
       {
@@ -326,7 +350,8 @@
           "name": "Max Num Seqs",
           "type": "number",
           "description": "Maximum number of sequences per iteration.",
-          "default": 256
+          "default": 256,
+          "advanced": true
         }
       },
       {
@@ -335,7 +360,8 @@
           "name": "Max Logprobs",
           "type": "number",
           "description": "Max number of log probs to return when logprobs is specified in SamplingParams.",
-          "default": 20
+          "default": 20,
+          "advanced": true
         }
       },
       {
@@ -344,7 +370,8 @@
           "name": "Disable Log Stats",
           "type": "boolean",
           "description": "Disable logging statistics.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -370,7 +397,8 @@
               "label": "GPTQ",
               "value": "gptq"
             }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -378,7 +406,8 @@
         "input": {
           "name": "RoPE Scaling",
           "type": "string",
-          "description": "RoPE scaling configuration in JSON format."
+          "description": "RoPE scaling configuration in JSON format.",
+          "advanced": true
         }
       },
       {
@@ -386,7 +415,8 @@
         "input": {
           "name": "RoPE Theta",
           "type": "number",
-          "description": "RoPE theta. Use with rope_scaling."
+          "description": "RoPE theta. Use with rope_scaling.",
+          "advanced": true
         }
       },
       {
@@ -395,7 +425,8 @@
           "name": "Tokenizer Pool Size",
           "type": "number",
           "description": "Size of tokenizer pool to use for asynchronous tokenization.",
-          "default": 0
+          "default": 0,
+          "advanced": true
         }
       },
       {
@@ -404,7 +435,8 @@
           "name": "Tokenizer Pool Type",
           "type": "string",
           "description": "Type of tokenizer pool to use for asynchronous tokenization.",
-          "default": "ray"
+          "default": "ray",
+          "advanced": true
         }
       },
       {
@@ -412,7 +444,8 @@
         "input": {
           "name": "Tokenizer Pool Extra Config",
           "type": "string",
-          "description": "Extra config for tokenizer pool."
+          "description": "Extra config for tokenizer pool.",
+          "advanced": true
         }
       },
       {
@@ -421,7 +454,8 @@
           "name": "Enable LoRA",
           "type": "boolean",
           "description": "If True, enable handling of LoRA adapters.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -430,7 +464,8 @@
           "name": "Max LoRAs",
           "type": "number",
           "description": "Max number of LoRAs in a single batch.",
-          "default": 1
+          "default": 1,
+          "advanced": true
         }
       },
       {
@@ -439,7 +474,8 @@
           "name": "Max LoRA Rank",
           "type": "number",
           "description": "Max LoRA rank.",
-          "default": 16
+          "default": 16,
+          "advanced": true
         }
       },
       {
@@ -448,7 +484,8 @@
           "name": "LoRA Extra Vocab Size",
           "type": "number",
           "description": "Maximum size of extra vocabulary for LoRA adapters.",
-          "default": 256
+          "default": 256,
+          "advanced": true
         }
       },
       {
@@ -475,7 +512,8 @@
               "value": "float32"
             }
           ],
-          "default": "auto"
+          "default": "auto",
+          "advanced": true
         }
       },
       {
@@ -483,7 +521,8 @@
         "input": {
           "name": "Long LoRA Scaling Factors",
           "type": "string",
-          "description": "Specify multiple scaling factors for LoRA adapters."
+          "description": "Specify multiple scaling factors for LoRA adapters.",
+          "advanced": true
         }
       },
       {
@@ -491,7 +530,8 @@
         "input": {
           "name": "Max CPU LoRAs",
           "type": "number",
-          "description": "Maximum number of LoRAs to store in CPU memory."
+          "description": "Maximum number of LoRAs to store in CPU memory.",
+          "advanced": true
         }
       },
       {
@@ -500,7 +540,8 @@
           "name": "Fully Sharded LoRAs",
           "type": "boolean",
           "description": "Enable fully sharded LoRA layers.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -539,7 +580,8 @@
               "value": "xpu"
             }
           ],
-          "default": "auto"
+          "default": "auto",
+          "advanced": true
         }
       },
       {
@@ -548,7 +590,8 @@
           "name": "Scheduler Delay Factor",
           "type": "number",
           "description": "Apply a delay before scheduling next prompt.",
-          "default": 0.0
+          "default": 0.0,
+          "advanced": true
         }
       },
       {
@@ -557,7 +600,8 @@
           "name": "Enable Chunked Prefill",
           "type": "boolean",
           "description": "Enable chunked prefill requests.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -565,7 +609,8 @@
         "input": {
           "name": "Speculative Model",
           "type": "string",
-          "description": "The name of the draft model to be used in speculative decoding."
+          "description": "The name of the draft model to be used in speculative decoding.",
+          "advanced": true
         }
       },
       {
@@ -573,7 +618,8 @@
         "input": {
           "name": "Num Speculative Tokens",
           "type": "number",
-          "description": "The number of speculative tokens to sample from the draft model."
+          "description": "The number of speculative tokens to sample from the draft model.",
+          "advanced": true
         }
       },
       {
@@ -581,7 +627,8 @@
         "input": {
           "name": "Speculative Draft Tensor Parallel Size",
           "type": "number",
-          "description": "Number of tensor parallel replicas for the draft model."
+          "description": "Number of tensor parallel replicas for the draft model.",
+          "advanced": true
         }
       },
       {
@@ -589,7 +636,8 @@
         "input": {
           "name": "Speculative Max Model Length",
           "type": "number",
-          "description": "The maximum sequence length supported by the draft model."
+          "description": "The maximum sequence length supported by the draft model.",
+          "advanced": true
         }
       },
       {
@@ -597,7 +645,8 @@
         "input": {
           "name": "Speculative Disable by Batch Size",
           "type": "number",
-          "description": "Disable speculative decoding if the number of enqueue requests is larger than this value."
+          "description": "Disable speculative decoding if the number of enqueue requests is larger than this value.",
+          "advanced": true
         }
       },
       {
@@ -605,7 +654,8 @@
         "input": {
           "name": "Ngram Prompt Lookup Max",
           "type": "number",
-          "description": "Max size of window for ngram prompt lookup in speculative decoding."
+          "description": "Max size of window for ngram prompt lookup in speculative decoding.",
+          "advanced": true
         }
       },
       {
@@ -613,7 +663,8 @@
         "input": {
           "name": "Ngram Prompt Lookup Min",
           "type": "number",
-          "description": "Min size of window for ngram prompt lookup in speculative decoding."
+          "description": "Min size of window for ngram prompt lookup in speculative decoding.",
+          "advanced": true
         }
       },
       {
@@ -632,7 +683,8 @@
               "value": "typical_acceptance_sampler"
             }
           ],
-          "default": "rejection_sampler"
+          "default": "rejection_sampler",
+          "advanced": true
         }
       },
       {
@@ -640,7 +692,8 @@
         "input": {
           "name": "Typical Acceptance Sampler Posterior Threshold",
           "type": "number",
-          "description": "Set the lower bound threshold for the posterior probability of a token to be accepted."
+          "description": "Set the lower bound threshold for the posterior probability of a token to be accepted.",
+          "advanced": true
         }
       },
       {
@@ -648,7 +701,8 @@
         "input": {
           "name": "Typical Acceptance Sampler Posterior Alpha",
           "type": "number",
-          "description": "A scaling factor for the entropy-based threshold for token acceptance."
+          "description": "A scaling factor for the entropy-based threshold for token acceptance.",
+          "advanced": true
         }
       },
       {
@@ -656,7 +710,8 @@
         "input": {
           "name": "Model Loader Extra Config",
           "type": "string",
-          "description": "Extra config for model loader."
+          "description": "Extra config for model loader.",
+          "advanced": true
         }
       },
       {
@@ -664,7 +719,8 @@
         "input": {
           "name": "Preemption Mode",
           "type": "string",
-          "description": "If 'recompute', the engine performs preemption-aware recomputation. If 'save', the engine saves activations into the CPU memory as preemption happens."
+          "description": "If 'recompute', the engine performs preemption-aware recomputation. If 'save', the engine saves activations into the CPU memory as preemption happens.",
+          "advanced": true
         }
       },
       {
@@ -673,7 +729,8 @@
           "name": "Preemption Check Period",
           "type": "number",
           "description": "How frequently the engine checks if a preemption happens.",
-          "default": 1.0
+          "default": 1.0,
+          "advanced": true
         }
       },
       {
@@ -682,7 +739,8 @@
           "name": "Preemption CPU Capacity",
           "type": "number",
           "description": "The percentage of CPU memory used for the saved activations.",
-          "default": 2
+          "default": 2,
+          "advanced": true
         }
       },
       {
@@ -690,7 +748,8 @@
         "input": {
           "name": "Max Log Length",
           "type": "number",
-          "description": "Max number of characters or ID numbers being printed in log."
+          "description": "Max number of characters or ID numbers being printed in log.",
+          "advanced": true
         }
       },
       {
@@ -699,7 +758,8 @@
           "name": "Disable Logging Request",
           "type": "boolean",
           "description": "Disable logging requests.",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -707,7 +767,8 @@
         "input": {
           "name": "Tokenizer Name",
           "type": "string",
-          "description": "Tokenizer repo to use a different tokenizer than the model's default"
+          "description": "Tokenizer repo to use a different tokenizer than the model's default",
+          "advanced": true
         }
       },
       {
@@ -715,7 +776,8 @@
         "input": {
           "name": "Tokenizer Revision",
           "type": "string",
-          "description": "Tokenizer revision to load"
+          "description": "Tokenizer revision to load",
+          "advanced": true
         }
       },
       {
@@ -723,7 +785,8 @@
         "input": {
           "name": "Custom Chat Template",
           "type": "string",
-          "description": "Custom chat jinja template"
+          "description": "Custom chat jinja template",
+          "advanced": true
         }
       },
       {
@@ -732,7 +795,8 @@
           "name": "GPU Memory Utilization",
           "type": "number",
           "description": "Sets GPU VRAM utilization",
-          "default": 0.95
+          "default": 0.95,
+          "advanced": true
         }
       },
       {
@@ -741,7 +805,8 @@
           "name": "Block Size",
           "type": "number",
           "description": "Token block size for contiguous chunks of tokens",
-          "default": 16
+          "default": 16,
+          "advanced": true
         }
       },
       {
@@ -750,7 +815,8 @@
           "name": "Swap Space",
           "type": "number",
           "description": "CPU swap space size (GiB) per GPU",
-          "default": 4
+          "default": 4,
+          "advanced": true
         }
       },
       {
@@ -759,7 +825,8 @@
           "name": "Enforce Eager",
           "type": "boolean",
           "description": "Always use eager-mode PyTorch. If False (0), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -768,7 +835,8 @@
           "name": "CUDA Graph Max Content Length",
           "type": "number",
           "description": "Maximum context length covered by CUDA graphs. If a sequence has context length larger than this, we fall back to eager mode",
-          "default": 8192
+          "default": 8192,
+          "advanced": true
         }
       },
       {
@@ -777,7 +845,8 @@
           "name": "Disable Custom All Reduce",
           "type": "boolean",
           "description": "Enables or disables custom all reduce",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -786,7 +855,8 @@
           "name": "Default Final Batch Size",
           "type": "number",
           "description": "Default and Maximum batch size for token streaming to reduce HTTP calls",
-          "default": 50
+          "default": 50,
+          "advanced": true
         }
       },
       {
@@ -795,7 +865,8 @@
           "name": "Default Starting Batch Size",
           "type": "number",
           "description": "Batch size for the first request, which will be multiplied by the growth factor every subsequent request",
-          "default": 1
+          "default": 1,
+          "advanced": true
         }
       },
       {
@@ -804,7 +875,8 @@
           "name": "Default Batch Size Growth Factor",
           "type": "number",
           "description": "Growth factor for dynamic batch size",
-          "default": 3
+          "default": 3,
+          "advanced": true
         }
       },
       {
@@ -813,7 +885,8 @@
           "name": "Raw OpenAI Output",
           "type": "boolean",
           "description": "Raw OpenAI output instead of just the text",
-          "default": true
+          "default": true,
+          "advanced": true
         }
       },
       {
@@ -822,7 +895,8 @@
           "name": "OpenAI Response Role",
           "type": "string",
           "description": "Role of the LLM's Response in OpenAI Chat Completions",
-          "default": "assistant"
+          "default": "assistant",
+          "advanced": true
         }
       },
       {
@@ -830,7 +904,8 @@
         "input": {
           "name": "OpenAI Served Model Name Override",
           "type": "string",
-          "description": "Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests"
+          "description": "Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests",
+          "advanced": true
         }
       },
       {
@@ -839,7 +914,8 @@
           "name": "Max Concurrency",
           "type": "number",
           "description": "Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency",
-          "default": 300
+          "default": 300,
+          "advanced": true
         }
       },
       {
@@ -847,7 +923,8 @@
         "input": {
           "name": "Model Revision",
           "type": "string",
-          "description": "Model revision (branch) to load"
+          "description": "Model revision (branch) to load",
+          "advanced": true
         }
       },
       {
@@ -856,7 +933,8 @@
           "name": "Base Path",
           "type": "string",
           "description": "Storage directory for Huggingface cache and model",
-          "default": "/runpod-volume"
+          "default": "/runpod-volume",
+          "advanced": true
         }
       },
       {
@@ -865,7 +943,8 @@
           "name": "Disable Log Requests",
           "type": "boolean",
           "description": "Enables or disables vLLM request logging",
-          "default": true
+          "default": true,
+          "advanced": true
         }
       },
       {
@@ -874,7 +953,8 @@
           "name": "Enable Auto Tool Choice",
           "type": "boolean",
           "description": "Enables or disables auto tool choice",
-          "default": false
+          "default": false,
+          "advanced": true
         }
       },
       {
@@ -927,9 +1007,7 @@
               "value": "internlm"
             }
           ],
-          "default": ""
+          "default": "",
+          "advanced": true
         }
       }
-    ]
-  }
-}
