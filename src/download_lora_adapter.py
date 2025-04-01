@@ -13,6 +13,12 @@ import boto3
 
 aws_access_key_id = os.getenv("WASABI_ACCESS_KEY")
 aws_secret_access_key = os.getenv("WASABI_SECRET_ACCESS_KEY")
+adapter_path = os.getenv("WASABI_LORA_ADAPTER_PATH")
+
+print("WASABI_ACCESS_KEY: ", aws_access_key_id)
+print("WASABI_SECRET_ACCESS_KEY: ", aws_secret_access_key)
+print("WASABI_LORA_ADAPTER_PATH: ", adapter_path)
+
 # Endpoint is determined when bucket is created
 ENDPOINT_URL = 'https://s3.eu-west-1.wasabisys.com'
 
@@ -45,4 +51,4 @@ def download_s3_folder(s3_uri, local_dir=None):
         bucket.download_file(obj.key, str(target))
 
 if __name__ == "__main__":
-    download_s3_folder(os.getenv("WASABI_LORA_ADAPTER_PATH"))
+    download_s3_folder(adapter_path)
