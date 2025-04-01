@@ -5,14 +5,14 @@ from urllib.parse import urlparse
 import boto3
 
 # Use the following code to connect using Wasabi profile from .aws/credentials file
-# session = boto3.Session(profile_name="default")
-# credentials = session.get_credentials()
+session = boto3.Session(profile_name="default")
+credentials = session.get_credentials()
 #
-# aws_access_key_id = credentials.access_key
-# aws_secret_access_key = credentials.secret_key
+aws_access_key_id = credentials.access_key
+aws_secret_access_key = credentials.secret_key
 
-aws_access_key_id = os.getenv("WASABI_ACCESS_KEY")
-aws_secret_access_key = os.getenv("WASABI_SECRET_ACCESS_KEY")
+# aws_access_key_id = os.getenv("WASABI_ACCESS_KEY")
+# aws_secret_access_key = os.getenv("WASABI_SECRET_ACCESS_KEY")
 adapter_path = os.getenv("WASABI_LORA_ADAPTER_PATH")
 
 print("WASABI_ACCESS_KEY: ", aws_access_key_id)
