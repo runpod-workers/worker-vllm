@@ -46,5 +46,21 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     python3 /src/download_model.py; \
     fi
 
+# Customisations for LoRA adapters in wasabi
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install boto3
+
+#ENV WASABI_LORA_ADAPTER_PATH=$WASABI_LORA_ADAPTER_PATH
+#ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+#ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+RUN mkdir /model_adapter
+# using credentials file
+#RUN --mount=type=secret,id=aws,target=/root/.aws/credentials \
+#    python3 /src/download_lora_adapter.py
+
+# using secrets injected as ENV vars
+RUN python3 /src/download_lora_adapter.py
+
 # Start the handler
 CMD ["python3", "/src/handler.py"]
