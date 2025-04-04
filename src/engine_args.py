@@ -147,6 +147,9 @@ def get_engine_args():
     
     # Rename and match to vllm args
     args = match_vllm_args(args)
+
+    if args.get("load_format") == "bitsandbytes":
+        args["quantization"] = args["load_format"]
     
     # Set tensor parallel size and max parallel loading workers if more than 1 GPU is available
     num_gpus = device_count()
