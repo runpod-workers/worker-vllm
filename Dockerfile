@@ -11,12 +11,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade -r /requirements.txt
 
-
 # Install vLLM (switching back to pip installs since issues that required building fork are fixed and space optimization is not as important since caching) and FlashInfer
 RUN python3 -m pip install vllm==0.8.2 && \
-    python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3
-    python3 -m pip install --system git+https://github.com/huggingface/transformers@v4.49.0-Mistral-3
-    python3 -m pip install --system git+https://github.com/huggingface/transformers@v4.49.0-Gemma-3
+    python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3 && \
+    python3 -m pip install git+https://github.com/huggingface/transformers@v4.49.0-Mistral-3 && \
+    python3 -m pip install git+https://github.com/huggingface/transformers@v4.49.0-Gemma-3
 
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
@@ -38,7 +37,6 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_HUB_ENABLE_HF_TRANSFER=0
 
 ENV PYTHONPATH="/:/vllm-workspace"
-
 
 COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
