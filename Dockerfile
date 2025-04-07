@@ -1,7 +1,7 @@
 FROM nvidia/cuda:12.1.0-base-ubuntu22.04
 
 RUN apt-get update -y \
-    && apt-get install -y python3-pip
+    && apt-get install -y python3-pip git
 
 RUN ldconfig /usr/local/cuda-12.1/compat/
 
