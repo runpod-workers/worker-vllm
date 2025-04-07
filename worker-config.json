@@ -1,5 +1,66 @@
 {
   "versions": {
+    "0.8.3": {
+      "imageName": "runpod/worker-v1-vllm:v2.3.0stable-cuda12.1.0",
+      "minimumCudaVersion": "12.1",
+      "categories": [
+        {
+          "title": "LLM Settings",
+          "settings": [
+            "TOKENIZER", "TOKENIZER_MODE", "SKIP_TOKENIZER_INIT", "TRUST_REMOTE_CODE",
+            "DOWNLOAD_DIR", "LOAD_FORMAT", "DTYPE", "KV_CACHE_DTYPE", "QUANTIZATION_PARAM_PATH",
+            "MAX_MODEL_LEN", "GUIDED_DECODING_BACKEND", "DISTRIBUTED_EXECUTOR_BACKEND",
+            "WORKER_USE_RAY", "RAY_WORKERS_USE_NSIGHT", "PIPELINE_PARALLEL_SIZE",
+            "TENSOR_PARALLEL_SIZE", "MAX_PARALLEL_LOADING_WORKERS", "ENABLE_PREFIX_CACHING",
+            "DISABLE_SLIDING_WINDOW", "NUM_LOOKAHEAD_SLOTS",
+            "SEED", "NUM_GPU_BLOCKS_OVERRIDE", "MAX_NUM_BATCHED_TOKENS", "MAX_NUM_SEQS",
+            "MAX_LOGPROBS", "DISABLE_LOG_STATS", "QUANTIZATION", "ROPE_SCALING", "ROPE_THETA",
+            "TOKENIZER_POOL_SIZE", "TOKENIZER_POOL_TYPE", "TOKENIZER_POOL_EXTRA_CONFIG",
+            "ENABLE_LORA", "MAX_LORAS", "MAX_LORA_RANK", "LORA_EXTRA_VOCAB_SIZE",
+            "LORA_DTYPE", "LONG_LORA_SCALING_FACTORS", "MAX_CPU_LORAS", "FULLY_SHARDED_LORAS",
+            "DEVICE", "SCHEDULER_DELAY_FACTOR", "ENABLE_CHUNKED_PREFILL", "SPECULATIVE_MODEL",
+            "NUM_SPECULATIVE_TOKENS", "SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE",
+            "SPECULATIVE_MAX_MODEL_LEN", "SPECULATIVE_DISABLE_BY_BATCH_SIZE",
+            "NGRAM_PROMPT_LOOKUP_MAX", "NGRAM_PROMPT_LOOKUP_MIN", "SPEC_DECODING_ACCEPTANCE_METHOD",
+            "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD", "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
+            "MODEL_LOADER_EXTRA_CONFIG", "PREEMPTION_MODE", "PREEMPTION_CHECK_PERIOD",
+            "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST",
+            "ENABLE_AUTO_TOOL_CHOICE", "TOOL_CALL_PARSER"
+          ]
+        },
+        {
+          "title": "Tokenizer Settings",
+          "settings": [
+            "TOKENIZER_NAME", "TOKENIZER_REVISION", "CUSTOM_CHAT_TEMPLATE"
+          ]
+        },
+        {
+          "title": "System Settings",
+          "settings": [
+            "GPU_MEMORY_UTILIZATION", "MAX_PARALLEL_LOADING_WORKERS", "BLOCK_SIZE",
+            "SWAP_SPACE", "ENFORCE_EAGER", "MAX_SEQ_LEN_TO_CAPTURE", "DISABLE_CUSTOM_ALL_REDUCE"
+          ]
+        },
+        {
+          "title": "Streaming Settings",
+          "settings": [
+            "DEFAULT_BATCH_SIZE", "DEFAULT_MIN_BATCH_SIZE", "DEFAULT_BATCH_SIZE_GROWTH_FACTOR"
+          ]
+        },
+        {
+          "title": "OpenAI Settings",
+          "settings": [
+            "RAW_OPENAI_OUTPUT", "OPENAI_RESPONSE_ROLE", "OPENAI_SERVED_MODEL_NAME_OVERRIDE"
+          ]
+        },
+        {
+          "title": "Serverless Settings",
+          "settings": [
+            "MAX_CONCURRENCY", "DISABLE_LOG_STATS", "DISABLE_LOG_REQUESTS"
+          ]
+        }
+      ]
+    },
     "0.8.2": {
       "imageName": "runpod/worker-v1-vllm:v2.2.0stable-cuda12.1.0",
       "minimumCudaVersion": "12.1",
