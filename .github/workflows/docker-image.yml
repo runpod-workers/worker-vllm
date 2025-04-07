@@ -34,12 +34,6 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/your-image-name:latest
 
-      - name: Cleanup after build
-        if: always()
-        run: |
-          sudo rm -rf /tmp/*
-          docker system prune -af
-
       - name: Send success notification
         if: success()
         run: |
