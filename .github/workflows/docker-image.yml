@@ -29,16 +29,25 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/your-image-name:latest
 
-      # Add this step to send failure notification to Mattermost
+      - name: Send success notification to Mattermost
+        if: success()  # This ensures it only runs if all previous steps succeeded
+        uses: appleboy/mattermost-action@master
+        with:
+          webhook_url: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          message: |
+            :white_check_mark: **Build Succeeded!**
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            [See Action Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
       - name: Send failure notification to Mattermost
         if: failure()  # This ensures it only runs if a previous step failed
-        uses: tferreira/mattermost-action@master
+        uses: appleboy/mattermost-action@master
         with:
-          webhook-url: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
-          #channel: 'builds-channel'  # Optional: specify channel
-          #username: 'GitHub Actions'  # Optional: override username
-          #icon-url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'  # Optional
-          text: |
+          webhook_url: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          message: |
             :x: **Build Failed!**
             Repository: ${{ github.repository }}
             Branch: ${{ github.ref_name }}
