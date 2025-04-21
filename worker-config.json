@@ -25,7 +25,7 @@
             "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD", "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
             "MODEL_LOADER_EXTRA_CONFIG", "PREEMPTION_MODE", "PREEMPTION_CHECK_PERIOD",
             "PREEMPTION_CPU_CAPACITY", "MAX_LOG_LEN", "DISABLE_LOGGING_REQUEST",
-            "ENABLE_AUTO_TOOL_CHOICE", "TOOL_CALL_PARSER"
+            "ENABLE_AUTO_TOOL_CHOICE", "TOOL_CALL_PARSER", "LIMIT_MM_PER_PROMPT"
           ]
         },
         {
@@ -1262,6 +1262,14 @@
       { "value": "pythonic", "label": "Pythonic" },
       { "value": "internlm", "label": "InternLM" }
     ]
+  },
+  "LIMIT_MM_PER_PROMPT": {
+    "env_var_name": "LIMIT_MM_PER_PROMPT",
+    "value": "image=1",
+    "title": "Limit MM Per Prompt",
+    "description": "Limit MM per prompt",
+    "required": false,
+    "type": "text"
   }
 }
 }
