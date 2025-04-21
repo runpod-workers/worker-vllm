@@ -125,7 +125,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `MAX_NUM_SEQS`                            | 256                   | `int`                                      | Maximum number of sequences per iteration. |
 | `MAX_LOGPROBS`                            | 20                    | `int`                                      | Max number of log probs to return when logprobs is specified in SamplingParams. |
 | `DISABLE_LOG_STATS`                       | False                 | `bool`                                     | Disable logging statistics. |
-| `QUANTIZATION`                            | None                  | ['awq', 'squeezellm', 'gptq']              | Method used to quantize the weights. |
+| `QUANTIZATION`                            | None                  | ['awq', 'squeezellm', 'gptq', 'bitsandbytes']              | Method used to quantize the weights. |
 | `ROPE_SCALING`                            | None                  | `dict`                                     | RoPE scaling configuration in JSON format. |
 | `ROPE_THETA`                              | None                  | `float`                                    | RoPE theta. Use with rope_scaling. |
 | `TOKENIZER_POOL_SIZE`                     | 0                     | `int`                                      | Size of tokenizer pool to use for asynchronous tokenization. |

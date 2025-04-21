@@ -802,14 +802,15 @@
     "env_var_name": "QUANTIZATION",
     "value": "",
     "title": "Quantization",
-    "description": "Method used to quantize the weights.",
+    "description": "Method used to quantize the weights.\nif the `Load Format` is 'bitsandbytes' then `Quantization` will be forced to 'bitsandbytes'",
     "required": false,
     "type": "select",
     "options": [
       { "value": "None", "label": "None" },
       { "value": "awq", "label": "AWQ" },
       { "value": "squeezellm", "label": "SqueezeLLM" },
-      { "value": "gptq", "label": "GPTQ" }
+      { "value": "gptq", "label": "GPTQ" },
+      { "value": "bitsandbytes", "label": "bitsandbytes" }
     ]
   },
   "ROPE_SCALING": {
