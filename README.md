@@ -38,9 +38,8 @@ Worker vLLM is now cached on all RunPod machines, resulting in near-instant depl
     - [Environment Variables](#environment-variables)
       - [LLM Settings](#llm-settings)
       - [Tokenizer Settings](#tokenizer-settings)
-      - [Tensor Parallelism (Multi-GPU) Settings](#tensor-parallelism-multi-gpu-settings)
-      - [System Settings](#system-settings)
-      - [Streaming Batch Size](#streaming-batch-size)
+      - [System and Parallelism Settings](#system-and-parallelism-settings)
+      - [Streaming Batch Size Settings](#streaming-batch-size-settings)
       - [OpenAI Settings](#openai-settings)
       - [Serverless Settings](#serverless-settings)
   - [Option 2: Build Docker Image with Model Inside](#option-2-build-docker-image-with-model-inside)
@@ -91,9 +90,10 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 #### Prerequisites
 - RunPod Account
 
-#### Environment Variables/Settings
+#### Environment Variables
 > Note:  `0` is equivalent to `False` and `1` is equivalent to `True` for boolean as int values.
 
+#### LLM Settings
 | `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
 |-------------------------------------------|-----------------------|--------------------------------------------|---------------|
 | `MODEL_NAME`                                   | 'facebook/opt-125m'   | `str`                                      | Name or path of the Hugging Face model to use. |
@@ -157,11 +157,20 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `PREEMPTION_CPU_CAPACITY`                 | 2                     | `float`                                    | The percentage of CPU memory used for the saved activations. |
 | `DISABLE_LOGGING_REQUEST`                 | False                 | `bool`                                     | Disable logging requests. |
 | `MAX_LOG_LEN`                             | None                  | `int`                                      | Max number of prompt characters or prompt ID numbers being printed in log. |
-**Tokenizer Settings**
+
+
+#### Tokenizer Settings
+
+| `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
+|-------------------------------------------|-----------------------|--------------------------------------------|---------------|
 | `TOKENIZER_NAME`                    | `None`               | `str`                                         |Tokenizer repository to use a different tokenizer than the model's default. |
 | `TOKENIZER_REVISION`                | `None`               | `str`                                         |Tokenizer revision to load. |
 | `CUSTOM_CHAT_TEMPLATE`              | `None`               | `str` of single-line jinja template                                         |Custom chat jinja template. [More Info](https://huggingface.co/docs/transformers/chat_templating) |
-**System, GPU, and Tensor Parallelism(Multi-GPU) Settings**
+
+#### System and Parallelism Settings
+
+| `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
+|-------------------------------------------|-----------------------|--------------------------------------------|---------------|
 | `GPU_MEMORY_UTILIZATION`            | `0.95`               | `float`                                         |Sets GPU VRAM utilization. |
 | `MAX_PARALLEL_LOADING_WORKERS`      | `None`               | `int`                                         |Load model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models. |
 | `BLOCK_SIZE`                        | `16`                 | `8`, `16`, `32`                           |Token block size for contiguous chunks of tokens. |
@@ -169,16 +178,31 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 | `ENFORCE_EAGER`                     | False                  | `bool`                                         |Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. |
 | `MAX_SEQ_LEN_TO_CAPTURE`        | `8192`               | `int`                                     |Maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode.|
 | `DISABLE_CUSTOM_ALL_REDUCE`         | `0`                  | `int`                                         |Enables or disables custom all reduce. |
-**Streaming Batch Size Settings**:  
+
+
+#### Streaming Batch Size Settings
+
+The way this works is that the first request will have a batch size of `DEFAULT_MIN_BATCH_SIZE`, and each subsequent request will have a batch size of `previous_batch_size * DEFAULT_BATCH_SIZE_GROWTH_FACTOR`. This will continue until the batch size reaches `DEFAULT_BATCH_SIZE`. E.g. for the default values, the batch sizes will be `1, 3, 9, 27, 50, 50, 50, ...`. You can also specify this per request, with inputs `max_batch_size`, `min_batch_size`, and `batch_size_growth_factor`. This has nothing to do with vLLM's internal batching, but rather the number of tokens sent in each HTTP request from the worker
+
+
+| `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
+|-------------------------------------------|-----------------------|--------------------------------------------|---------------|
 | `DEFAULT_BATCH_SIZE`                | `50`                 | `int`                                         |Default and Maximum batch size for token streaming to reduce HTTP calls. |
 | `DEFAULT_MIN_BATCH_SIZE`            | `1`                  | `int`                                         |Batch size for the first request, which will be multiplied by the growth factor every subsequent request. |
 | `DEFAULT_BATCH_SIZE_GROWTH_FACTOR`  | `3`                  | `float`                                         |Growth factor for dynamic batch size. |
-The way this works is that the first request will have a batch size of `DEFAULT_MIN_BATCH_SIZE`, and each subsequent request will have a batch size of `previous_batch_size * DEFAULT_BATCH_SIZE_GROWTH_FACTOR`. This will continue until the batch size reaches `DEFAULT_BATCH_SIZE`. E.g. for the default values, the batch sizes will be `1, 3, 9, 27, 50, 50, 50, ...`. You can also specify this per request, with inputs `max_batch_size`, `min_batch_size`, and `batch_size_growth_factor`. This has nothing to do with vLLM's internal batching, but rather the number of tokens sent in each HTTP request from the worker |
-**OpenAI Settings**
+
+#### OpenAI Settings
+
+| `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
+|-------------------------------------------|-----------------------|--------------------------------------------|---------------|
 | `RAW_OPENAI_OUTPUT`                 | `1`                  | boolean as `int`                                         |Enables raw OpenAI SSE format string output when streaming.  **Required** to be enabled (which it is by default) for OpenAI compatibility. |
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | `None`               | `str`                                         |Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests |
 | `OPENAI_RESPONSE_ROLE`              | `assistant`          | `str`                       |Role of the LLM's Response in OpenAI Chat Completions. |
-**Serverless Settings**
+
+#### Serverless Settings
+
+| `Name`                                    | `Default`             | `Type/Choices`                             | `Description` |
+|-------------------------------------------|-----------------------|--------------------------------------------|---------------|
 | `MAX_CONCURRENCY`                   | `300`                | `int`                                         |Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency |
 | `DISABLE_LOG_STATS`                 | False                  | `bool`                                         |Enables or disables vLLM stats logging. |
 | `DISABLE_LOG_REQUESTS`              | False                  | `bool`                                         |Enables or disables vLLM request logging. |
