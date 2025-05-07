@@ -17,10 +17,6 @@
                 "value": "facebook/opt-350m"
             },
             {
-                "key": "HF_TOKEN",
-                "value": "hf_dummy_token_for_testing_purposes_only"
-            },
-            {
                 "key": "MAX_MODEL_LEN",
                 "value": "8192"
             },
