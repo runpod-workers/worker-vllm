@@ -1,12 +1,17 @@
-import os
+import logging
+
 import runpod
-from utils import JobInput
+
 from engine import vLLMEngine, OpenAIvLLMEngine
+from utils import JobInput
+
+log = logging.getLogger(__name__)
 
 vllm_engine = vLLMEngine()
 OpenAIvLLMEngine = OpenAIvLLMEngine(vllm_engine)
 
 async def handler(job):
+    log.info("handle(job=%s)", job)
     job_input = JobInput(job["input"])
     engine = OpenAIvLLMEngine if job_input.openai_route else vllm_engine
     results_generator = engine.generate(job_input)
