@@ -122,31 +122,40 @@ class OpenAIvLLMEngine(vLLMEngine):
         super().__init__(vllm_engine)
         self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
+        self.lora_adapters = self._load_lora_adapters()
         asyncio.run(self._initialize_engines())
         self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
-        
+
+    def _load_lora_adapters(self):
+        adapters = []
+        try:
+            adapters = json.loads(os.getenv("LORA_MODULES", '[]'))
+        except Exception as e:
+            logging.info(f"---Initialized adapter json load error: {e}")
+
+        for i, adapter in enumerate(adapters):
+            try:
+                adapters[i] = LoRAModulePath(**adapter)
+                logging.info(f"---Initialized adapter: {adapter}")
+            except Exception as e:
+                logging.info(f"---Initialized adapter not worked: {e}")
+                continue
+        return adapters
+
     async def _initialize_engines(self):
         self.model_config = await self.llm.get_model_config()
         self.base_model_paths = [
             BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
         ]
 
-        lora_modules = os.getenv('LORA_MODULES', None)
-        if lora_modules is not None:
-            try:
-                lora_modules = json.loads(lora_modules)
-                lora_modules = [LoRAModulePath(**lora_modules)]
-            except:
-                lora_modules = None
-
         self.serving_models = OpenAIServingModels(
             engine_client=self.llm,
             model_config=self.model_config,
             base_model_paths=self.base_model_paths,
-            lora_modules=None,
+            lora_modules=self.lora_adapters,
             prompt_adapters=None,
         )
-
+        await self.serving_models.init_static_loras()
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             model_config=self.model_config,
