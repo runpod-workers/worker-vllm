@@ -122,7 +122,7 @@ def get_local_args():
         local_args = json.load(f)
 
     if local_args.get("MODEL_NAME") is None:
-        raise ValueError("Model name not found in /local_model_args.json. There was a problem when baking the model in.")
+        logging.warning("Model name not found in /local_model_args.json. There maybe was a problem when baking the model in.")
 
     logging.info(f"Using baked in model with args: {local_args}")
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
