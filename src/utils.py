@@ -15,9 +15,14 @@ except ImportError:
 
 logging.basicConfig(level=logging.INFO)
 
+# Updated to parse multiple comma-separated multimodal limits (e.g., 'image=1,video=0')
 def convert_limit_mm_per_prompt(input_string: str):
-    key, value = input_string.split('=')
-    return {key: int(value)}
+    result = {}
+    pairs = input_string.split(',')
+    for pair in pairs:
+        key, value = pair.split('=')
+        result[key] = int(value)
+    return result
 
 def count_physical_cores():
     with open('/proc/cpuinfo') as f:
