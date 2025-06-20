@@ -25,14 +25,67 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.engine_args = get_engine_args()
         logging.info(f"Engine args: {self.engine_args}")
-        self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
-                                          self.engine_args.tokenizer_revision, 
-                                          self.engine_args.trust_remote_code)
+        
+        # Initialize vLLM engine first
         self.llm = self._initialize_llm() if engine is None else engine.llm
+        
+        # Only create custom tokenizer wrapper if not using mistral tokenizer mode
+        # For mistral models, let vLLM handle tokenizer initialization
+        if self.engine_args.tokenizer_mode != 'mistral':
+            self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
+                                              self.engine_args.tokenizer_revision, 
+                                              self.engine_args.trust_remote_code)
+        else:
+            # For mistral models, we'll get the tokenizer from vLLM later
+            self.tokenizer = None
+            
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
         self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", DEFAULT_BATCH_SIZE_GROWTH_FACTOR))
         self.min_batch_size = int(os.getenv("MIN_BATCH_SIZE", DEFAULT_MIN_BATCH_SIZE))
+
+    def _get_tokenizer_for_chat_template(self):
+        """Get tokenizer for chat template application"""
+        if self.tokenizer is not None:
+            return self.tokenizer
+        else:
+            # For mistral models, get tokenizer from vLLM engine
+            # This is a fallback - ideally chat templates should be handled by vLLM directly
+            try:
+                from transformers import AutoTokenizer
+                tokenizer = AutoTokenizer.from_pretrained(
+                    self.engine_args.tokenizer or self.engine_args.model,
+                    revision=self.engine_args.tokenizer_revision or "main",
+                    trust_remote_code=self.engine_args.trust_remote_code
+                )
+                # Create a minimal wrapper
+                class MinimalTokenizerWrapper:
+                    def __init__(self, tokenizer):
+                        self.tokenizer = tokenizer
+                        self.custom_chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
+                        self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)
+                        if self.custom_chat_template and isinstance(self.custom_chat_template, str):
+                            self.tokenizer.chat_template = self.custom_chat_template
+                    
+                    def apply_chat_template(self, input):
+                        if isinstance(input, list):
+                            if not self.has_chat_template:
+                                raise ValueError(
+                                    "Chat template does not exist for this model, you must provide a single string input instead of a list of messages"
+                                )
+                        elif isinstance(input, str):
+                            input = [{"role": "user", "content": input}]
+                        else:
+                            raise ValueError("Input must be a string or a list of messages")
+                        
+                        return self.tokenizer.apply_chat_template(
+                            input, tokenize=False, add_generation_prompt=True
+                        )
+                
+                return MinimalTokenizerWrapper(tokenizer)
+            except Exception as e:
+                logging.error(f"Failed to create fallback tokenizer: {e}")
+                raise e
 
     def dynamic_batch_size(self, current_batch_size, batch_size_growth_factor):
         return min(current_batch_size*batch_size_growth_factor, self.default_batch_size)
@@ -55,7 +108,8 @@ class vLLMEngine:
 
     async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, batch_size_growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
         if apply_chat_template or isinstance(llm_input, list):
-            llm_input = self.tokenizer.apply_chat_template(llm_input)
+            tokenizer_wrapper = self._get_tokenizer_for_chat_template()
+            llm_input = tokenizer_wrapper.apply_chat_template(llm_input)
         results_generator = self.llm.generate(llm_input, validated_sampling_params, request_id)
         n_responses, n_input_tokens, is_first_output = validated_sampling_params.n, 0, True
         last_output_texts, token_counters = ["" for _ in range(n_responses)], {"batch": 0, "total": 0}
@@ -156,13 +210,19 @@ class OpenAIvLLMEngine(vLLMEngine):
             prompt_adapters=None,
         )
         await self.serving_models.init_static_loras()
+        
+        # Get chat template from vLLM tokenizer if available
+        chat_template = None
+        if self.tokenizer and hasattr(self.tokenizer, 'tokenizer'):
+            chat_template = self.tokenizer.tokenizer.chat_template
+        
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             model_config=self.model_config,
             models=self.serving_models,
             response_role=self.response_role,
             request_logger=None,
-            chat_template=self.tokenizer.tokenizer.chat_template,
+            chat_template=chat_template,
             chat_template_content_format="auto",
             # enable_reasoning=os.getenv('ENABLE_REASONING', 'false').lower() == 'true',
             reasoning_parser= os.getenv('REASONING_PARSER', "") or None,
