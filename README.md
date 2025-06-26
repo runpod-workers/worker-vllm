@@ -18,9 +18,9 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 ### 1. UI for Deploying vLLM Worker on RunPod console:
 ![Demo of Deploying vLLM Worker on RunPod console with new UI](media/ui_demo.gif)
 
-### 2. Worker vLLM `v2.6.0` with vLLM `0.9.0` now available under `stable` tags 
+### 2. Worker vLLM `v2.7.0` with vLLM `0.9.1` now available under `stable` tags 
 
-Update v2.6.0 is now available, use the image tag `runpod/worker-v1-vllm:v2.6.0stable-cuda12.1.0`.
+Update v2.7.0 is now available, use the image tag `runpod/worker-v1-vllm:v2.7.0stable-cuda12.1.0`.
 
 ### 3. OpenAI-Compatible [Embedding Worker](https://github.com/runpod-workers/worker-infinity-embedding) Released
 Deploy your own OpenAI-compatible Serverless Endpoint on RunPod with multiple embedding models and fast inference for RAG and more! 
@@ -81,7 +81,7 @@ Below is a summary of the available RunPod Worker images, categorized by image s
 
 | CUDA Version | Stable Image Tag                  | Development Image Tag             | Note                                                        |
 |--------------|-----------------------------------|-----------------------------------|----------------------------------------------------------------------|
-| 12.1.0       | `runpod/worker-v1-vllm:v2.6.0stable-cuda12.1.0` | `runpod/worker-v1-vllm:v2.6.0dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
+| 12.1.0       | `runpod/worker-v1-vllm:v2.7.0stable-cuda12.1.0` | `runpod/worker-v1-vllm:v2.7.0dev-cuda12.1.0` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. |
 
 
 
