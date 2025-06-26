@@ -26,6 +26,7 @@ DEFAULT_ARGS = {
     "trust_remote_code": os.getenv('TRUST_REMOTE_CODE', 'False').lower() == 'true',
     "download_dir": os.getenv('DOWNLOAD_DIR', None),
     "load_format": os.getenv('LOAD_FORMAT', 'auto'),
+    "config_format": os.getenv('CONFIG_FORMAT', 'auto'),
     "dtype": os.getenv('DTYPE', 'auto'),
     "kv_cache_dtype": os.getenv('KV_CACHE_DTYPE', 'auto'),
     "quantization_param_path": os.getenv('QUANTIZATION_PARAM_PATH', None),
