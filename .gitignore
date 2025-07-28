@@ -4,3 +4,5 @@ runpod.toml
 .env
 test/*
 vllm-base/vllm-*
+.vscode
+venv
