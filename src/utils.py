@@ -74,7 +74,7 @@ class JobInput:
         self.llm_input = get_llm_input(job)
         self.stream = job.get("stream", False)
         self.max_batch_size = job.get("max_batch_size")
-        self.apply_chat_template = job.get("apply_chat_template", False)
+        self.apply_chat_template = job.get("apply_chat_template", job.get("messages") is not None)
         self.use_openai_format = job.get("use_openai_format", False)
         samp_param = job.get("sampling_params", {})
         if "max_tokens" not in samp_param:
