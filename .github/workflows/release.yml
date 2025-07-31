@@ -56,16 +56,6 @@ jobs:
             *.args.RELEASE_VERSION=${{ env.RELEASE_VERSION }}
             *.args.HUGGINGFACE_ACCESS_TOKEN=${{ env.HUGGINGFACE_ACCESS_TOKEN }}
 
-      - name: Build and push latest tag
-        uses: docker/bake-action@v2
-        with:
-          push: true
-          set: |
-            *.args.DOCKERHUB_REPO=${{ env.DOCKERHUB_REPO }}
-            *.args.DOCKERHUB_IMG=${{ env.DOCKERHUB_IMG }}
-            *.args.RELEASE_VERSION=latest
-            *.args.HUGGINGFACE_ACCESS_TOKEN=${{ env.HUGGINGFACE_ACCESS_TOKEN }}
-
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
@@ -76,9 +66,7 @@ jobs:
           body: |
             Release ${{ github.ref_name }}
 
-            Docker Images:
-            - `${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}`
-            - `${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:latest`
+            Docker Image: `${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}`
 
             ## Changes
             See [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for detailed changes.

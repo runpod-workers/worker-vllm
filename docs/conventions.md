@@ -59,7 +59,7 @@ RunPod Request → handler.py → JobInput → Engine Selection → vLLM Generat
 
 #### Option 1: Pre-built Images (Recommended)
 
-- **Image**: `runpod/worker-v1-vllm:latest` (or specific version tags like `2.7.0`)
+- **Image**: `runpod/worker-v1-vllm:<version>` (see [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases))
 - **Configuration**: Entirely via environment variables
 - **Model Loading**: Downloads model at runtime from Hugging Face
 - **Use Case**: Quick deployment, model experimentation
@@ -175,7 +175,7 @@ src/
 #### CI/CD Strategy:
 
 - **Development Builds**: All non-main branches → `runpod/worker-v1-vllm:dev-<branch-name>`
-- **Release Builds**: Git tags (numeric) only → `runpod/worker-v1-vllm:<version>` + `latest`
+- **Release Builds**: Git tags (numeric) only → `runpod/worker-v1-vllm:<version>`
 - **Dependency Updates**: Automated runpod package version monitoring
 
 #### Docker Bake Configuration:
@@ -189,16 +189,15 @@ src/
 ### 1. **Version Tagging**
 
 - **Development**: `dev-<branch-name>` (e.g., `dev-feature-new-api`)
-- **Latest Release**: `latest` (always points to most recent stable release)
 - **Specific Versions**: `2.7.0`, `2.8.0` (semantic versioning without "v" prefix)
-- **Date Snapshots**: `20241215` (YYYYMMDD format for main branch builds)
+- **Version Discovery**: Check [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases) for available versions
 
 ### 2. **Release Workflow**
 
 1. **Feature Development**: Work on feature branches → triggers dev builds
 2. **Main Branch Staging**: Merge features to main → stable codebase (no builds)
-3. **Version Release**: Create git tag from main branch (e.g., `2.8.0`) → triggers versioned release + `latest` + GitHub release
-4. **Docker Hub**: All builds pushed with appropriate tags
+3. **Version Release**: Create git tag from main branch (e.g., `2.8.0`) → triggers versioned release + GitHub release
+4. **Docker Hub**: Versioned image pushed with tag
 
 ### 3. **Branch Strategy**
 
@@ -209,8 +208,8 @@ src/
 ### 4. **Deployment Recommendations**
 
 - **Production**: Use specific version tags (e.g., `2.7.0`) for stability
-- **Staging**: Use `latest` for recent stable features
 - **Development**: Use `dev-<branch>` for testing specific features
+- **Version Selection**: Check [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases) for available versions
 - **Release Process**: Always tag from main branch: `git checkout main && git tag 2.8.0 && git push origin 2.8.0`
 
 ## Performance & Scaling Considerations

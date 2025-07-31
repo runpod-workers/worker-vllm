@@ -22,7 +22,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ### 2. Worker vLLM with latest vLLM version now available
 
-The latest Worker vLLM is now available. Use the image tag `runpod/worker-v1-vllm:latest` for the most recent release, or check [Docker Hub](https://hub.docker.com/r/runpod/worker-v1-vllm/tags) for specific version tags.
+The latest Worker vLLM is now available. See [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases) for available versions.
 
 ### 3. OpenAI-Compatible [Embedding Worker](https://github.com/runpod-workers/worker-infinity-embedding) Released
 
@@ -80,9 +80,9 @@ We now offer a pre-built Docker Image for the vLLM Worker that you can configure
 
 Below is a summary of the available RunPod Worker images, categorized by image stability and CUDA version compatibility.
 
-| CUDA Version | Stable Image Tag               | Development Image Tag                     | Note                                                                                                                                                     |
-| ------------ | ------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 12.1.0       | `runpod/worker-v1-vllm:latest` | `runpod/worker-v1-vllm:dev-<branch-name>` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. Use `latest` for stable releases or specific version tags like `2.7.0` |
+| CUDA Version | Stable Image Tag                  | Development Image Tag                     | Note                                                                                                                                                                                   |
+| ------------ | --------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 12.1.0       | `runpod/worker-v1-vllm:<version>` | `runpod/worker-v1-vllm:dev-<branch-name>` | When creating an Endpoint, select CUDA Version 12.3, 12.2 and 12.1 in the filter. See [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases) for available versions |
 
 ---
 
@@ -652,7 +652,7 @@ The JSON consists of two main parts, schema and versions.
 {
   "versions": {
     "0.5.4": {
-      "imageName": "runpod/worker-v1-vllm:1.2.0stable-cuda12.1.0",
+      "imageName": "runpod/worker-v1-vllm:<version>",
       "minimumCudaVersion": "12.1",
       "categories": [
         {
