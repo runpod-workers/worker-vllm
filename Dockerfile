@@ -16,7 +16,7 @@ RUN python3 -m pip install vllm==0.9.1 && \
     python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3
 
 # Setup for Option 2: Building the Image with the Model included
-ARG MODEL_NAME=""
+ARG MODEL_NAME="openai/gpt-oss-120b"
 ARG TOKENIZER_NAME=""
 ARG BASE_PATH="/runpod-volume"
 ARG QUANTIZATION=""
