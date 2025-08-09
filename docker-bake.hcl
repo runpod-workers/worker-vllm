@@ -1,26 +1,32 @@
-variable "DOCKERHUB_REPO" {
+variable "PUSH" {
+  default = "true"
+}
+
+variable "REPOSITORY" {
   default = "runpod"
 }
 
-variable "DOCKERHUB_IMG" {
-  default = "worker-v1-vllm"
+variable "BASE_IMAGE_VERSION" {
+  default = "v2.7.0stable"
 }
 
-variable "RELEASE_VERSION" {
-  default = "latest"
+group "all" {
+  targets = ["main"]
 }
 
-variable "HUGGINGFACE_ACCESS_TOKEN" {
-  default = ""
+
+group "main" {
+  targets = ["worker-1210"]
 }
 
-group "default" {
-  targets = ["worker-vllm"]
-}
-
-target "worker-vllm" {
-  tags = ["${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}"]
+ 
+target "worker-1210" {
+  tags = ["${REPOSITORY}/worker-v1-vllm:${BASE_IMAGE_VERSION}-cuda12.1.0"]
   context = "."
   dockerfile = "Dockerfile"
-  platforms = ["linux/amd64"]
+  args = {
+    BASE_IMAGE_VERSION = "${BASE_IMAGE_VERSION}"
+    WORKER_CUDA_VERSION = "12.1.0"
+  }
+  output = ["type=docker,push=${PUSH}"]
 }
