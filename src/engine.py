@@ -207,7 +207,6 @@ class OpenAIvLLMEngine(vLLMEngine):
             model_config=self.model_config,
             base_model_paths=self.base_model_paths,
             lora_modules=self.lora_adapters,
-            prompt_adapters=None,
         )
         await self.serving_models.init_static_loras()
         
