@@ -178,7 +178,12 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
         self.lora_adapters = self._load_lora_adapters()
         asyncio.run(self._initialize_engines())
-        self.raw_openai_output = bool(int(os.getenv("RAW_OPENAI_OUTPUT", 1)))
+        # Handle both integer and boolean string values for RAW_OPENAI_OUTPUT
+        raw_output_env = os.getenv("RAW_OPENAI_OUTPUT", "1")
+        if raw_output_env.lower() in ('true', 'false'):
+            self.raw_openai_output = raw_output_env.lower() == 'true'
+        else:
+            self.raw_openai_output = bool(int(raw_output_env))
 
     def _load_lora_adapters(self):
         adapters = []
