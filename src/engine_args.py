@@ -111,7 +111,7 @@ def match_vllm_args(args):
     """
     renamed_args = {RENAME_ARGS_MAP.get(k, k): v for k, v in args.items()}
     matched_args = {k: v for k, v in renamed_args.items() if k in AsyncEngineArgs.__dataclass_fields__}
-    return {k: v for k, v in matched_args.items() if v not in [None, ""]}
+    return {k: v for k, v in matched_args.items() if v not in [None, "", "None"]}
 def get_local_args():
     """
     Retrieve local arguments from a JSON file.
