@@ -1,32 +1,52 @@
 {
-    "tests": [
-        {
-            "name": "basic_inference_test",
-            "input": {
-                "prompt": "Write a short poem about artificial intelligence."
-            },
-            "timeout": 30000
-        }
-    ],
-    "config": {
-        "gpuTypeId": "NVIDIA GeForce RTX 4090",
-        "gpuCount": 1,
-        "env": [
+  "tests": [
+    {
+      "name": "basic_inference_test",
+      "input": {
+        "prompt": "Write a short poem about artificial intelligence."
+      },
+      "timeout": 30000
+    },
+    {
+      "name": "openai_messages_test",
+      "input": {
+        "openai_route": "/v1/chat/completions",
+        "openai_input": {
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "messages": [
             {
-                "key": "MODEL_NAME",
-                "value": "facebook/opt-350m"
+              "role": "system",
+              "content": "You are a helpful assistant that writes concise responses."
+            },
+            {
+              "role": "user",
+              "content": "Explain what a neural network is in one sentence."
             }
-        ],
-        "allowedCudaVersions": [
-            "12.7",
-            "12.6",
-            "12.5",
-            "12.4",
-            "12.3",
-            "12.2",
-            "12.1",
-            "12.0",
-            "11.7"
-        ]
+          ],
+          "max_tokens": 50,
+          "temperature": 0.7
+        }
+      },
+      "timeout": 30000
     }
+  ],
+  "config": {
+    "gpuTypeId": "NVIDIA GeForce RTX 4090",
+    "gpuCount": 1,
+    "env": [
+      {
+        "key": "MODEL_NAME",
+        "value": "HuggingFaceTB/SmolLM2-135M-Instruct"
+      }
+    ],
+    "allowedCudaVersions": [
+      "12.7",
+      "12.6",
+      "12.5",
+      "12.4",
+      "12.3",
+      "12.2",
+      "12.1"
+    ]
+  }
 }
