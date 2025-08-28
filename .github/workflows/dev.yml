@@ -5,6 +5,9 @@ on:
     branches:
       - "**"
 
+permissions:
+  contents: read
+
 jobs:
   dev:
     runs-on: [blacksmith-8vcpu-ubuntu-2204, linux]

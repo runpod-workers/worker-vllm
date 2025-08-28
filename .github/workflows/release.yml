@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write # Required for creating GitHub releases
+  packages: write # Required for pushing Docker images (if using GitHub packages)
+
 jobs:
   release:
     runs-on: [blacksmith-8vcpu-ubuntu-2204, linux]
