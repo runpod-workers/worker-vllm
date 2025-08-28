@@ -39,7 +39,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 **🚀 Deploy Guide**: Follow our [step-by-step deployment guide](https://docs.runpod.io/serverless/vllm/get-started) to deploy using the RunPod Console.
 
-**📦 Docker Image**: `runpod/worker-v1-vllm:<version>stable-cuda12.1.0`
+**📦 Docker Image**: `runpod/worker-v1-vllm:<version>`
 
 - **Available Versions**: See [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases)
 - **CUDA Compatibility**: Requires CUDA >= 12.1

@@ -12,7 +12,7 @@
    git push origin feature/your-feature-name
    ```
 
-   - Creates pull request → triggers dev build: `runpod/worker-v1-vllm:dev-feature-your-feature-name`
+   - Creates pull request → triggers dev build: `runpod/worker-v1-vllm:dev-refs-pull-214-merge`
 
 2. **Main Branch**
    ```bash
@@ -74,6 +74,6 @@ See [README.md](../README.md) for full list of supported environment variables.
 
 ## 🔧 CI/CD Workflows
 
-- **Dev builds**: All pull requests → `dev-<branch-name>` images
+- **Dev builds**: All pull requests → `dev-refs-pull-<PR#>-merge` images
 - **Release builds**: Git tags → versioned images + GitHub releases
 - **Manual triggers**: Available in GitHub Actions for emergency releases
