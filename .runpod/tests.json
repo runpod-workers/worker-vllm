@@ -8,11 +8,10 @@
       "timeout": 30000
     },
     {
-      "name": "openai_messages_test",
+      "name": "openai_messages_test_legacy",
       "input": {
         "openai_route": "/v1/chat/completions",
         "openai_input": {
-          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
           "messages": [
             {
               "role": "system",
@@ -23,9 +22,27 @@
               "content": "Explain what a neural network is in one sentence."
             }
           ],
-          "max_tokens": 50,
-          "temperature": 0.7
+          "max_tokens": 200,
+          "temperature": 0.1
         }
+      },
+      "timeout": 30000
+    },
+    {
+      "name": "openai_messages_test_auto",
+      "input": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a helpful assistant that writes concise responses."
+          },
+          {
+            "role": "user",
+            "content": "Explain what a neural network is in one sentence."
+          }
+        ],
+        "max_tokens": 200,
+        "temperature": 0.1
       },
       "timeout": 30000
     }
