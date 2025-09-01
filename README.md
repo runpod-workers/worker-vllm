@@ -9,16 +9,10 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 ## Table of Contents
 
 - [Setting up the Serverless Worker](#setting-up-the-serverless-worker)
-  - [Option 1: Deploy Any Model Using Pre-Built Docker Image **[RECOMMENDED]**](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
-    - [Environment Variables](#environment-variables)
-      - [LLM Settings](#llm-settings)
-      - [Tokenizer Settings](#tokenizer-settings)
-      - [System and Parallelism Settings](#system-and-parallelism-settings)
-      - [Streaming Batch Size Settings](#streaming-batch-size-settings)
-      - [OpenAI Settings](#openai-settings)
-      - [Serverless Settings](#serverless-settings)
+  - [Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
+    - [Configuration](#configuration)
   - [Option 2: Build Docker Image with Model Inside](#option-2-build-docker-image-with-model-inside)
-    - [Prerequisites](#prerequisites-1)
+    - [Prerequisites](#prerequisites)
     - [Arguments](#arguments)
     - [Example: Building an image with OpenChat-3.5](#example-building-an-image-with-openchat-35)
       - [(Optional) Including Huggingface Token](#optional-including-huggingface-token)
@@ -26,12 +20,14 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 - [Usage: OpenAI Compatibility](#usage-openai-compatibility)
   - [Modifying your OpenAI Codebase to use your deployed vLLM Worker](#modifying-your-openai-codebase-to-use-your-deployed-vllm-worker)
   - [OpenAI Request Input Parameters](#openai-request-input-parameters)
-    - [Chat Completions](#chat-completions)
+  - [Chat Completions [RECOMMENDED]](#chat-completions-recommended)
   - [Examples: Using your RunPod endpoint with OpenAI](#examples-using-your-runpod-endpoint-with-openai)
-- [Usage: standard](#non-openai-usage)
-  - [Input Request Parameters](#input-request-parameters)
+    - [Chat Completions](#chat-completions)
+    - [Getting a list of names for available models](#getting-a-list-of-names-for-available-models)
+- [Usage: Standard (Non-OpenAI)](#usage-standard-non-openai)
+  - [Request Input Parameters](#request-input-parameters)
+  - [Sampling Parameters](#sampling-parameters)
     - [Text Input Formats](#text-input-formats)
-    - [Sampling Parameters](#sampling-parameters)
 
 # Setting up the Serverless Worker
 
@@ -46,9 +42,24 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ### Configuration
 
-Configure worker-vllm using environment variables. For the complete list of all available environment variables, examples, and detailed descriptions, see:
+Configure worker-vllm using environment variables:
 
-📖 **[Configuration Reference](docs/configuration.md)**
+| Environment Variable                | Description                                       | Default             | Options                                                            |
+| ----------------------------------- | ------------------------------------------------- | ------------------- | ------------------------------------------------------------------ |
+| `MODEL_NAME`                        | Path of the model weights                         | "facebook/opt-125m" | Local folder or Hugging Face repo ID                               |
+| `HF_TOKEN`                          | HuggingFace access token for gated/private models |                     | Your HuggingFace access token                                      |
+| `MAX_MODEL_LEN`                     | Model's maximum context length                    |                     | Integer (e.g., 4096)                                               |
+| `QUANTIZATION`                      | Quantization method                               |                     | "awq", "gptq", "squeezellm", "bitsandbytes"                        |
+| `TENSOR_PARALLEL_SIZE`              | Number of GPUs                                    | 1                   | Integer                                                            |
+| `GPU_MEMORY_UTILIZATION`            | Fraction of GPU memory to use                     | 0.95                | Float between 0.0 and 1.0                                          |
+| `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 256                 | Integer                                                            |
+| `CUSTOM_CHAT_TEMPLATE`              | Custom chat template override                     |                     | Jinja2 template string                                             |
+| `ENABLE_AUTO_TOOL_CHOICE`           | Enable automatic tool selection                   | false               | boolean (true or false)                                            |
+| `TOOL_CALL_PARSER`                  | Parser for tool calls                             |                     | "mistral", "hermes", "llama3_json", "granite", "deepseek_v3", etc. |
+| `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
+| `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 300                 | Integer                                                            |
+
+For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
 
 ## Option 2: Build Docker Image with Model Inside
 
