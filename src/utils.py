@@ -60,21 +60,8 @@ class JobInput:
         min_batch_size = job.get("min_batch_size")
         self.min_batch_size = int(min_batch_size) if min_batch_size else None 
         
-        # Auto-detect OpenAI format (SGLang-style automatic detection)
         self.openai_route = job.get("openai_route")
         self.openai_input = job.get("openai_input")
-        
-        # If no explicit openai_route but input contains "messages", auto-route to OpenAI chat/completions
-        if not self.openai_route and "messages" in job:
-            self.openai_route = "/v1/chat/completions"
-            # Create openai_input by copying the job input and ensuring required fields
-            self.openai_input = dict(job)
-            # Remove non-OpenAI fields that might confuse the OpenAI endpoint
-            for field in ["openai_route", "openai_input", "sampling_params", "apply_chat_template", "max_batch_size", "min_batch_size", "batch_size_growth_factor"]:
-                self.openai_input.pop(field, None)
-            # Ensure model field exists (required by OpenAI API)
-            if "model" not in self.openai_input:
-                self.openai_input["model"] = "default"
 class DummyState:
     def __init__(self):
         self.request_metadata = None

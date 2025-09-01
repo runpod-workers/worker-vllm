@@ -8,7 +8,7 @@
       "timeout": 30000
     },
     {
-      "name": "openai_messages_test_legacy",
+      "name": "openai_messages_test",
       "input": {
         "openai_route": "/v1/chat/completions",
         "openai_input": {
@@ -25,24 +25,6 @@
           "max_tokens": 200,
           "temperature": 0.1
         }
-      },
-      "timeout": 30000
-    },
-    {
-      "name": "openai_messages_test_auto",
-      "input": {
-        "messages": [
-          {
-            "role": "system",
-            "content": "You are a helpful assistant that writes concise responses."
-          },
-          {
-            "role": "user",
-            "content": "Explain what a neural network is in one sentence."
-          }
-        ],
-        "max_tokens": 200,
-        "temperature": 0.1
       },
       "timeout": 30000
     }

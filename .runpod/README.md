@@ -46,8 +46,10 @@ For testing directly in the RunPod UI, use these examples in your endpoint's req
       { "role": "system", "content": "You are a helpful assistant." },
       { "role": "user", "content": "What is the capital of France?" }
     ],
-    "max_tokens": 100,
-    "temperature": 0.7
+    "sampling_params": {
+      "max_tokens": 100,
+      "temperature": 0.7
+    }
   }
 }
 ```
@@ -60,8 +62,10 @@ For testing directly in the RunPod UI, use these examples in your endpoint's req
     "messages": [
       { "role": "user", "content": "Write a short story about a robot." }
     ],
-    "max_tokens": 500,
-    "temperature": 0.8,
+    "sampling_params": {
+      "max_tokens": 500,
+      "temperature": 0.8
+    },
     "stream": true
   }
 }
@@ -230,8 +234,10 @@ response = requests.post(
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "Explain quantum computing in simple terms"}
             ],
-            "temperature": 0.7,
-            "max_tokens": 150
+            "sampling_params": {
+                "temperature": 0.7,
+                "max_tokens": 150
+            }
         }
     }
 )
