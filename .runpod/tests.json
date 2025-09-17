@@ -12,7 +12,6 @@
       "input": {
         "openai_route": "/v1/chat/completions",
         "openai_input": {
-          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
           "messages": [
             {
               "role": "system",
@@ -23,8 +22,8 @@
               "content": "Explain what a neural network is in one sentence."
             }
           ],
-          "max_tokens": 50,
-          "temperature": 0.7
+          "max_tokens": 200,
+          "temperature": 0.1
         }
       },
       "timeout": 30000
