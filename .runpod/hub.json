@@ -1,6 +1,6 @@
 {
   "title": "vLLM",
-  "description": "Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the vLLM Inference Engine on RunPod Serverless",
+  "description": "Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by vLLM",
   "type": "serverless",
   "category": "language",
   "iconUrl": "https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/vllm-color.png",
@@ -1019,6 +1019,23 @@
               "label": "InternLM",
               "value": "internlm"
             }
+          ],
+          "default": "",
+          "advanced": true
+        }
+      },
+      {
+        "key": "REASONING_PARSER",
+        "input": {
+          "name": "Reasoning Parser",
+          "type": "string",
+          "description": "Parser for reasoning-capable models (enables reasoning mode)",
+          "options": [
+            { "label": "None", "value": "" },
+            { "label": "DeepSeek R1", "value": "deepseek_r1" },
+            { "label": "Qwen3", "value": "qwen3" },
+            { "label": "Granite", "value": "granite" },
+            { "label": "Hunyuan A13B", "value": "hunyuan_a13b" }
           ],
           "default": "",
           "advanced": true
