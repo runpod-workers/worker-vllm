@@ -39,16 +39,6 @@
         }
       },
       {
-        "key": "HF_TOKEN",
-        "input": {
-          "name": "Access Token",
-          "type": "string",
-          "description": "Hugging Face access token for gated & private models",
-          "default": "",
-          "required": false
-        }
-      },
-      {
         "key": "TOKENIZER",
         "input": {
           "name": "Tokenizer",
