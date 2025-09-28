@@ -204,7 +204,7 @@ class OpenAIvLLMEngine(vLLMEngine):
     async def _initialize_engines(self):
         self.model_config = await self.llm.get_model_config()
         self.base_model_paths = [
-            BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
+            BaseModelPath(name=self.served_model_name, model_path=self.engine_args.model)
         ]
 
         self.serving_models = OpenAIServingModels(
