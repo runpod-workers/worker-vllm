@@ -1,7 +1,14 @@
 import os
 import runpod
-from utils import JobInput
-from engine import vLLMEngine, OpenAIvLLMEngine
+
+try:
+    # Try relative imports (when installed as package)
+    from .utils import JobInput
+    from .engine import vLLMEngine, OpenAIvLLMEngine
+except ImportError:
+    # Fall back to absolute imports (when running directly)
+    from utils import JobInput
+    from engine import vLLMEngine, OpenAIvLLMEngine
 
 vllm_engine = vLLMEngine()
 OpenAIvLLMEngine = OpenAIvLLMEngine(vllm_engine)

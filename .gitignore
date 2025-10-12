@@ -5,3 +5,6 @@ runpod.toml
 test/*
 vllm-base/vllm-*
 .DS_Store
+build/
+*.lock
+*.egg-info

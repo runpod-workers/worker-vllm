@@ -4,7 +4,13 @@ import logging
 import glob
 from shutil import rmtree
 from huggingface_hub import snapshot_download
-from utils import timer_decorator
+
+try:
+    # Try relative imports (when installed as package)
+    from .utils import timer_decorator
+except ImportError:
+    # Fall back to absolute imports (when running directly)
+    from utils import timer_decorator
 
 BASE_DIR = "/" 
 TOKENIZER_PATTERNS = [["*.json", "tokenizer*"]]

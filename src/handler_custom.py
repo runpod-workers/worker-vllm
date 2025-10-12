@@ -4,9 +4,29 @@ import logging
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
-from utils import JobInput
-from engine import vLLMEngine, OpenAIvLLMEngine
 import json
+
+try:
+    # Try relative imports (when installed as package)
+    from .utils import JobInput
+    from .engine import vLLMEngine, OpenAIvLLMEngine
+except ImportError:
+    # Fall back to absolute imports (when running directly)
+    from utils import JobInput
+    from engine import vLLMEngine, OpenAIvLLMEngine
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    # Python < 3.8
+    from importlib_metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("vllm-worker")
+except PackageNotFoundError:
+    # Package is not installed, fallback to reading VERSION file
+    from pathlib import Path
+    _version_file = Path(__file__).parent.parent / "VERSION"
+    __version__ = _version_file.read_text().strip()
 
    
 # Bypass model_name since runpod cannot set model_name to local or network volume
@@ -47,7 +67,7 @@ print("Mode running: ", mode_to_run)
 print("------- -------------------- -------")
 
 # Create FastAPI app
-app = FastAPI(title="vLLM OpenAI-Compatible API", version="1.0.0")
+app = FastAPI(title="vLLM OpenAI-Compatible API", version=__version__)
 
 
 async def handler(job):
