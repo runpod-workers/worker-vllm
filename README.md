@@ -57,7 +57,7 @@ Configure worker-vllm using environment variables:
 | `ENABLE_AUTO_TOOL_CHOICE`           | Enable automatic tool selection                   | false               | boolean (true or false)                                            |
 | `TOOL_CALL_PARSER`                  | Parser for tool calls                             |                     | "mistral", "hermes", "llama3_json", "granite", "deepseek_v3", etc. |
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
-| `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 300                 | Integer                                                            |
+| `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 30                  | Integer                                                            |
 
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
 

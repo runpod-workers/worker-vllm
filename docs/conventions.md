@@ -222,7 +222,7 @@ src/
 
 ### 2. **Concurrency Patterns**
 
-- **Max Concurrency**: 300 concurrent requests by default
+- **Max Concurrency**: 30 concurrent requests by default
 - **vLLM Queuing**: Internal request batching and scheduling
 - **RunPod Integration**: Concurrency modifier for auto-scaling
 
