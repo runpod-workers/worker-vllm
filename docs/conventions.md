@@ -51,7 +51,8 @@ RunPod Request → handler.py → JobInput → Engine Selection → vLLM Generat
 
 - `src/engine_args.py`: Centralized configuration management
 - `src/constants.py`: Default values for core settings
-- `worker-config.json`: UI form generation for RunPod console
+- `.runpod/hub.json`: Hub UI configuration (CRITICAL: always update when changing defaults)
+- `worker-config.json`: UI form generation for RunPod console (if exists)
 
 ## Core Development Concepts
 
