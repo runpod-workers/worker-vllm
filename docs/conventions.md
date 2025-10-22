@@ -51,7 +51,8 @@ RunPod Request → handler.py → JobInput → Engine Selection → vLLM Generat
 
 - `src/engine_args.py`: Centralized configuration management
 - `src/constants.py`: Default values for core settings
-- `worker-config.json`: UI form generation for RunPod console
+- `.runpod/hub.json`: Hub UI configuration (CRITICAL: always update when changing defaults)
+- `worker-config.json`: UI form generation for RunPod console (if exists)
 
 ## Core Development Concepts
 
@@ -222,7 +223,7 @@ src/
 
 ### 2. **Concurrency Patterns**
 
-- **Max Concurrency**: 300 concurrent requests by default
+- **Max Concurrency**: 30 concurrent requests by default
 - **vLLM Queuing**: Internal request batching and scheduling
 - **RunPod Integration**: Concurrency modifier for auto-scaling
 
