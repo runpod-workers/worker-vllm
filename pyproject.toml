@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=77.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vllm-worker"
+dynamic = ["version"]
+description = "OpenAI-compatible vLLM worker for serverless inference. Forked from https://github.com/runpod-workers/worker-vllm"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Arief Wijaya", email = "ariefwiijaya@gmail.com"}
+]
+keywords = ["vllm", "llm", "inference", "openai", "serverless"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "ray",
+    "pandas",
+    "pyarrow",
+    "runpod~=1.7.7",
+    "huggingface-hub",
+    "packaging",
+    "typing-extensions>=4.8.0",
+    "pydantic",
+    "pydantic-settings",
+    "hf-transfer",
+    "transformers>=4.51.3",
+    "bitsandbytes>=0.45.0",
+    "kernels",
+    "torch==2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "black",
+    "flake8",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/ariefwijaya/worker-vllm"
+Repository = "https://github.com/ariefwijaya/worker-vllm"
+Documentation = "https://github.com/ariefwijaya/worker-vllm/blob/main/README.md"
+
+[tool.setuptools]
+package-dir = {"vllm_worker" = "src"}
+packages = ["vllm_worker"]
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
