@@ -168,7 +168,7 @@ class vLLMEngine:
             return engine
         except Exception as e:
             logging.error("Error initializing vLLM engine: %s", e)
-            raise e
+            raise 
 
 
 class OpenAIvLLMEngine(vLLMEngine):
@@ -250,7 +250,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             async for response in self._handle_chat_or_completion_request(openai_request):
                 yield response
         else:
-            yield create_error_response("Invalid route").model_dump()
+            yield {"error": create_error_response("Invalid route").model_dump()}
     
     async def _handle_model_request(self):
         models = await self.serving_models.show_available_models()
@@ -268,8 +268,9 @@ class OpenAIvLLMEngine(vLLMEngine):
             request = request_class(
                 **openai_request.openai_input
             )
+            print(request)
         except Exception as e:
-            yield create_error_response(str(e)).model_dump()
+            yield {"error": create_error_response(str(e))}
             return
         
         dummy_request = DummyRequest()
@@ -303,4 +304,3 @@ class OpenAIvLLMEngine(vLLMEngine):
                 if self.raw_openai_output:
                     batch = "".join(batch)
                 yield batch
-            
