@@ -6,7 +6,7 @@
   "iconUrl": "https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/vllm-color.png",
   "config": {
     "runsOn": "GPU",
-    "containerDiskInGb": 200,
+    "containerDiskInGb": 150,
     "gpuIds": "ADA_80_PRO, AMPERE_80",
     "gpuCount": 1,
     "allowedCudaVersions": [
