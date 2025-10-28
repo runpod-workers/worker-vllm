@@ -52,5 +52,5 @@ RUN mkdir -p /usr/local/bin
 COPY --chmod=755 start.sh /usr/local/bin/start.sh
 
 # Start the handler
-ENTRYPOINT ["/usr/local/bin/start.sh"] 
+ENTRYPOINT ["/bin/bash", "/usr/local/bin/start.sh"] 
 CMD ["python3", "/src/handler.py"]
