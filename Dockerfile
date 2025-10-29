@@ -47,10 +47,4 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     fi
 
 
-# Create directory for startup script and copy it
-RUN mkdir -p /usr/local/bin
-COPY --chmod=755 start.sh /usr/local/bin/start.sh
-
-# Start the handler
-#ENTRYPOINT ["/bin/bash", "/usr/local/bin/start.sh"] 
 CMD ["python3", "/src/handler.py"]
