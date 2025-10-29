@@ -46,5 +46,5 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     python3 /src/download_model.py; \
     fi
 
-
+# Start the handler
 CMD ["python3", "/src/handler.py"]
