@@ -56,15 +56,15 @@ class JobInput:
         # self.sampling_params = SamplingParams(max_tokens=100, **job.get("sampling_params", {}))
         self.request_id = random_uuid()
         batch_size_growth_factor = job.get("batch_size_growth_factor")
-        self.batch_size_growth_factor = float(batch_size_growth_factor) if batch_size_growth_factor else None 
+        self.batch_size_growth_factor = float(batch_size_growth_factor) if batch_size_growth_factor else None
         min_batch_size = job.get("min_batch_size")
-        self.min_batch_size = int(min_batch_size) if min_batch_size else None 
+        self.min_batch_size = int(min_batch_size) if min_batch_size else None
         self.openai_route = job.get("openai_route")
         self.openai_input = job.get("openai_input")
 class DummyState:
     def __init__(self):
         self.request_metadata = None
-        
+
 class DummyRequest:
     def __init__(self):
         self.headers = {}
@@ -82,16 +82,16 @@ class BatchSize:
             self.current_batch_size = min_batch_size
         else:
             self.current_batch_size = max_batch_size
-        
+
     def update(self):
         if self.is_dynamic:
             self.current_batch_size = min(self.current_batch_size*self.batch_size_growth_factor, self.max_batch_size)
-        
+
 def create_error_response(message: str, err_type: str = "BadRequestError", status_code: HTTPStatus = HTTPStatus.BAD_REQUEST) -> ErrorResponse:
     return ErrorResponse(message=message,
                             type=err_type,
                             code=status_code.value)
-    
+
 def get_int_bool_env(env_var: str, default: bool) -> bool:
     return int(os.getenv(env_var, int(default))) == 1
 
