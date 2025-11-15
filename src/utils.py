@@ -4,6 +4,7 @@ from http import HTTPStatus
 from functools import wraps
 from time import time
 from vllm.entrypoints.openai.protocol import RequestResponseMetadata
+from vllm.sampling_params import StructuredOutputsParams
 
 try:
     from vllm.utils import random_uuid
@@ -50,6 +51,47 @@ class JobInput:
         self.apply_chat_template = job.get("apply_chat_template", False)
         self.use_openai_format = job.get("use_openai_format", False)
         samp_param = job.get("sampling_params", {})
+
+        # Reject deprecated old API format (top-level guided_json parameter)
+        # worker-vllm v2.9.5+ updated to vLLM 0.11.0+, which uses
+        # OpenAI-compatible extra_body.structured_outputs format
+        if job.get("guided_json") is not None:
+            raise ValueError(
+                "The 'guided_json' parameter is deprecated in vLLM 0.11.0+. "
+                "Please use 'structured_outputs' instead. "
+                "See: https://docs.vllm.ai/en/v0.11.0/features/structured_outputs.html"
+            )
+
+        # Extract extra_body (for new structured_outputs API) from sampling_params
+        extra_body = samp_param.pop("extra_body", None)
+        if extra_body and "structured_outputs" in extra_body:
+            structured_outputs = extra_body["structured_outputs"]
+
+            # Create StructuredOutputsParams instance
+            if "json" in structured_outputs:
+                samp_param["structured_outputs"] = StructuredOutputsParams(
+                    json=structured_outputs["json"]
+                )
+            elif "regex" in structured_outputs:
+                samp_param["structured_outputs"] = StructuredOutputsParams(
+                    regex=structured_outputs["regex"]
+                )
+            elif "choice" in structured_outputs:
+                samp_param["structured_outputs"] = StructuredOutputsParams(
+                    choice=structured_outputs["choice"]
+                )
+            elif "grammar" in structured_outputs:
+                samp_param["structured_outputs"] = StructuredOutputsParams(
+                    grammar=structured_outputs["grammar"]
+                )
+            elif "structural_tag" in structured_outputs:
+                samp_param["structured_outputs"] = StructuredOutputsParams(
+                    structural_tag=structured_outputs["structural_tag"]
+                )
+
+        # Store for potential use in OpenAI-compatible API
+        self.extra_body = extra_body
+
         if "max_tokens" not in samp_param:
             samp_param["max_tokens"] = 100
         self.sampling_params = SamplingParams(**samp_param)
