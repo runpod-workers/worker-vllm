@@ -930,6 +930,16 @@
         }
       },
       {
+        "key": "ENABLE_EXPERT_PARALLEL",
+        "input": {
+          "name": "Enable Expert Parallel",
+          "type": "boolean",
+          "description": "Enable Expert Parallel for MoE models",
+          "default": false,
+          "advanced": true
+        }
+      },
+      {
         "key": "MODEL_REVISION",
         "input": {
           "name": "Model Revision",

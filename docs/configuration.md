@@ -85,6 +85,7 @@ Complete guide to all environment variables and configuration options for worker
 | `ENFORCE_EAGER`                | False   | `bool`          | Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. |
 | `MAX_SEQ_LEN_TO_CAPTURE`       | `8192`  | `int`           | Maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode.     |
 | `DISABLE_CUSTOM_ALL_REDUCE`    | `0`     | `int`           | Enables or disables custom all reduce.                                                                                              |
+| `ENABLE_EXPERT_PARALLEL`       | `False` | `bool`           |  Enable Expert Parallel for MoE models  |
 
 ## Tokenizer Settings
 
