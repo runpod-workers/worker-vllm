@@ -21,8 +21,8 @@ jobs:
         run: |
           echo "Fetching the current runpod version from requirements.txt..."
           
-          # Get current version, allowing both == and ~= in the search pattern
-          current_version=$(grep -oP 'runpod[~=]{1,2}\K[^"]+' ./builder/requirements.txt)
+          # Get current version, supporting ==, ~=, and >= operators
+          current_version=$(grep -oP 'runpod[>~=]+\K[^"]+' ./builder/requirements.txt)
           echo "Current version: $current_version"
 
           if [ -z "$current_version" ]; then
@@ -30,17 +30,41 @@ jobs:
               exit 1
           fi
 
-          # Compare versions using sort -V (version sort)
+          echo "Fetching the latest runpod version from PyPI..."
+          new_version=$(curl -s https://pypi.org/pypi/runpod/json | jq -r .info.version)
+          echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
+          echo "New version from PyPI: $new_version"
+
+          if [ -z "$new_version" ]; then
+              echo "ERROR: Failed to fetch the new version from PyPI."
+              exit 1
+          fi
+
+          # Check for exact version match
           if [ "$current_version" = "$new_version" ]; then
               echo "No update needed. Already at version $new_version."
               exit 0
           fi
 
-          # Check if new version is actually newer
+          # Check if new version is actually newer using semantic version comparison
           newer_version=$(printf "%s\n%s" "$current_version" "$new_version" | sort -V | tail -n1)
           if [ "$newer_version" = "$current_version" ]; then
               echo "No update needed. Current version ($current_version) is already >= new version ($new_version)."
               exit 0
           fi
 
-          echo "New version detected ($new_version > $current_version). Updating runpod version..."
+          echo "New version detected ($new_version > $current_version). Updating requirements.txt..."
+          sed -i "s/runpod[>~=]*[0-9.]*/runpod>=$new_version/" ./builder/requirements.txt
+          echo "requirements.txt has been updated to runpod>=$new_version"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: Update runpod to ${{ env.NEW_VERSION }}"
+          title: "chore: Update runpod to latest version"
+          body: |
+            Automated update of runpod package version.
+
+            New version: ${{ env.NEW_VERSION }}
+          branch: runpod-package-update
