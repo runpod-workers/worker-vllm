@@ -1,7 +1,7 @@
 ray
 pandas
 pyarrow
-runpod~=1.7.7
+runpod>=1.8,<2.0
 huggingface-hub
 packaging
 typing-extensions>=4.8.0
