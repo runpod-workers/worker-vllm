@@ -228,6 +228,9 @@ When using the chat completion feature of the vLLM Serverless Endpoint Worker, y
 | `user`              | Optional[str]                    | None          | Unsupported by vLLM                                                                                                                                                                                                                                          |
 
 Additional parameters supported by vLLM:
+
+| Parameter           | Type                             | Default Value | Description                                                                                                                                                                                                                                                  |
+| ------------------- | -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `best_of` | Optional[int] | None | Number of output sequences that are generated from the prompt. From these `best_of` sequences, the top `n` sequences are returned. `best_of` must be greater than or equal to `n`. This is treated as the beam width when `use_beam_search` is True. By default, `best_of` is set to `n`. |
 | `top_k` | Optional[int] | -1 | Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens. |
 | `ignore_eos` | Optional[bool] | False | Whether to ignore the EOS token and continue generating tokens after the EOS token is generated. |
