@@ -146,6 +146,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
 
 2. Change the `model` parameter to your deployed model's name whenever using Completions or Chat Completions.
    - Before:
+
    ```python
    response = client.chat.completions.create(
        model="gpt-3.5-turbo",
@@ -154,7 +155,9 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
        max_tokens=100,
    )
    ```
+
    - After:
+
    ```python
    response = client.chat.completions.create(
        model="<YOUR DEPLOYED MODEL REPO/NAME>",
@@ -168,6 +171,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
 
 1. Change the `Authorization` header to your RunPod API Key and the `url` to your RunPod Serverless Endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`
    - Before:
+
    ```bash
    curl https://api.openai.com/v1/chat/completions \
    -H "Content-Type: application/json" \
@@ -184,7 +188,9 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    "max_tokens": 100
    }'
    ```
+
    - After:
+
    ```bash
    curl https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1/chat/completions \
    -H "Content-Type: application/json" \
@@ -202,7 +208,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    }'
    ```
 
-## OpenAI Request Input Parameters:
+## OpenAI Request Input Parameters
 
 When using the chat completion feature of the vLLM Serverless Endpoint Worker, you can customize your requests with the following parameters:
 
@@ -262,11 +268,12 @@ client = OpenAI(
 )
 ```
 
-### Chat Completions:
+### Chat Completions
 
 This is the format used for GPT-4 and focused on instruction-following and chat. Examples of Open Source chat/instruct models include `meta-llama/Llama-2-7b-chat-hf`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, `openchat/openchat-3.5-0106`, `NousResearch/Nous-Hermes-2-Mistral-7B-DPO` and more. However, if your model is a completion-style model with no chat/instruct fine-tune and/or does not have a chat template, you can still use this if you provide a chat template with the environment variable `CUSTOM_CHAT_TEMPLATE`.
 
 - **Streaming**:
+
   ```python
   # Create a chat completion stream
   response_stream = client.chat.completions.create(
@@ -280,7 +287,9 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   for response in response_stream:
       print(chunk.choices[0].delta.content or "", end="", flush=True)
   ```
+
 - **Non-Streaming**:
+
   ```python
   # Create a chat completion
   response = client.chat.completions.create(
@@ -293,7 +302,7 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   print(response.choices[0].message.content)
   ```
 
-### Getting a list of names for available models:
+### Getting a list of names for available models
 
 In the case of baking the model into the image, sometimes the repo may not be accepted as the `model` in the request. In this case, you can list the available models as shown below and use that name.
 
@@ -309,8 +318,9 @@ print(list_of_models)
 
 <details>
   <summary>Click to expand table</summary>
-    
+
   You may either use a `prompt` or a list of `messages` as input. If you use `messages`, the model's chat template will be applied to the messages automatically, so the model must have one. If you use `prompt`, you may optionally apply the model's chat template to the prompt by setting `apply_chat_template` to `true`.
+
   | Argument              | Type                 | Default            | Description                                                                                            |
   |-----------------------|----------------------|--------------------|--------------------------------------------------------------------------------------------------------|
   | `prompt`              | str                  |                    | Prompt string to generate text based on.                                                               |
@@ -321,6 +331,7 @@ print(list_of_models)
   | `max_batch_size`          | int                  | env var `DEFAULT_BATCH_SIZE` | The maximum number of tokens to stream every HTTP POST call.                                                   |
   | `min_batch_size`          | int                  | env var `DEFAULT_MIN_BATCH_SIZE` | The minimum number of tokens to stream every HTTP POST call.                                           |
   | `batch_size_growth_factor` | int                  | env var `DEFAULT_BATCH_SIZE_GROWTH_FACTOR` | The growth factor by which `min_batch_size` will be multiplied for each call until `max_batch_size` is reached.           |
+
 </details>
 
 ### Sampling Parameters
@@ -355,7 +366,7 @@ Below are all available sampling parameters that you can specify in the `samplin
 
 You may either use a `prompt` or a list of `messages` as input.
 
-1.  `prompt`
+1. `prompt`
     The prompt string can be any string, and the model's chat template will not be applied to it unless `apply_chat_template` is set to `true`, in which case it will be treated as a user message.
 
         Example:
@@ -371,7 +382,7 @@ You may either use a `prompt` or a list of `messages` as input.
         }
         ```
 
-2.  `messages`
+2. `messages`
     Your list can contain any number of messages, and each message usually can have any role from the following list: - `user` - `assistant` - `system`
 
     However, some models may have different roles, so you should check the model's chat template to see which roles are required.
