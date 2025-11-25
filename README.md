@@ -244,6 +244,7 @@ Additional parameters supported by vLLM:
 | `stop_token_ids` | Optional[List[int]] | list | List of tokens that stop the generation when they are generated. The returned output will contain the stop tokens unless the stop tokens are special tokens. |
 | `skip_special_tokens` | Optional[bool] | True | Whether to skip special tokens in the output. |
 | `spaces_between_special_tokens`| Optional[bool] | True | Whether to add spaces between special tokens in the output. Defaults to True. |
+| `structured_outputs` | Optional[dict] | None | Constrains generations to JSON schemas, regexes, grammar, etc. See [Structured Outputs](https://docs.vllm.ai/en/latest/features/structured_outputs/). |
 | `add_generation_prompt` | Optional[bool] | True | Read more [here](https://huggingface.co/docs/transformers/main/en/chat_templating#what-are-generation-prompts) |
 | `echo` | Optional[bool] | False | Echo back the prompt in addition to the completion |
 | `repetition_penalty` | Optional[float] | 1.0 | Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens. |
@@ -415,5 +416,34 @@ You may either use a `prompt` or a list of `messages` as input.
       }
     }
     ```
+
+#### Structured Outputs
+
+The RunPod API mirrors vLLM's offline inference API directly. To enforce JSON schemas, regexes, grammar rules, or structural tags, provide a `structured_outputs` object directly inside `sampling_params`. The structure matches the `SamplingParams(structured_outputs=StructuredOutputsParams(...))` API from vLLM (`json`, `regex`, `choice`, `grammar`, `structural_tag`, etc.). Example enforcing a JSON schema:
+
+```json
+{
+  "input": {
+    "messages": [
+      {"role": "user", "content": "Return a JSON document with name and age"}
+    ],
+    "sampling_params": {
+      "max_tokens": 128,
+      "structured_outputs": {
+        "json": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"}
+          },
+          "required": ["name", "age"]
+        }
+      }
+    }
+  }
+}
+```
+
+For all supported structured output types and usage patterns, refer to the vLLM [Structured Outputs guide](https://docs.vllm.ai/en/v0.11.1.1/features/structured_outputs/).
 
 </details>
