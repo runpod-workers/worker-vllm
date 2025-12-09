@@ -202,14 +202,12 @@ class OpenAIvLLMEngine(vLLMEngine):
         return adapters
 
     async def _initialize_engines(self):
-        self.model_config = await self.llm.get_model_config()
         self.base_model_paths = [
             BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
         ]
 
         self.serving_models = OpenAIServingModels(
             engine_client=self.llm,
-            model_config=self.model_config,
             base_model_paths=self.base_model_paths,
             lora_modules=self.lora_adapters,
         )
@@ -222,7 +220,6 @@ class OpenAIvLLMEngine(vLLMEngine):
         
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
-            model_config=self.model_config,
             models=self.serving_models,
             response_role=self.response_role,
             request_logger=None,
@@ -237,7 +234,6 @@ class OpenAIvLLMEngine(vLLMEngine):
         )
         self.completion_engine = OpenAIServingCompletion(
             engine_client=self.llm, 
-            model_config=self.model_config,
             models=self.serving_models,
             request_logger=None,
             # return_token_as_token_ids=False,
