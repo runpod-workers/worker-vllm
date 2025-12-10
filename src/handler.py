@@ -71,16 +71,7 @@ def initialize_engines():
         log.error(STARTUP_ERROR)
 
 async def handler(job):
-    # Return startup error to user if initialization failed
-    if STARTUP_ERROR:
-        log.error(f"Returning startup error to user: {STARTUP_ERROR}")
-        yield {"error": STARTUP_ERROR}
-        return
-    
-    if vllm_engine is None or openai_engine is None:
-        yield {"error": "vLLM engine not initialized. Check worker logs for details."}
-        return
-    
+    """Handle inference requests. Startup errors cause worker exit before this runs."""
     try:
         from utils import JobInput
         job_input = JobInput(job["input"])
@@ -89,13 +80,35 @@ async def handler(job):
         async for batch in results_generator:
             yield batch
     except Exception as e:
-        log.error(f"Error during inference: {e}")
-        yield {"error": str(e)}
+        import sys
+        import traceback
+        
+        error_str = str(e)
+        full_traceback = traceback.format_exc()
+        
+        # Log full error with traceback for debugging
+        log.error(f"Error during inference: {error_str}")
+        log.error(f"Full traceback:\n{full_traceback}")
+        
+        # CUDA errors = worker is broken, log then exit to flush it out
+        if "CUDA" in error_str or "cuda" in error_str or "OutOfMemory" in error_str:
+            log.error("Terminating worker due to CUDA/GPU error")
+            sys.exit(1)
+        
+        yield {"error": error_str}
 
 # Only run initialization and start server in main process
 # This prevents re-initialization when vLLM spawns worker subprocesses
 if __name__ == "__main__" or multiprocessing.current_process().name == "MainProcess":
+    import sys
+    
     initialize_engines()
+    
+    # If CUDA/engine init failed, crash the worker BEFORE starting serverless loop
+    # This way RunPod never sees this worker as available, and jobs go to healthy workers
+    if STARTUP_ERROR or vllm_engine is None:
+        log.error(f"Worker startup failed, exiting: {STARTUP_ERROR}")
+        sys.exit(1)  # Non-zero exit = worker unhealthy, RunPod will spin up another
     
     runpod.serverless.start(
         {
