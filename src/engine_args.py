@@ -41,6 +41,7 @@ DEFAULT_ARGS = {
     "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'False').lower() == 'true',
     "swap_space": int(os.getenv('SWAP_SPACE', 4)),  # GiB
     "cpu_offload_gb": int(os.getenv('CPU_OFFLOAD_GB', 0)),  # GiB
+    # vLLM 0.12.0 defaults None to 2048; keep 0 as None to let vLLM auto-calculate
     "max_num_batched_tokens": int(os.getenv('MAX_NUM_BATCHED_TOKENS', 0)) or None,
     "max_num_seqs": int(os.getenv('MAX_NUM_SEQS', 256)),
     "max_logprobs": int(os.getenv('MAX_LOGPROBS', 20)),  # Default value for OpenAI Chat Completions API
@@ -175,5 +176,11 @@ def get_engine_args():
     # if "gemma-2" in args.get("model", "").lower():
     #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
     #     logging.info("Using FLASHINFER for gemma-2 model.")
+    
+    # vLLM 0.12.0 compatibility: when max_num_batched_tokens is None (i.e., env var was 0),
+    # set it to max_model_len to preserve "unlimited" behavior. vLLM 0.12.0 defaults None to 2048.
+    if args.get("max_num_batched_tokens") is None and args.get("max_model_len") is not None:
+        args["max_num_batched_tokens"] = args["max_model_len"]
+        logging.info(f"Setting max_num_batched_tokens to max_model_len ({args['max_model_len']}) for unlimited batching.")
         
     return AsyncEngineArgs(**args)
