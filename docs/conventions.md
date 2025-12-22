@@ -157,6 +157,11 @@ src/
 - **Lists**: Comma-separated strings
 - **Objects**: JSON strings for complex configurations
 
+#### Documentation Conventions:
+
+- When documenting commonly used environment variables (especially in `README.md`), always include: what it controls, when you’d change it, safe example values, and key trade-offs (VRAM vs throughput vs latency).
+- Call out worker-specific behavior that overrides upstream vLLM defaults (e.g., multi-GPU auto tensor parallel sizing) and whether a setting affects the vLLM engine, OpenAI compatibility, or RunPod worker runtime.
+
 ### 4. **Docker & Deployment**
 
 #### Multi-Stage Builds:

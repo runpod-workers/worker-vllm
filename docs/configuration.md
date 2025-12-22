@@ -6,7 +6,7 @@ Complete guide to all environment variables and configuration options for worker
 
 | Variable                       | Default             | Type/Choices                                                | Description                                                                     |
 | ------------------------------ | ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `MODEL_NAME`                   | 'facebook/opt-125m' | `str`                                                       | Name or path of the Hugging Face model to use.                                  |
+| `MODEL_NAME`                   | 'facebook/opt-125m' | `str`                                                       | Hugging Face repo ID or local filesystem path for the model weights. Change this to deploy a different model. |
 | `MODEL_REVISION`               | 'main'              | `str`                                                       | Model revision to load (default: main).                                         |
 | `TOKENIZER`                    | None                | `str`                                                       | Name or path of the Hugging Face tokenizer to use.                              |
 | `SKIP_TOKENIZER_INIT`          | False               | `bool`                                                      | Skip initialization of tokenizer and detokenizer.                               |
@@ -14,16 +14,16 @@ Complete guide to all environment variables and configuration options for worker
 | `TRUST_REMOTE_CODE`            | `False`             | `bool`                                                      | Trust remote code from Hugging Face.                                            |
 | `DOWNLOAD_DIR`                 | None                | `str`                                                       | Directory to download and load the weights.                                     |
 | `LOAD_FORMAT`                  | 'auto'              | `str`                                                       | The format of the model weights to load.                                        |
-| `HF_TOKEN`                     | -                   | `str`                                                       | Hugging Face token for private and gated models.                                |
+| `HF_TOKEN`                     | -                   | `str`                                                       | Hugging Face token required to download gated/private models. Not needed for public models. Provide it via secrets. |
 | `DTYPE`                        | 'auto'              | ['auto', 'half', 'float16', 'bfloat16', 'float', 'float32'] | Data type for model weights and activations.                                    |
 | `KV_CACHE_DTYPE`               | 'auto'              | ['auto', 'fp8']                                             | Data type for KV cache storage.                                                 |
 | `QUANTIZATION_PARAM_PATH`      | None                | `str`                                                       | Path to the JSON file containing the KV cache scaling factors.                  |
-| `MAX_MODEL_LEN`                | None                | `int`                                                       | Model context length.                                                           |
+| `MAX_MODEL_LEN`                | None                | `int`                                                       | Maximum context length (tokens) the engine will allocate KV cache for. Lower it to reduce VRAM usage; raise it for long-context models if supported and you have VRAM. |
 | `GUIDED_DECODING_BACKEND`      | 'outlines'          | ['outlines', 'lm-format-enforcer']                          | Which engine will be used for guided decoding by default.                       |
 | `DISTRIBUTED_EXECUTOR_BACKEND` | None                | ['ray', 'mp']                                               | Backend to use for distributed serving.                                         |
 | `WORKER_USE_RAY`               | False               | `bool`                                                      | Deprecated, use --distributed-executor-backend=ray.                             |
 | `PIPELINE_PARALLEL_SIZE`       | 1                   | `int`                                                       | Number of pipeline stages.                                                      |
-| `TENSOR_PARALLEL_SIZE`         | 1                   | `int`                                                       | Number of tensor parallel replicas.                                             |
+| `TENSOR_PARALLEL_SIZE`         | 1                   | `int`                                                       | Tensor parallel degree (number of GPUs to shard across). On multi-GPU machines, this worker auto-sets it to the number of visible GPUs. |
 | `MAX_PARALLEL_LOADING_WORKERS` | None                | `int`                                                       | Load model sequentially in multiple batches.                                    |
 | `RAY_WORKERS_USE_NSIGHT`       | False               | `bool`                                                      | If specified, use nsight to profile Ray workers.                                |
 | `ENABLE_PREFIX_CACHING`        | False               | `bool`                                                      | Enables automatic prefix caching.                                               |
@@ -33,10 +33,10 @@ Complete guide to all environment variables and configuration options for worker
 | `SEED`                         | 0                   | `int`                                                       | Random seed for operations.                                                     |
 | `NUM_GPU_BLOCKS_OVERRIDE`      | None                | `int`                                                       | If specified, ignore GPU profiling result and use this number of GPU blocks.    |
 | `MAX_NUM_BATCHED_TOKENS`       | None                | `int`                                                       | Maximum number of batched tokens per iteration.                                 |
-| `MAX_NUM_SEQS`                 | 256                 | `int`                                                       | Maximum number of sequences per iteration.                                      |
+| `MAX_NUM_SEQS`                 | 256                 | `int`                                                       | Upper bound on sequences batched per iteration (affects throughput, VRAM, and tail latency). Higher can improve throughput for many concurrent short requests; lower reduces VRAM usage. |
 | `MAX_LOGPROBS`                 | 20                  | `int`                                                       | Max number of log probs to return when logprobs is specified in SamplingParams. |
 | `DISABLE_LOG_STATS`            | False               | `bool`                                                      | Disable logging statistics.                                                     |
-| `QUANTIZATION`                 | None                | ['awq', 'squeezellm', 'gptq', 'bitsandbytes']               | Method used to quantize the weights.                                            |
+| `QUANTIZATION`                 | None                | ['awq', 'squeezellm', 'gptq', 'bitsandbytes']               | Quantization backend for loading quantized checkpoints (AWQ/GPTQ/...) or BitsAndBytes. Must match the checkpoint format. |
 | `ROPE_SCALING`                 | None                | `dict`                                                      | RoPE scaling configuration in JSON format.                                      |
 | `ROPE_THETA`                   | None                | `float`                                                     | RoPE theta. Use with rope_scaling.                                              |
 | `TOKENIZER_POOL_SIZE`          | 0                   | `int`                                                       | Size of tokenizer pool to use for asynchronous tokenization.                    |
@@ -78,7 +78,7 @@ Complete guide to all environment variables and configuration options for worker
 
 | Variable                       | Default | Type/Choices    | Description                                                                                                                         |
 | ------------------------------ | ------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `GPU_MEMORY_UTILIZATION`       | `0.95`  | `float`         | Sets GPU VRAM utilization.                                                                                                          |
+| `GPU_MEMORY_UTILIZATION`       | `0.95`  | `float`         | Fraction of GPU VRAM vLLM is allowed to use for KV cache + runtime allocations. Lower if you hit CUDA OOM; raise if you have VRAM headroom. |
 | `MAX_PARALLEL_LOADING_WORKERS` | `None`  | `int`           | Load model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models.                          |
 | `BLOCK_SIZE`                   | `16`    | `8`, `16`, `32` | Token block size for contiguous chunks of tokens.                                                                                   |
 | `SWAP_SPACE`                   | `4`     | `int`           | CPU swap space size (GiB) per GPU.                                                                                                  |
@@ -93,7 +93,7 @@ Complete guide to all environment variables and configuration options for worker
 | ---------------------- | ------- | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `TOKENIZER_NAME`       | `None`  | `str`                               | Tokenizer repository to use a different tokenizer than the model's default.                       |
 | `TOKENIZER_REVISION`   | `None`  | `str`                               | Tokenizer revision to load.                                                                       |
-| `CUSTOM_CHAT_TEMPLATE` | `None`  | `str` of single-line jinja template | Custom chat jinja template. [More Info](https://huggingface.co/docs/transformers/chat_templating) |
+| `CUSTOM_CHAT_TEMPLATE` | `None`  | `str` of single-line jinja template | Override the model chat template (single-line Jinja2). Useful when sending `messages` to a base model without a built-in chat template. [More Info](https://huggingface.co/docs/transformers/chat_templating) |
 
 ## Streaming & Batch Settings
 
@@ -110,17 +110,17 @@ The way this works is that the first request will have a batch size of `DEFAULT_
 | Variable                            | Default     | Type/Choices     | Description                                                                                                                                                                                                       |
 | ----------------------------------- | ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RAW_OPENAI_OUTPUT`                 | `1`         | boolean as `int` | Enables raw OpenAI SSE format string output when streaming. **Required** to be enabled (which it is by default) for OpenAI compatibility.                                                                         |
-| `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | `None`      | `str`            | Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests                                 |
+| `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | `None`      | `str`            | Exposes a custom model id via `/v1/models` and accepts it as the `model` field in OpenAI requests (alias for the served model).                                                                     |
 | `OPENAI_RESPONSE_ROLE`              | `assistant` | `str`            | Role of the LLM's Response in OpenAI Chat Completions.                                                                                                                                                            |
-| `ENABLE_AUTO_TOOL_CHOICE`           | `false`     | `bool`           | Enables automatic tool selection for supported models. Set to `true` to activate.                                                                                                                                 |
-| `TOOL_CALL_PARSER`                  | `None`      | `str`            | Specifies the parser for tool calls. Options: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `llama4_pythonic`, `granite`, `granite-20b-fc`, `deepseek_v3`, `internlm`, `jamba`, `phi4_mini_json`, `pythonic` |
+| `ENABLE_AUTO_TOOL_CHOICE`           | `false`     | `bool`           | Enables vLLM automatic tool selection for OpenAI Chat Completions. Only enable for tool-capable models.                                                                                               |
+| `TOOL_CALL_PARSER`                  | `None`      | `str`            | Tool-call parser that matches your model’s tool-call format (required for most tool-calling models). Options include: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `granite`, `deepseek_v3`, `pythonic`, ... |
 | `REASONING_PARSER`                  | `None`      | `str`            | Parser for reasoning-capable models (enables reasoning mode). Examples: `deepseek_r1`, `qwen3`, `granite`, `hunyuan_a13b`. Leave unset to disable.                                                                |
 
 ## Serverless & Concurrency Settings
 
 | Variable               | Default | Type/Choices | Description                                                                                                                                                                |
 | ---------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MAX_CONCURRENCY`      | `30`    | `int`        | Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency |
+| `MAX_CONCURRENCY`      | `30`    | `int`        | Max concurrent requests per worker instance (RunPod-side). Higher can increase throughput but also increases queueing/latency; tune for better load balancing and autoscaling. |
 | `DISABLE_LOG_STATS`    | False   | `bool`       | Enables or disables vLLM stats logging.                                                                                                                                    |
 | `DISABLE_LOG_REQUESTS` | False   | `bool`       | Enables or disables vLLM request logging.                                                                                                                                  |
 
