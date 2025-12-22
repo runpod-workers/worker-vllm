@@ -113,14 +113,17 @@ The way this works is that the first request will have a batch size of `DEFAULT_
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | `None`      | `str`            | Exposes a custom model id via `/v1/models` and accepts it as the `model` field in OpenAI requests (alias for the served model).                                                                     |
 | `OPENAI_RESPONSE_ROLE`              | `assistant` | `str`            | Role of the LLM's Response in OpenAI Chat Completions.                                                                                                                                                            |
 | `ENABLE_AUTO_TOOL_CHOICE`           | `false`     | `bool`           | Enables vLLM automatic tool selection for OpenAI Chat Completions. Only enable for tool-capable models.                                                                                               |
-| `TOOL_CALL_PARSER`                  | `None`      | `str`            | Tool-call parser that matches your model’s tool-call format (required for most tool-calling models). Options include: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `granite`, `deepseek_v3`, `pythonic`, ... |
+| `TOOL_CALL_PARSER`                  | `None`      | `str`            | Tool-call parser that matches your model’s tool-call format (required for most tool-calling models). Supported values: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `llama4_pythonic`, `granite`, `granite-20b-fc`, `deepseek_v3`, `internlm`, `jamba`, `phi4_mini_json`, `pythonic`. |
 | `REASONING_PARSER`                  | `None`      | `str`            | Parser for reasoning-capable models (enables reasoning mode). Examples: `deepseek_r1`, `qwen3`, `granite`, `hunyuan_a13b`. Leave unset to disable.                                                                |
+
+Notes:
+- `TOOL_CALL_PARSER` tells vLLM how to interpret a model’s tool-call output. If the parser doesn’t match the model’s format, tool calls may not be detected (or may error during parsing).
 
 ## Serverless & Concurrency Settings
 
 | Variable               | Default | Type/Choices | Description                                                                                                                                                                |
 | ---------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MAX_CONCURRENCY`      | `30`    | `int`        | Max concurrent requests per worker instance (RunPod-side). Higher can increase throughput but also increases queueing/latency; tune for better load balancing and autoscaling. |
+| `MAX_CONCURRENCY`      | `30`    | `int`        | Max concurrent requests per worker instance (Runpod-side). Not a vLLM engine arg; it controls Runpod worker concurrency and affects how requests are fed into vLLM (queueing/throughput/latency). |
 | `DISABLE_LOG_STATS`    | False   | `bool`       | Enables or disables vLLM stats logging.                                                                                                                                    |
 | `DISABLE_LOG_REQUESTS` | False   | `bool`       | Enables or disables vLLM request logging.                                                                                                                                  |
 

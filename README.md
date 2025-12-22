@@ -2,7 +2,7 @@
 
 # OpenAI-Compatible vLLM Serverless Endpoint Worker
 
-Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https://github.com/vllm-project/vllm) Inference Engine on RunPod Serverless with just a few clicks.
+Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https://github.com/vllm-project/vllm) Inference Engine on Runpod Serverless with just a few clicks.
 
 </div>
 
@@ -21,7 +21,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
   - [Modifying your OpenAI Codebase to use your deployed vLLM Worker](#modifying-your-openai-codebase-to-use-your-deployed-vllm-worker)
   - [OpenAI Request Input Parameters](#openai-request-input-parameters)
   - [Chat Completions [RECOMMENDED]](#chat-completions-recommended)
-  - [Examples: Using your RunPod endpoint with OpenAI](#examples-using-your-runpod-endpoint-with-openai)
+- [Examples: Using your Runpod endpoint with OpenAI](#examples-using-your-runpod-endpoint-with-openai)
     - [Chat Completions](#chat-completions)
     - [Getting a list of names for available models](#getting-a-list-of-names-for-available-models)
 - [Usage: Standard (Non-OpenAI)](#usage-standard-non-openai)
@@ -33,7 +33,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ## Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]
 
-**🚀 Deploy Guide**: Follow our [step-by-step deployment guide](https://docs.runpod.io/serverless/vllm/get-started) to deploy using the RunPod Console.
+**🚀 Deploy Guide**: Follow our [step-by-step deployment guide](https://docs.runpod.io/serverless/vllm/get-started) to deploy using the Runpod Console.
 
 **📦 Docker Image**: `runpod/worker-v1-vllm:<version>`
 
@@ -55,9 +55,9 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 | `MAX_NUM_SEQS`                      | Max number of sequences vLLM will batch per iteration. Higher can improve throughput for many small requests but uses more VRAM; lower can reduce VRAM usage and tail latency.                        | `256`               | `32`, `64`, `128`, `256`                                                                                            |
 | `CUSTOM_CHAT_TEMPLATE`              | Overrides the model’s chat template (Jinja2). Useful when sending `messages` to a base model without a built-in chat template.                                                                        | -                   | Single-line Jinja2 string (see [HF chat templating docs](https://huggingface.co/docs/transformers/chat_templating)) |
 | `ENABLE_AUTO_TOOL_CHOICE`           | Enables vLLM’s automatic tool selection for OpenAI Chat Completions. Turn on only for tool-capable models.                                                                                            | `false`             | `true` / `false`                                                                                                    |
-| `TOOL_CALL_PARSER`                  | Tool-call parser that matches your model’s output format (required for most tool-calling models).                                                                                                     | -                   | `mistral`, `hermes`, `llama3_json`, `llama4_json`, `granite`, `deepseek_v3`, ...                                    |
+| `TOOL_CALL_PARSER`                  | Tool-call parser that matches your model’s tool-call format (required for most tool-calling models).                                                                                                  | -                   | `mistral`, `hermes`, `llama3_json`, `llama4_json`, `llama4_pythonic`, `granite`, `granite-20b-fc`, `deepseek_v3`, `internlm`, `jamba`, `phi4_mini_json`, `pythonic` |
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Changes the model id exposed via `/v1/models` and the `model` value your OpenAI client should send. Useful as a stable alias.                                                                         | -                   | `my-model`, `prod-llama3-8b`                                                                                        |
-| `MAX_CONCURRENCY`                   | RunPod worker-level concurrency (how many requests a single worker processes in parallel). Higher increases throughput but can increase queueing/latency; lower keeps response times more consistent. | `30`                | `10`–`50`                                                                                                           |
+| `MAX_CONCURRENCY`                   | Runpod worker-level concurrency (how many requests a single worker processes in parallel). Not a vLLM engine arg, but it directly impacts how requests are fed into vLLM (queueing/throughput/latency). | `30`                | `10`–`50`                                                                                                           |
 
 #### Common tuning scenarios
 
@@ -65,6 +65,13 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 - **Need longer context**: raise `MAX_MODEL_LEN` (e.g., `8192` or `16384`). This usually requires more VRAM.
 - **Multi-GPU endpoints**: scale GPUs and let the worker auto-configure tensor parallelism, or explicitly set `TENSOR_PARALLEL_SIZE` to match the number of visible GPUs.
 - **Tool calling not working**: set `ENABLE_AUTO_TOOL_CHOICE=true` and pick the right `TOOL_CALL_PARSER` for your model.
+
+#### Tool calling: parser reference
+
+`TOOL_CALL_PARSER` tells vLLM how to interpret a model’s tool-call output. If you pick the wrong parser, you’ll usually see either no tool calls detected or parsing errors.
+
+- **All supported values**: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `llama4_pythonic`, `granite`, `granite-20b-fc`, `deepseek_v3`, `internlm`, `jamba`, `phi4_mini_json`, `pythonic`
+- **Rule of thumb**: choose a parser that matches the format your model emits (for example, `*_json` parsers expect JSON-shaped tool calls; `*_pythonic`/`pythonic` expect a more python-like tool-call syntax).
 
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
 
@@ -124,13 +131,13 @@ You can deploy **any model on Hugging Face** that is supported by vLLM. For the 
 
 # Usage: OpenAI Compatibility
 
-The vLLM Worker is fully compatible with OpenAI's API, and you can use it with any OpenAI Codebase by changing only 3 lines in total. The supported routes are <ins>Chat Completions</ins> and <ins>Models</ins> - with both streaming and non-streaming.
+The vLLM Worker is fully compatible with OpenAI's API, and you can use it with any OpenAI codebase by changing only 3 lines in total. The supported routes are <ins>Chat Completions</ins> and <ins>Models</ins> - with both streaming and non-streaming.
 
-## Modifying your OpenAI Codebase to use your deployed vLLM Worker
+## Modifying your OpenAI codebase to use your deployed vLLM Worker
 
 **Python** (similar to Node.js, etc.):
 
-1. When initializing the OpenAI Client in your code, change the `api_key` to your RunPod API Key and the `base_url` to your RunPod Serverless Endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`, filling in your deployed endpoint ID. For example, if your Endpoint ID is `abc1234`, the URL would be `https://api.runpod.ai/v2/abc1234/openai/v1`.
+1. When initializing the OpenAI Client in your code, change the `api_key` to your Runpod API key and the `base_url` to your Runpod Serverless endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`, filling in your deployed endpoint ID. For example, if your Endpoint ID is `abc1234`, the URL would be `https://api.runpod.ai/v2/abc1234/openai/v1`.
 
    - Before:
 
@@ -156,7 +163,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    ```python
    response = client.chat.completions.create(
        model="gpt-3.5-turbo",
-       messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
+       messages=[{"role": "user", "content": "Why is Runpod the best platform?"}],
        temperature=0,
        max_tokens=100,
    )
@@ -165,15 +172,15 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    ```python
    response = client.chat.completions.create(
        model="<YOUR DEPLOYED MODEL REPO/NAME>",
-       messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
+       messages=[{"role": "user", "content": "Why is Runpod the best platform?"}],
        temperature=0,
        max_tokens=100,
    )
    ```
 
-**Using http requests**:
+**Using HTTP requests**:
 
-1. Change the `Authorization` header to your RunPod API Key and the `url` to your RunPod Serverless Endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`
+1. Change the `Authorization` header to your Runpod API key and the `url` to your Runpod Serverless endpoint URL in the following format: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1`
    - Before:
    ```bash
    curl https://api.openai.com/v1/chat/completions \
@@ -184,7 +191,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    "messages": [
      {
        "role": "user",
-       "content": "Why is RunPod the best platform?"
+       "content": "Why is Runpod the best platform?"
      }
    ],
    "temperature": 0,
@@ -201,7 +208,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    "messages": [
      {
        "role": "user",
-       "content": "Why is RunPod the best platform?"
+       "content": "Why is Runpod the best platform?"
      }
    ],
    "temperature": 0,
@@ -209,7 +216,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    }'
    ```
 
-## OpenAI Request Input Parameters:
+## OpenAI request input parameters:
 
 When using the chat completion feature of the vLLM Serverless Endpoint Worker, you can customize your requests with the following parameters:
 
@@ -221,7 +228,7 @@ When using the chat completion feature of the vLLM Serverless Endpoint Worker, y
 | Parameter           | Type                             | Default Value | Description                                                                                                                                                                                                                                                  |
 | ------------------- | -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `messages`          | Union[str, List[Dict[str, str]]] |               | List of messages, where each message is a dictionary with a `role` and `content`. The model's chat template will be applied to the messages automatically, so the model must have one or it should be specified as `CUSTOM_CHAT_TEMPLATE` env var.           |
-| `model`             | str                              |               | The model repo that you've deployed on your RunPod Serverless Endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your RunPod endpoint with OpenAI** section |
+| `model`             | str                              |               | The model repo that you've deployed on your Runpod Serverless endpoint. If you are unsure what the name is or are baking the model in, use the guide to get the list of available models in the **Examples: Using your Runpod endpoint with OpenAI** section |
 | `temperature`       | Optional[float]                  | 0.7           | Float that controls the randomness of the sampling. Lower values make the model more deterministic, while higher values make the model more random. Zero means greedy sampling.                                                                              |
 | `top_p`             | Optional[float]                  | 1.0           | Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens.                                                                                                                            |
 | `n`                 | Optional[int]                    | 1             | Number of output sequences to return for the given prompt.                                                                                                                                                                                                   |
@@ -251,15 +258,15 @@ Additional parameters supported by vLLM:
 
 </details>
 
-### Examples: Using your RunPod endpoint with OpenAI
+### Examples: Using your Runpod endpoint with OpenAI
 
-First, initialize the OpenAI Client with your RunPod API Key and Endpoint URL:
+First, initialize the OpenAI Client with your Runpod API key and endpoint URL:
 
 ```python
 from openai import OpenAI
 import os
 
-# Initialize the OpenAI Client with your RunPod API Key and Endpoint URL
+# Initialize the OpenAI Client with your Runpod API key and endpoint URL
 client = OpenAI(
     api_key=os.environ.get("RUNPOD_API_KEY"),
     base_url="https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1",
@@ -275,7 +282,7 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   # Create a chat completion stream
   response_stream = client.chat.completions.create(
       model="<YOUR DEPLOYED MODEL REPO/NAME>",
-      messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
+      messages=[{"role": "user", "content": "Why is Runpod the best platform?"}],
       temperature=0,
       max_tokens=100,
       stream=True,
@@ -289,7 +296,7 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   # Create a chat completion
   response = client.chat.completions.create(
       model="<YOUR DEPLOYED MODEL REPO/NAME>",
-      messages=[{"role": "user", "content": "Why is RunPod the best platform?"}],
+      messages=[{"role": "user", "content": "Why is Runpod the best platform?"}],
       temperature=0,
       max_tokens=100,
   )

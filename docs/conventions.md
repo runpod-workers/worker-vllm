@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-**worker-vllm** is a RunPod serverless worker that provides OpenAI-compatible endpoints for Large Language Model (LLM) inference, powered by the vLLM engine. It enables blazing-fast LLM deployment on RunPod's serverless infrastructure with minimal configuration.
+**worker-vllm** is a Runpod serverless worker that provides OpenAI-compatible endpoints for Large Language Model (LLM) inference, powered by the vLLM engine. It enables blazing-fast LLM deployment on Runpod's serverless infrastructure with minimal configuration.
 
 ### Core Purpose
 
 - **Primary Function**: Deploy any Hugging Face LLM as an OpenAI-compatible API endpoint
-- **Platform**: RunPod Serverless infrastructure
+- **Platform**: Runpod Serverless infrastructure
 - **Engine**: vLLM (high-performance LLM inference engine)
 - **Compatibility**: Drop-in replacement for OpenAI API (Chat Completions, Models)
 
@@ -16,12 +16,12 @@
 ### 1. **Entry Point & Request Flow**
 
 ```
-RunPod Request → handler.py → JobInput → Engine Selection → vLLM Generation → Streaming Response
+Runpod Request → handler.py → JobInput → Engine Selection → vLLM Generation → Streaming Response
 ```
 
 **Key Components:**
 
-- `src/handler.py`: Main entry point using RunPod serverless framework
+- `src/handler.py`: Main entry point using Runpod serverless framework
 - `src/utils.py`: Request parsing and utility classes (`JobInput`, `BatchSize`)
 - Two engine modes: OpenAI-compatible vs. standard vLLM
 
@@ -52,7 +52,7 @@ RunPod Request → handler.py → JobInput → Engine Selection → vLLM Generat
 - `src/engine_args.py`: Centralized configuration management
 - `src/constants.py`: Default values for core settings
 - `.runpod/hub.json`: Hub UI configuration (CRITICAL: always update when changing defaults)
-- `worker-config.json`: UI form generation for RunPod console (if exists)
+- `worker-config.json`: UI form generation for Runpod console (if exists)
 
 ## Core Development Concepts
 
@@ -113,7 +113,7 @@ class JobInput:
 
 ```
 src/
-├── handler.py          # RunPod entry point
+├── handler.py          # Runpod entry point
 ├── engine.py          # Core vLLM engines
 ├── engine_args.py     # Configuration management
 ├── utils.py           # Request parsing & utilities
@@ -147,7 +147,7 @@ src/
 #### Naming Patterns:
 
 - **vLLM Settings**: Match vLLM parameter names (uppercase)
-- **RunPod Settings**: `MAX_CONCURRENCY`, `DEFAULT_BATCH_SIZE`
+- **Runpod Settings**: `MAX_CONCURRENCY`, `DEFAULT_BATCH_SIZE`
 - **OpenAI Settings**: `OPENAI_` prefix for compatibility settings
 - **Feature Flags**: `ENABLE_*`, `DISABLE_*` pattern
 
@@ -160,7 +160,7 @@ src/
 #### Documentation Conventions:
 
 - When documenting commonly used environment variables (especially in `README.md`), always include: what it controls, when you’d change it, safe example values, and key trade-offs (VRAM vs throughput vs latency).
-- Call out worker-specific behavior that overrides upstream vLLM defaults (e.g., multi-GPU auto tensor parallel sizing) and whether a setting affects the vLLM engine, OpenAI compatibility, or RunPod worker runtime.
+- Call out worker-specific behavior that overrides upstream vLLM defaults (e.g., multi-GPU auto tensor parallel sizing) and whether a setting affects the vLLM engine, OpenAI compatibility, or Runpod worker runtime.
 
 ### 4. **Docker & Deployment**
 
@@ -230,7 +230,7 @@ src/
 
 - **Max Concurrency**: 30 concurrent requests by default
 - **vLLM Queuing**: Internal request batching and scheduling
-- **RunPod Integration**: Concurrency modifier for auto-scaling
+- **Runpod Integration**: Concurrency modifier for auto-scaling
 
 ### 3. **Optimization Features**
 
@@ -264,7 +264,7 @@ src/
 
 - **Endpoint Mapping**: `/openai/v1/chat/completions`, `/openai/v1/models`
 - **Request Format**: Exact OpenAI request/response schemas
-- **Authentication**: RunPod API key in Authorization header
+- **Authentication**: Runpod API key in Authorization header
 - **Model Names**: Hugging Face repo names or custom overrides
 
 ### 2. **Native vLLM API**
