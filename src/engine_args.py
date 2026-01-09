@@ -4,6 +4,7 @@ import logging
 from torch.cuda import device_count
 from vllm import AsyncEngineArgs
 from vllm.model_executor.model_loader.tensorizer import TensorizerConfig
+from vllm.config import CompilationConfig
 from src.utils import convert_limit_mm_per_prompt
 
 RENAME_ARGS_MAP = {
@@ -148,6 +149,10 @@ def get_engine_args():
     #     args["load_format"] = "tensorizer"
     #     args["model_loader_extra_config"] = TensorizerConfig(tensorizer_uri=args["TENSORIZER_URI"], num_readers=None)
     #     logging.info(f"Using tensorized model from {args['TENSORIZER_URI']}")
+
+    if os.getenv("COMPILATION_CONFIG") is not None:
+        compilation_config = CompilationConfig(**json.loads(os.getenv("COMPILATION_CONFIG")))
+        args["compilation_config"] = compilation_config
     
     
     # Rename and match to vllm args

@@ -42,6 +42,7 @@ Complete guide to all environment variables and configuration options for worker
 | `TOKENIZER_POOL_SIZE`          | 0                   | `int`                                                       | Size of tokenizer pool to use for asynchronous tokenization.                    |
 | `TOKENIZER_POOL_TYPE`          | 'ray'               | `str`                                                       | Type of tokenizer pool to use for asynchronous tokenization.                    |
 | `TOKENIZER_POOL_EXTRA_CONFIG`  | None                | `dict`                                                      | Extra config for tokenizer pool.                                                |
+| `COMPILATION_CONFIG`           | None                | `dict`                                                      | Compilation Config for vLLM                                                     |
 
 ## LoRA (Low-Rank Adaptation) Settings
 
