@@ -1,5 +1,5 @@
 variable "DOCKERHUB_REPO" {
-  default = "runpod"
+  default = "madiatorlabs"
 }
 
 variable "DOCKERHUB_IMG" {
@@ -7,7 +7,7 @@ variable "DOCKERHUB_IMG" {
 }
 
 variable "RELEASE_VERSION" {
-  default = "latest"
+  default = "dev-checks4"
 }
 
 variable "HUGGINGFACE_ACCESS_TOKEN" {

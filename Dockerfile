@@ -5,9 +5,11 @@ RUN apt-get update -y \
 
 RUN ldconfig /usr/local/cuda-12.8/compat/
 
-# Install vLLM with FlashInfer - use CUDA 12.8 PyTorch wheels (officially supported by vLLM 0.12.0)
+# Install vLLM with FlashInfer - use CUDA 12.8 PyTorch wheels (officially supported by vLLM 0.13.0)
 RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install "vllm[flashinfer]==0.12.0" --extra-index-url https://download.pytorch.org/whl/cu128
+    python3 -m pip install "vllm[flashinfer]==0.13.0" --extra-index-url https://download.pytorch.org/whl/cu128
+
+
 
 # Install additional Python dependencies (after vLLM to avoid PyTorch version conflicts)
 COPY builder/requirements.txt /requirements.txt
@@ -34,7 +36,7 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_HUB_ENABLE_HF_TRANSFER=0 \
     # Suppress Ray metrics agent warnings (not needed in containerized environments)
     RAY_METRICS_EXPORT_ENABLED=0 \
-    RAY_DISABLE_USAGE_STATS=1 
+    RAY_DISABLE_USAGE_STATS=1
 
 ENV PYTHONPATH="/:/vllm-workspace"
 

@@ -38,7 +38,9 @@ DEFAULT_ARGS = {
     "block_size": int(os.getenv('BLOCK_SIZE', 16)),
     "enable_prefix_caching": os.getenv('ENABLE_PREFIX_CACHING', 'False').lower() == 'true',
     "disable_sliding_window": os.getenv('DISABLE_SLIDING_WINDOW', 'False').lower() == 'true',
-    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'False').lower() == 'true',
+    # use_v2_block_manager removed in vLLM 0.13.0 - V2 is now the default and only option
+    # vLLM 0.13.0: attention_backend replaces VLLM_ATTENTION_BACKEND env var
+    "attention_backend": os.getenv('ATTENTION_BACKEND', None),
     "swap_space": int(os.getenv('SWAP_SPACE', 4)),  # GiB
     "cpu_offload_gb": int(os.getenv('CPU_OFFLOAD_GB', 0)),  # GiB
     # vLLM 0.12.0 defaults None to 2048; keep 0 as None to let vLLM auto-calculate
@@ -93,7 +95,7 @@ DEFAULT_ARGS = {
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
     "disable_logprobs_during_spec_decoding": os.getenv('DISABLE_LOGPROBS_DURING_SPEC_DECODING', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
-    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'true'),
+    # use_v2_block_manager removed in vLLM 0.13.0 (was line 96)
 }
 limit_mm_env = os.getenv('LIMIT_MM_PER_PROMPT')
 if limit_mm_env is not None:
@@ -182,5 +184,14 @@ def get_engine_args():
     if args.get("max_num_batched_tokens") is None and args.get("max_model_len") is not None:
         args["max_num_batched_tokens"] = args["max_model_len"]
         logging.info(f"Setting max_num_batched_tokens to max_model_len ({args['max_model_len']}) for unlimited batching.")
+    
+    # vLLM 0.13.0: VLLM_ATTENTION_BACKEND env var is deprecated, migrate to attention_backend
+    if os.getenv('VLLM_ATTENTION_BACKEND'):
+        logging.warning(
+            "VLLM_ATTENTION_BACKEND env var is deprecated in vLLM 0.13.0. "
+            "Use ATTENTION_BACKEND instead (maps to --attention-backend CLI arg)."
+        )
+        if not args.get('attention_backend'):
+            args['attention_backend'] = os.getenv('VLLM_ATTENTION_BACKEND')
         
     return AsyncEngineArgs(**args)
