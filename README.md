@@ -58,6 +58,7 @@ Configure worker-vllm using environment variables:
 | `TOOL_CALL_PARSER`                  | Parser for tool calls                             |                     | "mistral", "hermes", "llama3_json", "granite", "deepseek_v3", etc. |
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
 | `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 30                  | Integer                                                            |
+| `LIMIT_MM_PER_PROMPT`               | Multimodal input (Required for vision models)     |                     | `image=2` or `image=2,video=1`                                     |
 
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
 
@@ -290,14 +291,26 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
   print(response.choices[0].message.content)
   ```
 
-### Getting a list of names for available models:
+### Image Inputs (Multimodal Models):
 
-In the case of baking the model into the image, sometimes the repo may not be accepted as the `model` in the request. In this case, you can list the available models as shown below and use that name.
+For vision-language models, pass images alongside text using the OpenAI format:
 
 ```python
-models_response = client.models.list()
-list_of_models = [model.id for model in models_response]
-print(list_of_models)
+# Configuration: Set LIMIT_MM_PER_PROMPT=image=2
+response = client.chat.completions.create(
+    model="llava-hf/llava-1.5-7b-hf",
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "What's in this image?"},
+                {"type": "image_url", "image_url": {"url": "[https://example.com/image.jpg](https://example.com/image.jpg)"}}
+            ]
+        }
+    ],
+    max_tokens=300
+)
+print(response.choices[0].message.content)
 ```
 
 # Usage: Standard (Non-OpenAI)
