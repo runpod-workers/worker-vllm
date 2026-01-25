@@ -15,10 +15,10 @@ from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRe
 from vllm.entrypoints.openai.serving_models import BaseModelPath, LoRAModulePath, OpenAIServingModels
 
 
-from utils import DummyRequest, JobInput, BatchSize, create_error_response
-from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
-from tokenizer import TokenizerWrapper
-from engine_args import get_engine_args
+from .utils import DummyRequest, JobInput, BatchSize, create_error_response
+from .constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
+from .tokenizer import TokenizerWrapper
+from .engine_args import get_engine_args
 
 class vLLMEngine:
     def __init__(self, engine = None):
@@ -204,7 +204,7 @@ class OpenAIvLLMEngine(vLLMEngine):
     async def _initialize_engines(self):
         self.model_config = await self.llm.get_model_config()
         self.base_model_paths = [
-            BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
+            BaseModelPath(name=self.served_model_name, model_path=self.engine_args.model)
         ]
 
         self.serving_models = OpenAIServingModels(

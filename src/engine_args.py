@@ -4,7 +4,13 @@ import logging
 from torch.cuda import device_count
 from vllm import AsyncEngineArgs
 from vllm.model_executor.model_loader.tensorizer import TensorizerConfig
-from src.utils import convert_limit_mm_per_prompt
+
+try:
+    # Try relative imports (when installed as package)
+    from .utils import convert_limit_mm_per_prompt
+except ImportError:
+    # Fall back to absolute imports (when running directly)
+    from utils import convert_limit_mm_per_prompt
 
 RENAME_ARGS_MAP = {
     "MODEL_NAME": "model",
