@@ -75,6 +75,7 @@ To build an image with the model baked in, you must specify the following docker
   - `MODEL_NAME`
 - **Optional**
   - `MODEL_REVISION`: Model revision to load (default: `main`).
+  - `TASK`: The task to use for the model, e.g. `embed` for embedding models (default: `auto`).
   - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
   - `QUANTIZATION`
   - `WORKER_CUDA_VERSION`: `12.1.0` (`12.1.0` is recommended for optimal performance).
