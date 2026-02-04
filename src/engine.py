@@ -9,10 +9,14 @@ import time
 
 from vllm import AsyncLLMEngine
 from vllm.entrypoints.logger import RequestLogger
-from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest, CompletionRequest, ErrorResponse
-from vllm.entrypoints.openai.serving_models import BaseModelPath, LoRAModulePath, OpenAIServingModels
+# vLLM 0.15.0: Reorganized import paths
+from vllm.entrypoints.openai.chat_completion.serving import OpenAIServingChat
+from vllm.entrypoints.openai.completion.serving import OpenAIServingCompletion
+from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
+from vllm.entrypoints.openai.completion.protocol import CompletionRequest
+from vllm.entrypoints.openai.engine.protocol import ErrorResponse
+from vllm.entrypoints.openai.models.protocol import BaseModelPath, LoRAModulePath
+from vllm.entrypoints.openai.models.serving import OpenAIServingModels
 
 
 from utils import DummyRequest, JobInput, BatchSize, create_error_response
@@ -177,7 +181,19 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
         self.lora_adapters = self._load_lora_adapters()
-        asyncio.run(self._initialize_engines())
+
+        # Conditional initialization based on LoRA usage
+        # With LoRA: defer async init to first request to avoid event loop mismatch in Serverless
+        # Without LoRA: safe to init at startup (original behavior)
+        if self.lora_adapters:
+            self._engines_initialized = False
+            logging.info(f"LoRA mode: {len(self.lora_adapters)} adapter(s) will load on first request")
+            for adapter in self.lora_adapters:
+                logging.info(f"  - {adapter.name}: {adapter.path}")
+        else:
+            asyncio.run(self._initialize_engines())
+            self._engines_initialized = True
+
         # Handle both integer and boolean string values for RAW_OPENAI_OUTPUT
         raw_output_env = os.getenv("RAW_OPENAI_OUTPUT", "1")
         if raw_output_env.lower() in ('true', 'false'):
@@ -201,6 +217,20 @@ class OpenAIvLLMEngine(vLLMEngine):
                 continue
         return adapters
 
+    async def _ensure_engines_initialized(self):
+        """Initialize engines if not already done (for lazy LoRA init).
+
+        This method ensures OpenAI serving engines are initialized in the correct
+        event loop context. When LoRA adapters are configured, initialization is
+        deferred to the first request to avoid event loop mismatch issues in
+        RunPod Serverless environments.
+        """
+        if not self._engines_initialized:
+            logging.info("Initializing OpenAI engines with LoRA adapters...")
+            await self._initialize_engines()
+            self._engines_initialized = True
+            logging.info("OpenAI engines with LoRA initialized successfully")
+
     async def _initialize_engines(self):
         self.model_config = self.llm.model_config
         self.base_model_paths = [
@@ -219,7 +249,7 @@ class OpenAIvLLMEngine(vLLMEngine):
         if self.tokenizer and hasattr(self.tokenizer, 'tokenizer'):
             chat_template = self.tokenizer.tokenizer.chat_template
         
-        # vLLM 0.13.0: New parameters for OpenAIServingChat
+        # vLLM 0.15.0: OpenAIServingChat with all supported parameters
         self.chat_engine = OpenAIServingChat(
             engine_client=self.llm, 
             models=self.serving_models,
@@ -238,9 +268,9 @@ class OpenAIvLLMEngine(vLLMEngine):
             enable_log_outputs=os.getenv('ENABLE_LOG_OUTPUTS', 'false').lower() == 'true',
             log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
         )
-        # vLLM 0.13.0: New parameters for OpenAIServingCompletion
+        # vLLM 0.15.0: New parameters for OpenAIServingCompletion
         self.completion_engine = OpenAIServingCompletion(
-            engine_client=self.llm, 
+            engine_client=self.llm,
             models=self.serving_models,
             request_logger=None,
             return_tokens_as_token_ids=os.getenv('RETURN_TOKENS_AS_TOKEN_IDS', 'false').lower() == 'true',
@@ -248,8 +278,16 @@ class OpenAIvLLMEngine(vLLMEngine):
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
             log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
         )
-    
+
+        # vLLM 0.15.0: Warmup chat engine to pre-compile Jinja2 templates
+        # This reduces first-request latency
+        if hasattr(self.chat_engine, 'warmup'):
+            await self.chat_engine.warmup()
+
     async def generate(self, openai_request: JobInput):
+        # Ensure engines are ready (no-op if already initialized at startup)
+        await self._ensure_engines_initialized()
+
         if openai_request.openai_route == "/v1/models":
             yield await self._handle_model_request()
         elif openai_request.openai_route in ["/v1/chat/completions", "/v1/completions"]:

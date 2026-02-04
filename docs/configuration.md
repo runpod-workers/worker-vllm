@@ -56,6 +56,8 @@ Complete guide to all environment variables and configuration options for worker
 | `FULLY_SHARDED_LORAS`       | False   | `bool`                                     | Enable fully sharded LoRA layers.                                                                         |
 | `LORA_MODULES`              | `[]`    | `list[dict]`                               | Add lora adapters from Hugging Face `[{"name": "xx", "path": "xxx/xxxx", "base_model_name": "xxx/xxxx"}]` |
 
+> **Note (Serverless)**: When LoRA adapters are configured via `LORA_MODULES`, initialization is deferred to the first request to ensure compatibility with RunPod Serverless. This means the first request will include LoRA loading time. Subsequent requests are unaffected. Check logs for "LoRA mode: X adapter(s) will load on first request" at startup.
+
 ## Speculative Decoding Settings
 
 | Variable                                         | Default             | Type/Choices                                        | Description                                                                               |
@@ -86,6 +88,8 @@ Complete guide to all environment variables and configuration options for worker
 | `DISABLE_CUSTOM_ALL_REDUCE`    | `0`     | `int`           | Enables or disables custom all reduce.                                                                                              |
 | `ENABLE_EXPERT_PARALLEL`       | `False` | `bool`          | Enable Expert Parallel for MoE models.                                                                                              |
 | `ATTENTION_BACKEND`            | `None`  | `str`           | Attention backend to use (e.g., `FLASH_ATTN`, `FLASHINFER`, `TRITON_FLASH_ATTN`). Replaces deprecated `VLLM_ATTENTION_BACKEND`.     |
+| `ASYNC_SCHEDULING`             | `None`  | `bool`          | Enable async scheduling (overlaps engine scheduling with GPU execution). Default: enabled in vLLM 0.14.0+. Set to `false` to disable. |
+| `STREAM_INTERVAL`              | `1`     | `int`           | Controls how often to yield streaming results. Lower = more frequent updates.                                                        |
 
 ## Tokenizer Settings
 
@@ -129,7 +133,7 @@ The way this works is that the first request will have a batch size of `DEFAULT_
 | ---------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MAX_CONCURRENCY`      | `30`    | `int`        | Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency |
 | `DISABLE_LOG_STATS`    | False   | `bool`       | Enables or disables vLLM stats logging.                                                                                                                                    |
-| `DISABLE_LOG_REQUESTS` | False   | `bool`       | Enables or disables vLLM request logging.                                                                                                                                  |
+| `ENABLE_LOG_REQUESTS`  | False   | `bool`       | Enables vLLM request logging. (Replaces deprecated `DISABLE_LOG_REQUESTS` in vLLM 0.15.0)                                                                                  |
 
 ## Advanced Settings
 
@@ -161,3 +165,23 @@ These variables are used when building custom Docker images with models baked in
 | `kv_cache_dtype=fp8_e5m2`    | `kv_cache_dtype=fp8`     | Simplified fp8 format                                                |
 | `USE_V2_BLOCK_MANAGER`       | *(removed)*              | V2 block manager is now the default in vLLM 0.13.0, setting ignored  |
 | `VLLM_ATTENTION_BACKEND`     | `ATTENTION_BACKEND`      | Use new env var name (old still works with deprecation warning)      |
+| `DISABLE_LOG_REQUESTS`       | `ENABLE_LOG_REQUESTS`    | Inverted logic in vLLM 0.15.0 (old still works with deprecation warning) |
+
+## vLLM 0.15.0 Notes
+
+- **LoRA Serverless fix**: LoRA adapters now use lazy initialization to fix `EngineDeadError` crashes on first request in Serverless environments. LoRA adapters load on first request instead of startup.
+- **Chat engine warmup**: Pre-compiles Jinja2 chat templates on initialization to reduce first-request latency.
+- **New model support**: Kimi-K2.5, Molmo2, Step3vl 10B, Step1, GLM-Lite, Eagle2.5-8B VLM.
+- **LoRA expansion**: Nemotron-H, InternVL2, MiniMax M2 now support LoRA.
+- **Inplace LoRA loading**: New `load_inplace` option for memory-efficient LoRA reloading.
+- **Mamba prefix caching**: Block-aligned prefix caching for Mamba/hybrid models (~2x speedup).
+- **Async scheduling + Pipeline Parallelism**: `--async-scheduling` now works with pipeline parallelism.
+- **FlashInfer MLA default on Blackwell**: Improved performance on NVIDIA Blackwell GPUs.
+- **Deprecated**: `DISABLE_LOG_REQUESTS` replaced by `ENABLE_LOG_REQUESTS`.
+
+## vLLM 0.14.0 Notes
+
+- **Async scheduling enabled by default**: Overlaps engine core scheduling with GPU execution for improved throughput. Disable with `ASYNC_SCHEDULING=false` if experiencing issues.
+- **PyTorch 2.9.1 required**: Default wheel compiled against CUDA 12.9.
+- **Stricter spec decode validation**: Unsupported sampling parameters now fail instead of being silently ignored.
+- **`--max-model-len auto`**: Automatically fits context length to available GPU memory (set `MAX_MODEL_LEN=auto`).
