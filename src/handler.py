@@ -80,7 +80,7 @@ if __name__ == "__main__" or multiprocessing.current_process().name == "MainProc
     initialize_engines()
     
     # If engine init failed, crash the worker BEFORE starting serverless loop
-    # This way RunPod never sees this worker as available, and jobs go to healthy workers
+    # This way Runpod never sees this worker as available, and jobs go to healthy workers
     if STARTUP_ERROR or vllm_engine is None:
         log.error(f"Worker startup failed, exiting: {STARTUP_ERROR}")
         sys.exit(1)  # Non-zero exit = worker unhealthy, RunPod will spin up another
