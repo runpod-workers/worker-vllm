@@ -36,7 +36,11 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_HUB_ENABLE_HF_TRANSFER=0 \
     # Suppress Ray metrics agent warnings (not needed in containerized environments)
     RAY_METRICS_EXPORT_ENABLED=0 \
-    RAY_DISABLE_USAGE_STATS=1
+    RAY_DISABLE_USAGE_STATS=1 \
+    # Prevent rayon thread pool panic in containers where ulimit -u < nproc
+    # (tokenizers uses Rust's rayon which tries to spawn threads = CPU cores)
+    TOKENIZERS_PARALLELISM=false \
+    RAYON_NUM_THREADS=4
 
 ENV PYTHONPATH="/:/vllm-workspace"
 

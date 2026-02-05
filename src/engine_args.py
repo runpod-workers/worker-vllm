@@ -15,7 +15,7 @@ RENAME_ARGS_MAP = {
 
 DEFAULT_ARGS = {
     "disable_log_stats": os.getenv('DISABLE_LOG_STATS', 'False').lower() == 'true',
-    # vLLM 0.15.0: disable_log_requests is deprecated, use enable_log_requests instead
+    # disable_log_requests is deprecated, use enable_log_requests instead
     "enable_log_requests": os.getenv('ENABLE_LOG_REQUESTS', 'False').lower() == 'true',
     "gpu_memory_utilization": float(os.getenv('GPU_MEMORY_UTILIZATION', 0.95)),
     "pipeline_parallel_size": int(os.getenv('PIPELINE_PARALLEL_SIZE', 1)),
@@ -39,17 +39,15 @@ DEFAULT_ARGS = {
     "block_size": int(os.getenv('BLOCK_SIZE', 16)),
     "enable_prefix_caching": os.getenv('ENABLE_PREFIX_CACHING', 'False').lower() == 'true',
     "disable_sliding_window": os.getenv('DISABLE_SLIDING_WINDOW', 'False').lower() == 'true',
-    # use_v2_block_manager removed in vLLM 0.13.0 - V2 is now the default and only option
-    # vLLM 0.13.0+: attention_backend replaces VLLM_ATTENTION_BACKEND env var
+    # attention_backend replaces deprecated VLLM_ATTENTION_BACKEND env var
     "attention_backend": os.getenv('ATTENTION_BACKEND', None),
-    # vLLM 0.14.0: async_scheduling is now enabled by default for improved throughput
-    # Set to False to disable if experiencing issues
+    # Enabled by default for improved throughput. Set to False to disable if experiencing issues
     "async_scheduling": None if os.getenv('ASYNC_SCHEDULING') is None else os.getenv('ASYNC_SCHEDULING', 'True').lower() == 'true',
-    # vLLM 0.14.0: stream_interval controls how often to yield streaming results
+    # Controls how often to yield streaming results
     "stream_interval": int(os.getenv('STREAM_INTERVAL', 1)),
     "swap_space": int(os.getenv('SWAP_SPACE', 4)),  # GiB
     "cpu_offload_gb": int(os.getenv('CPU_OFFLOAD_GB', 0)),  # GiB
-    # vLLM 0.12.0 defaults None to 2048; keep 0 as None to let vLLM auto-calculate
+    # vLLM defaults None to 2048; keep 0 as None to let vLLM auto-calculate
     "max_num_batched_tokens": int(os.getenv('MAX_NUM_BATCHED_TOKENS', 0)) or None,
     "max_num_seqs": int(os.getenv('MAX_NUM_SEQS', 256)),
     "max_logprobs": int(os.getenv('MAX_LOGPROBS', 20)),  # Default value for OpenAI Chat Completions API
@@ -101,8 +99,6 @@ DEFAULT_ARGS = {
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
     "disable_logprobs_during_spec_decoding": os.getenv('DISABLE_LOGPROBS_DURING_SPEC_DECODING', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
-    # use_v2_block_manager removed in vLLM 0.13.0
-    # vLLM 0.14.0: async_scheduling enabled by default, stream_interval added
 }
 limit_mm_env = os.getenv('LIMIT_MM_PER_PROMPT')
 if limit_mm_env is not None:
@@ -186,25 +182,25 @@ def get_engine_args():
     #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
     #     logging.info("Using FLASHINFER for gemma-2 model.")
     
-    # vLLM 0.12.0 compatibility: when max_num_batched_tokens is None (i.e., env var was 0),
-    # set it to max_model_len to preserve "unlimited" behavior. vLLM 0.12.0 defaults None to 2048.
+    # When max_num_batched_tokens is None (env var was 0), set to max_model_len
+    # to preserve "unlimited" behavior. vLLM defaults None to 2048.
     if args.get("max_num_batched_tokens") is None and args.get("max_model_len") is not None:
         args["max_num_batched_tokens"] = args["max_model_len"]
         logging.info(f"Setting max_num_batched_tokens to max_model_len ({args['max_model_len']}) for unlimited batching.")
     
-    # vLLM 0.13.0+: VLLM_ATTENTION_BACKEND env var is deprecated, migrate to attention_backend
+    # VLLM_ATTENTION_BACKEND is deprecated, migrate to attention_backend
     if os.getenv('VLLM_ATTENTION_BACKEND'):
         logging.warning(
-            "VLLM_ATTENTION_BACKEND env var is deprecated since vLLM 0.13.0. "
+            "VLLM_ATTENTION_BACKEND env var is deprecated. "
             "Use ATTENTION_BACKEND instead (maps to --attention-backend CLI arg)."
         )
         if not args.get('attention_backend'):
             args['attention_backend'] = os.getenv('VLLM_ATTENTION_BACKEND')
 
-    # vLLM 0.15.0: DISABLE_LOG_REQUESTS is deprecated, use ENABLE_LOG_REQUESTS instead
+    # DISABLE_LOG_REQUESTS is deprecated, use ENABLE_LOG_REQUESTS instead
     if os.getenv('DISABLE_LOG_REQUESTS'):
         logging.warning(
-            "DISABLE_LOG_REQUESTS env var is deprecated since vLLM 0.15.0. "
+            "DISABLE_LOG_REQUESTS env var is deprecated. "
             "Use ENABLE_LOG_REQUESTS instead (default: False)."
         )
         # Honor old behavior: if DISABLE_LOG_REQUESTS=true, don't enable logging

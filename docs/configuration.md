@@ -167,21 +167,3 @@ These variables are used when building custom Docker images with models baked in
 | `VLLM_ATTENTION_BACKEND`     | `ATTENTION_BACKEND`      | Use new env var name (old still works with deprecation warning)      |
 | `DISABLE_LOG_REQUESTS`       | `ENABLE_LOG_REQUESTS`    | Inverted logic in vLLM 0.15.0 (old still works with deprecation warning) |
 
-## vLLM 0.15.0 Notes
-
-- **LoRA Serverless fix**: LoRA adapters now use lazy initialization to fix `EngineDeadError` crashes on first request in Serverless environments. LoRA adapters load on first request instead of startup.
-- **Chat engine warmup**: Pre-compiles Jinja2 chat templates on initialization to reduce first-request latency.
-- **New model support**: Kimi-K2.5, Molmo2, Step3vl 10B, Step1, GLM-Lite, Eagle2.5-8B VLM.
-- **LoRA expansion**: Nemotron-H, InternVL2, MiniMax M2 now support LoRA.
-- **Inplace LoRA loading**: New `load_inplace` option for memory-efficient LoRA reloading.
-- **Mamba prefix caching**: Block-aligned prefix caching for Mamba/hybrid models (~2x speedup).
-- **Async scheduling + Pipeline Parallelism**: `--async-scheduling` now works with pipeline parallelism.
-- **FlashInfer MLA default on Blackwell**: Improved performance on NVIDIA Blackwell GPUs.
-- **Deprecated**: `DISABLE_LOG_REQUESTS` replaced by `ENABLE_LOG_REQUESTS`.
-
-## vLLM 0.14.0 Notes
-
-- **Async scheduling enabled by default**: Overlaps engine core scheduling with GPU execution for improved throughput. Disable with `ASYNC_SCHEDULING=false` if experiencing issues.
-- **PyTorch 2.9.1 required**: Default wheel compiled against CUDA 12.9.
-- **Stricter spec decode validation**: Unsupported sampling parameters now fail instead of being silently ignored.
-- **`--max-model-len auto`**: Automatically fits context length to available GPU memory (set `MAX_MODEL_LEN=auto`).
