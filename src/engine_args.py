@@ -38,7 +38,6 @@ DEFAULT_ARGS = {
     "block_size": int(os.getenv('BLOCK_SIZE', 16)),
     "enable_prefix_caching": os.getenv('ENABLE_PREFIX_CACHING', 'False').lower() == 'true',
     "disable_sliding_window": os.getenv('DISABLE_SLIDING_WINDOW', 'False').lower() == 'true',
-    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'False').lower() == 'true',
     "swap_space": int(os.getenv('SWAP_SPACE', 4)),  # GiB
     "cpu_offload_gb": int(os.getenv('CPU_OFFLOAD_GB', 0)),  # GiB
     "max_num_batched_tokens": int(os.getenv('MAX_NUM_BATCHED_TOKENS', 0)) or None,
@@ -71,29 +70,128 @@ DEFAULT_ARGS = {
     "device": os.getenv('DEVICE', 'auto'),
     "ray_workers_use_nsight": os.getenv('RAY_WORKERS_USE_NSIGHT', 'False').lower() == 'true',
     "num_gpu_blocks_override": int(os.getenv('NUM_GPU_BLOCKS_OVERRIDE', 0)) or None,
-    "num_lookahead_slots": int(os.getenv('NUM_LOOKAHEAD_SLOTS', 0)),
     "model_loader_extra_config": os.getenv('MODEL_LOADER_EXTRA_CONFIG', None),
     "ignore_patterns": os.getenv('IGNORE_PATTERNS', None),
     "preemption_mode": os.getenv('PREEMPTION_MODE', None),
     "scheduler_delay_factor": float(os.getenv('SCHEDULER_DELAY_FACTOR', 0.0)),
     "enable_chunked_prefill": os.getenv('ENABLE_CHUNKED_PREFILL', None),
     "guided_decoding_backend": os.getenv('GUIDED_DECODING_BACKEND', 'outlines'),
-    "speculative_model": os.getenv('SPECULATIVE_MODEL', None),
-    "speculative_draft_tensor_parallel_size": int(os.getenv('SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE', 0)) or None,
     "enable_expert_parallel": bool(os.getenv('ENABLE_EXPERT_PARALLEL', 'False').lower() == 'true'),
-    "num_speculative_tokens": int(os.getenv('NUM_SPECULATIVE_TOKENS', 0)) or None,
-    "speculative_max_model_len": int(os.getenv('SPECULATIVE_MAX_MODEL_LEN', 0)) or None,
-    "speculative_disable_by_batch_size": int(os.getenv('SPECULATIVE_DISABLE_BY_BATCH_SIZE', 0)) or None,
-    "ngram_prompt_lookup_max": int(os.getenv('NGRAM_PROMPT_LOOKUP_MAX', 0)) or None,
-    "ngram_prompt_lookup_min": int(os.getenv('NGRAM_PROMPT_LOOKUP_MIN', 0)) or None,
-    "spec_decoding_acceptance_method": os.getenv('SPEC_DECODING_ACCEPTANCE_METHOD', 'rejection_sampler'),
-    "typical_acceptance_sampler_posterior_threshold": float(os.getenv('TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD', 0)) or None,
-    "typical_acceptance_sampler_posterior_alpha": float(os.getenv('TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA', 0)) or None,
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
-    "disable_logprobs_during_spec_decoding": os.getenv('DISABLE_LOGPROBS_DURING_SPEC_DECODING', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
-    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'true'),
 }
+
+
+def get_speculative_config():
+    """
+    Build speculative decoding configuration from environment variables.
+
+    Supports two modes:
+    1. Full JSON config via SPECULATIVE_CONFIG env var
+    2. Individual env vars for common settings
+
+    Speculative Methods:
+    - "draft_model": Use a smaller draft model for speculation
+    - "ngram": Use n-gram based prompt lookup (no additional model needed)
+    - "eagle" / "eagle3": Use EAGLE-based speculation
+    - "medusa": Use Medusa heads for speculation
+    - "mlp_speculator": Use MLP-based speculator
+
+    Returns:
+        dict | None: Speculative config dictionary or None if not configured
+    """
+    # Option 1: Full JSON configuration
+    spec_config_json = os.getenv('SPECULATIVE_CONFIG')
+    if spec_config_json:
+        try:
+            config = json.loads(spec_config_json)
+            logging.info(f"Using speculative config from SPECULATIVE_CONFIG: {config}")
+            return config
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to parse SPECULATIVE_CONFIG JSON: {e}")
+            return None
+
+    # Option 2: Build config from individual environment variables
+    spec_method = os.getenv('SPECULATIVE_METHOD')  # ngram, draft_model, eagle, eagle3, medusa, mlp_speculator
+    spec_model = os.getenv('SPECULATIVE_MODEL')
+    num_spec_tokens = os.getenv('NUM_SPECULATIVE_TOKENS')
+
+    # N-gram specific settings
+    ngram_max = os.getenv('NGRAM_PROMPT_LOOKUP_MAX')
+    ngram_min = os.getenv('NGRAM_PROMPT_LOOKUP_MIN')
+
+    # Check if any speculative decoding is configured
+    if not any([spec_method, spec_model, ngram_max]):
+        return None
+
+    config = {}
+
+    # Determine method
+    if spec_method:
+        config['method'] = spec_method
+    elif ngram_max and not spec_model:
+        config['method'] = 'ngram'
+    elif spec_model:
+        # Auto-detect method based on model name if not specified
+        model_lower = spec_model.lower()
+        if 'eagle3' in model_lower:
+            config['method'] = 'eagle3'
+        elif 'eagle' in model_lower:
+            config['method'] = 'eagle'
+        elif 'medusa' in model_lower:
+            config['method'] = 'medusa'
+        else:
+            config['method'] = 'draft_model'
+
+    # Model configuration
+    if spec_model:
+        config['model'] = spec_model
+
+    # Number of speculative tokens
+    if num_spec_tokens:
+        config['num_speculative_tokens'] = int(num_spec_tokens)
+
+    # N-gram settings
+    if ngram_max:
+        config['prompt_lookup_max'] = int(ngram_max)
+    if ngram_min:
+        config['prompt_lookup_min'] = int(ngram_min)
+
+    # Draft model tensor parallel size
+    draft_tp = os.getenv('SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE')
+    if draft_tp:
+        config['draft_tensor_parallel_size'] = int(draft_tp)
+
+    # Max model length for draft
+    spec_max_len = os.getenv('SPECULATIVE_MAX_MODEL_LEN')
+    if spec_max_len:
+        config['max_model_len'] = int(spec_max_len)
+
+    # Disable by batch size
+    disable_batch = os.getenv('SPECULATIVE_DISABLE_BY_BATCH_SIZE')
+    if disable_batch:
+        config['disable_by_batch_size'] = int(disable_batch)
+
+    # Draft model quantization
+    spec_quant = os.getenv('SPECULATIVE_QUANTIZATION')
+    if spec_quant:
+        config['quantization'] = spec_quant
+
+    # Draft model revision
+    spec_revision = os.getenv('SPECULATIVE_MODEL_REVISION')
+    if spec_revision:
+        config['revision'] = spec_revision
+
+    # Enforce eager mode for draft model
+    spec_eager = os.getenv('SPECULATIVE_ENFORCE_EAGER')
+    if spec_eager:
+        config['enforce_eager'] = spec_eager.lower() == 'true'
+
+    if config:
+        logging.info(f"Built speculative config from env vars: {config}")
+        return config
+
+    return None
 limit_mm_env = os.getenv('LIMIT_MM_PER_PROMPT')
 if limit_mm_env is not None:
     DEFAULT_ARGS["limit_mm_per_prompt"] = convert_limit_mm_per_prompt(limit_mm_env)
@@ -171,9 +269,10 @@ def get_engine_args():
     if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"):
         args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
         logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
-        
-    # if "gemma-2" in args.get("model", "").lower():
-    #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
-    #     logging.info("Using FLASHINFER for gemma-2 model.")
-        
+
+    # Add speculative decoding configuration if present
+    speculative_config = get_speculative_config()
+    if speculative_config:
+        args["speculative_config"] = speculative_config
+
     return AsyncEngineArgs(**args)

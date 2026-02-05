@@ -8,7 +8,7 @@ typing-extensions>=4.8.0
 pydantic
 pydantic-settings
 hf-transfer
-transformers>=4.57.0
+transformers>=4.57.5
 bitsandbytes>=0.45.0
 kernels
-torch==2.6.0
+torch>=2.10.0

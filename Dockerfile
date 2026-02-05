@@ -1,9 +1,9 @@
-FROM nvidia/cuda:12.4.1-base-ubuntu22.04 
+FROM nvidia/cuda:12.9.0-base-ubuntu22.04
 
 RUN apt-get update -y \
     && apt-get install -y python3-pip
 
-RUN ldconfig /usr/local/cuda-12.4/compat/
+RUN ldconfig /usr/local/cuda-12.9/compat/
 
 # Install Python dependencies
 COPY builder/requirements.txt /requirements.txt
@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade -r /requirements.txt
 
 # Install vLLM
-RUN python3 -m pip install vllm==0.11.0
+RUN python3 -m pip install vllm==0.15.0
 
 # Setup for Option 2: Building the Image with the Model included
 ARG MODEL_NAME=""
@@ -21,6 +21,7 @@ ARG BASE_PATH="/runpod-volume"
 ARG QUANTIZATION=""
 ARG MODEL_REVISION=""
 ARG TOKENIZER_REVISION=""
+ARG VLLM_NIGHTLY="true"
 
 ENV MODEL_NAME=$MODEL_NAME \
     MODEL_REVISION=$MODEL_REVISION \
@@ -34,6 +35,12 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_HUB_ENABLE_HF_TRANSFER=0 
 
 ENV PYTHONPATH="/:/vllm-workspace"
+
+RUN if [ -n "${VLLM_NIGHTLY}" ]; then \
+    pip install -U vllm --pre --index-url https://pypi.org/simple --extra-index-url https://wheels.vllm.ai/nightly && \
+    apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/* && \
+    pip install git+https://github.com/huggingface/transformers.git; \
+fi
 
 
 COPY src /src
