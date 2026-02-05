@@ -6,7 +6,6 @@ from time import time
 
 try:
     from vllm.utils import random_uuid
-    # vLLM 0.15.0: Reorganized import paths
     from vllm.entrypoints.openai.engine.protocol import ErrorResponse, RequestResponseMetadata
     from vllm import SamplingParams
 except ImportError:
