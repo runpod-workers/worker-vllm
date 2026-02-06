@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   dev:
-    runs-on: [blacksmith-8vcpu-ubuntu-2204, linux]
+    runs-on: linux
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -43,7 +43,6 @@ jobs:
         run: |
           echo "DOCKERHUB_REPO=${{ vars.DOCKERHUB_REPO || 'runpod' }}" >> $GITHUB_ENV
           echo "DOCKERHUB_IMG=${{ vars.DOCKERHUB_IMG || 'worker-v1-vllm' }}" >> $GITHUB_ENV
-          echo "HUGGINGFACE_ACCESS_TOKEN=${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}" >> $GITHUB_ENV
           # Convert branch name to safe docker tag (replace / with -)
           BRANCH_NAME="${GITHUB_REF##refs/heads/}"
           SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g')
@@ -57,4 +56,3 @@ jobs:
             *.args.DOCKERHUB_REPO=${{ env.DOCKERHUB_REPO }}
             *.args.DOCKERHUB_IMG=${{ env.DOCKERHUB_IMG }}
             *.args.RELEASE_VERSION=${{ env.RELEASE_VERSION }}
-            *.args.HUGGINGFACE_ACCESS_TOKEN=${{ env.HUGGINGFACE_ACCESS_TOKEN }}
