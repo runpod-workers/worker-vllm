@@ -10,10 +10,6 @@ variable "RELEASE_VERSION" {
   default = "latest"
 }
 
-variable "HUGGINGFACE_ACCESS_TOKEN" {
-  default = ""
-}
-
 group "default" {
   targets = ["worker-vllm"]
 }
