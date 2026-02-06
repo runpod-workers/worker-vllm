@@ -12,3 +12,4 @@ transformers>=4.57.5
 bitsandbytes>=0.45.0
 kernels
 torch>=2.10.0
+torch-c-dlpack-ext
