@@ -15,7 +15,7 @@ RENAME_ARGS_MAP = {
 
 DEFAULT_ARGS = {
     "disable_log_stats": os.getenv('DISABLE_LOG_STATS', 'False').lower() == 'true',
-    "disable_log_requests": os.getenv('DISABLE_LOG_REQUESTS', 'False').lower() == 'true',
+    "enable_log_requests": os.getenv('ENABLE_LOG_REQUESTS', 'False').lower() == 'true',
     "gpu_memory_utilization": float(os.getenv('GPU_MEMORY_UTILIZATION', 0.95)),
     "pipeline_parallel_size": int(os.getenv('PIPELINE_PARALLEL_SIZE', 1)),
     "tensor_parallel_size": int(os.getenv('TENSOR_PARALLEL_SIZE', 1)),
@@ -32,7 +32,6 @@ DEFAULT_ARGS = {
     "quantization_param_path": os.getenv('QUANTIZATION_PARAM_PATH', None),
     "seed": int(os.getenv('SEED', 0)),
     "max_model_len": int(os.getenv('MAX_MODEL_LEN', 0)) or None,
-    "worker_use_ray": os.getenv('WORKER_USE_RAY', 'False').lower() == 'true',
     "distributed_executor_backend": os.getenv('DISTRIBUTED_EXECUTOR_BACKEND', None),
     "max_parallel_loading_workers": int(os.getenv('MAX_PARALLEL_LOADING_WORKERS', 0)) or None,
     "block_size": int(os.getenv('BLOCK_SIZE', 16)),
@@ -45,17 +44,12 @@ DEFAULT_ARGS = {
     "max_logprobs": int(os.getenv('MAX_LOGPROBS', 20)),  # Default value for OpenAI Chat Completions API
     "revision": os.getenv('REVISION', None),
     "code_revision": os.getenv('CODE_REVISION', None),
-    "rope_scaling": os.getenv('ROPE_SCALING', None),
-    "rope_theta": float(os.getenv('ROPE_THETA', 0)) or None,
     "tokenizer_revision": os.getenv('TOKENIZER_REVISION', None),
     "quantization": os.getenv('QUANTIZATION', None),
     "enforce_eager": os.getenv('ENFORCE_EAGER', 'False').lower() == 'true',
     "max_context_len_to_capture": int(os.getenv('MAX_CONTEXT_LEN_TO_CAPTURE', 0)) or None,
     "max_seq_len_to_capture": int(os.getenv('MAX_SEQ_LEN_TO_CAPTURE', 8192)),
     "disable_custom_all_reduce": os.getenv('DISABLE_CUSTOM_ALL_REDUCE', 'False').lower() == 'true',
-    "tokenizer_pool_size": int(os.getenv('TOKENIZER_POOL_SIZE', 0)),
-    "tokenizer_pool_type": os.getenv('TOKENIZER_POOL_TYPE', 'ray'),
-    "tokenizer_pool_extra_config": os.getenv('TOKENIZER_POOL_EXTRA_CONFIG', None),
     "enable_lora": os.getenv('ENABLE_LORA', 'False').lower() == 'true',
     "max_loras": int(os.getenv('MAX_LORAS', 1)),
     "max_lora_rank": int(os.getenv('MAX_LORA_RANK', 16)),
@@ -63,8 +57,6 @@ DEFAULT_ARGS = {
     "max_prompt_adapters": int(os.getenv('MAX_PROMPT_ADAPTERS', 1)),
     "max_prompt_adapter_token": int(os.getenv('MAX_PROMPT_ADAPTER_TOKEN', 0)),
     "fully_sharded_loras": os.getenv('FULLY_SHARDED_LORAS', 'False').lower() == 'true',
-    "lora_extra_vocab_size": int(os.getenv('LORA_EXTRA_VOCAB_SIZE', 256)),
-    "long_lora_scaling_factors": tuple(map(float, os.getenv('LONG_LORA_SCALING_FACTORS', '').split(','))) if os.getenv('LONG_LORA_SCALING_FACTORS') else None,
     "lora_dtype": os.getenv('LORA_DTYPE', 'auto'),
     "max_cpu_loras": int(os.getenv('MAX_CPU_LORAS', 0)) or None,
     "device": os.getenv('DEVICE', 'auto'),
@@ -79,6 +71,9 @@ DEFAULT_ARGS = {
     "enable_expert_parallel": bool(os.getenv('ENABLE_EXPERT_PARALLEL', 'False').lower() == 'true'),
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
+    "attention_backend": os.getenv('ATTENTION_BACKEND', None),
+    "async_scheduling": os.getenv('ASYNC_SCHEDULING', 'False').lower() == 'true',
+    "stream_interval": float(os.getenv('STREAM_INTERVAL', 0)),
 }
 
 
@@ -192,6 +187,7 @@ def get_speculative_config():
         return config
 
     return None
+
 limit_mm_env = os.getenv('LIMIT_MM_PER_PROMPT')
 if limit_mm_env is not None:
     DEFAULT_ARGS["limit_mm_per_prompt"] = convert_limit_mm_per_prompt(limit_mm_env)
@@ -211,6 +207,7 @@ def match_vllm_args(args):
     renamed_args = {RENAME_ARGS_MAP.get(k, k): v for k, v in args.items()}
     matched_args = {k: v for k, v in renamed_args.items() if k in AsyncEngineArgs.__dataclass_fields__}
     return {k: v for k, v in matched_args.items() if v not in [None, "", "None"]}
+
 def get_local_args():
     """
     Retrieve local arguments from a JSON file.
@@ -232,28 +229,29 @@ def get_local_args():
     os.environ["HF_HUB_OFFLINE"] = "1"
 
     return local_args
+
 def get_engine_args():
     # Start with default args
     args = DEFAULT_ARGS
-    
+
     # Get env args that match keys in AsyncEngineArgs
     args.update(os.environ)
-    
+
     # Get local args if model is baked in and overwrite env args
     args.update(get_local_args())
-    
+
     # if args.get("TENSORIZER_URI"): TODO: add back once tensorizer is ready
     #     args["load_format"] = "tensorizer"
     #     args["model_loader_extra_config"] = TensorizerConfig(tensorizer_uri=args["TENSORIZER_URI"], num_readers=None)
     #     logging.info(f"Using tensorized model from {args['TENSORIZER_URI']}")
-    
-    
+
+
     # Rename and match to vllm args
     args = match_vllm_args(args)
 
     if args.get("load_format") == "bitsandbytes":
         args["quantization"] = args["load_format"]
-    
+
     # Set tensor parallel size and max parallel loading workers if more than 1 GPU is available
     num_gpus = device_count()
     if num_gpus > 1:
@@ -261,7 +259,7 @@ def get_engine_args():
         args["max_parallel_loading_workers"] = None
         if os.getenv("MAX_PARALLEL_LOADING_WORKERS"):
             logging.warning("Overriding MAX_PARALLEL_LOADING_WORKERS with None because more than 1 GPU is available.")
-    
+
     # Deprecated env args backwards compatibility
     if args.get("kv_cache_dtype") == "fp8_e5m2":
         args["kv_cache_dtype"] = "fp8"
@@ -269,6 +267,21 @@ def get_engine_args():
     if os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"):
         args["max_seq_len_to_capture"] = int(os.getenv("MAX_CONTEXT_LEN_TO_CAPTURE"))
         logging.warning("Using MAX_CONTEXT_LEN_TO_CAPTURE is deprecated. Please use MAX_SEQ_LEN_TO_CAPTURE instead.")
+
+    # VLLM_ATTENTION_BACKEND env var → attention_backend arg (deprecated shim)
+    vllm_attn_backend = os.getenv("VLLM_ATTENTION_BACKEND")
+    if vllm_attn_backend and "attention_backend" not in args:
+        args["attention_backend"] = vllm_attn_backend
+        logging.warning("VLLM_ATTENTION_BACKEND is deprecated. Please use ATTENTION_BACKEND instead.")
+
+    # DISABLE_LOG_REQUESTS → enable_log_requests (inverted, deprecated shim)
+    if os.getenv("DISABLE_LOG_REQUESTS") and "enable_log_requests" not in args:
+        args["enable_log_requests"] = os.getenv("DISABLE_LOG_REQUESTS", "False").lower() != "true"
+        logging.warning("DISABLE_LOG_REQUESTS is deprecated. Please use ENABLE_LOG_REQUESTS instead.")
+
+    # Default max_num_batched_tokens to max_model_len when not explicitly set
+    if args.get("max_num_batched_tokens") is None and args.get("max_model_len") is not None:
+        args["max_num_batched_tokens"] = args["max_model_len"]
 
     # Add speculative decoding configuration if present
     speculative_config = get_speculative_config()

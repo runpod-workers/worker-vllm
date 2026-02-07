@@ -17,19 +17,14 @@ Complete guide to all environment variables and configuration options for worker
 | `HF_TOKEN`                     | -                   | `str`                                                       | Hugging Face token for private and gated models.                                |
 | `DTYPE`                        | 'auto'              | ['auto', 'half', 'float16', 'bfloat16', 'float', 'float32'] | Data type for model weights and activations.                                    |
 | `KV_CACHE_DTYPE`               | 'auto'              | ['auto', 'fp8']                                             | Data type for KV cache storage.                                                 |
-| `QUANTIZATION_PARAM_PATH`      | None                | `str`                                                       | Path to the JSON file containing the KV cache scaling factors.                  |
 | `MAX_MODEL_LEN`                | None                | `int`                                                       | Model context length.                                                           |
-| `GUIDED_DECODING_BACKEND`      | 'outlines'          | ['outlines', 'lm-format-enforcer']                          | Which engine will be used for guided decoding by default.                       |
 | `DISTRIBUTED_EXECUTOR_BACKEND` | None                | ['ray', 'mp']                                               | Backend to use for distributed serving.                                         |
-| `WORKER_USE_RAY`               | False               | `bool`                                                      | Deprecated, use --distributed-executor-backend=ray.                             |
 | `PIPELINE_PARALLEL_SIZE`       | 1                   | `int`                                                       | Number of pipeline stages.                                                      |
 | `TENSOR_PARALLEL_SIZE`         | 1                   | `int`                                                       | Number of tensor parallel replicas.                                             |
 | `MAX_PARALLEL_LOADING_WORKERS` | None                | `int`                                                       | Load model sequentially in multiple batches.                                    |
 | `RAY_WORKERS_USE_NSIGHT`       | False               | `bool`                                                      | If specified, use nsight to profile Ray workers.                                |
 | `ENABLE_PREFIX_CACHING`        | False               | `bool`                                                      | Enables automatic prefix caching.                                               |
 | `DISABLE_SLIDING_WINDOW`       | False               | `bool`                                                      | Disables sliding window, capping to sliding window size.                        |
-| `USE_V2_BLOCK_MANAGER`         | False               | `bool`                                                      | Use BlockSpaceMangerV2.                                                         |
-| `NUM_LOOKAHEAD_SLOTS`          | 0                   | `int`                                                       | Experimental scheduling config necessary for speculative decoding.              |
 | `SEED`                         | 0                   | `int`                                                       | Random seed for operations.                                                     |
 | `NUM_GPU_BLOCKS_OVERRIDE`      | None                | `int`                                                       | If specified, ignore GPU profiling result and use this number of GPU blocks.    |
 | `MAX_NUM_BATCHED_TOKENS`       | None                | `int`                                                       | Maximum number of batched tokens per iteration.                                 |
@@ -37,11 +32,6 @@ Complete guide to all environment variables and configuration options for worker
 | `MAX_LOGPROBS`                 | 20                  | `int`                                                       | Max number of log probs to return when logprobs is specified in SamplingParams. |
 | `DISABLE_LOG_STATS`            | False               | `bool`                                                      | Disable logging statistics.                                                     |
 | `QUANTIZATION`                 | None                | ['awq', 'squeezellm', 'gptq', 'bitsandbytes']               | Method used to quantize the weights.                                            |
-| `ROPE_SCALING`                 | None                | `dict`                                                      | RoPE scaling configuration in JSON format.                                      |
-| `ROPE_THETA`                   | None                | `float`                                                     | RoPE theta. Use with rope_scaling.                                              |
-| `TOKENIZER_POOL_SIZE`          | 0                   | `int`                                                       | Size of tokenizer pool to use for asynchronous tokenization.                    |
-| `TOKENIZER_POOL_TYPE`          | 'ray'               | `str`                                                       | Type of tokenizer pool to use for asynchronous tokenization.                    |
-| `TOKENIZER_POOL_EXTRA_CONFIG`  | None                | `dict`                                                      | Extra config for tokenizer pool.                                                |
 
 ## LoRA (Low-Rank Adaptation) Settings
 
@@ -50,31 +40,41 @@ Complete guide to all environment variables and configuration options for worker
 | `ENABLE_LORA`               | False   | `bool`                                     | If True, enable handling of LoRA adapters.                                                                |
 | `MAX_LORAS`                 | 1       | `int`                                      | Max number of LoRAs in a single batch.                                                                    |
 | `MAX_LORA_RANK`             | 16      | `int`                                      | Max LoRA rank.                                                                                            |
-| `LORA_EXTRA_VOCAB_SIZE`     | 256     | `int`                                      | Maximum size of extra vocabulary for LoRA adapters.                                                       |
 | `LORA_DTYPE`                | 'auto'  | ['auto', 'float16', 'bfloat16', 'float32'] | Data type for LoRA.                                                                                       |
-| `LONG_LORA_SCALING_FACTORS` | None    | `tuple`                                    | Specify multiple scaling factors for LoRA adapters.                                                       |
 | `MAX_CPU_LORAS`             | None    | `int`                                      | Maximum number of LoRAs to store in CPU memory.                                                           |
 | `FULLY_SHARDED_LORAS`       | False   | `bool`                                     | Enable fully sharded LoRA layers.                                                                         |
 | `LORA_MODULES`              | `[]`    | `list[dict]`                               | Add lora adapters from Hugging Face `[{"name": "xx", "path": "xxx/xxxx", "base_model_name": "xxx/xxxx"}]` |
 
+> **Note:** When using LoRA with serverless deployments, the OpenAI serving engines are initialized on the first request (deferred initialization) to avoid event loop conflicts. LoRA adapter count is logged at startup.
+
 ## Speculative Decoding Settings
 
-| Variable                                         | Default             | Type/Choices                                        | Description                                                                               |
-| ------------------------------------------------ | ------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `SCHEDULER_DELAY_FACTOR`                         | 0.0                 | `float`                                             | Apply a delay before scheduling next prompt.                                              |
-| `ENABLE_CHUNKED_PREFILL`                         | False               | `bool`                                              | Enable chunked prefill requests.                                                          |
-| `SPECULATIVE_MODEL`                              | None                | `str`                                               | The name of the draft model to be used in speculative decoding.                           |
-| `NUM_SPECULATIVE_TOKENS`                         | None                | `int`                                               | The number of speculative tokens to sample from the draft model.                          |
-| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE`         | None                | `int`                                               | Number of tensor parallel replicas for the draft model.                                   |
-| `SPECULATIVE_MAX_MODEL_LEN`                      | None                | `int`                                               | The maximum sequence length supported by the draft model.                                 |
-| `SPECULATIVE_DISABLE_BY_BATCH_SIZE`              | None                | `int`                                               | Disable speculative decoding if the number of enqueue requests is larger than this value. |
-| `NGRAM_PROMPT_LOOKUP_MAX`                        | None                | `int`                                               | Max size of window for ngram prompt lookup in speculative decoding.                       |
-| `NGRAM_PROMPT_LOOKUP_MIN`                        | None                | `int`                                               | Min size of window for ngram prompt lookup in speculative decoding.                       |
-| `SPEC_DECODING_ACCEPTANCE_METHOD`                | 'rejection_sampler' | ['rejection_sampler', 'typical_acceptance_sampler'] | Specify the acceptance method for draft token verification in speculative decoding.       |
-| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD` | None                | `float`                                             | Set the lower bound threshold for the posterior probability of a token to be accepted.    |
-| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA`     | None                | `float`                                             | A scaling factor for the entropy-based threshold for token acceptance.                    |
+Speculative decoding can be configured in two ways:
 
-## System Performance Settings
+### Option 1: JSON Configuration
+
+Set `SPECULATIVE_CONFIG` to a JSON string with your full speculative decoding configuration:
+
+```bash
+SPECULATIVE_CONFIG='{"method": "ngram", "num_speculative_tokens": 5, "prompt_lookup_max": 4}'
+```
+
+### Option 2: Individual Environment Variables
+
+| Variable                                 | Default | Type/Choices                                                       | Description                                                                               |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `SPECULATIVE_METHOD`                     | None    | ['draft_model', 'ngram', 'eagle', 'eagle3', 'medusa', 'mlp_speculator'] | Speculative decoding method to use.                                                       |
+| `SPECULATIVE_MODEL`                      | None    | `str`                                                              | The name of the draft model to be used in speculative decoding.                           |
+| `NUM_SPECULATIVE_TOKENS`                 | None    | `int`                                                              | The number of speculative tokens to sample from the draft model.                          |
+| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE` | None    | `int`                                                              | Number of tensor parallel replicas for the draft model.                                   |
+| `SPECULATIVE_MAX_MODEL_LEN`              | None    | `int`                                                              | The maximum sequence length supported by the draft model.                                 |
+| `SPECULATIVE_DISABLE_BY_BATCH_SIZE`      | None    | `int`                                                              | Disable speculative decoding if the number of enqueue requests is larger than this value. |
+| `NGRAM_PROMPT_LOOKUP_MAX`                | None    | `int`                                                              | Max size of window for ngram prompt lookup in speculative decoding.                       |
+| `NGRAM_PROMPT_LOOKUP_MIN`                | None    | `int`                                                              | Min size of window for ngram prompt lookup in speculative decoding.                       |
+
+If `SPECULATIVE_CONFIG` is set, it takes priority over individual env vars. When using individual env vars without `SPECULATIVE_METHOD`, the method is auto-detected from the model name or configuration.
+
+## Scheduling & Performance Settings
 
 | Variable                       | Default | Type/Choices    | Description                                                                                                                         |
 | ------------------------------ | ------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -85,7 +85,12 @@ Complete guide to all environment variables and configuration options for worker
 | `ENFORCE_EAGER`                | False   | `bool`          | Always use eager-mode PyTorch. If False(`0`), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility. |
 | `MAX_SEQ_LEN_TO_CAPTURE`       | `8192`  | `int`           | Maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode.     |
 | `DISABLE_CUSTOM_ALL_REDUCE`    | `0`     | `int`           | Enables or disables custom all reduce.                                                                                              |
-| `ENABLE_EXPERT_PARALLEL`       | `False` | `bool`           |  Enable Expert Parallel for MoE models  |
+| `ENABLE_EXPERT_PARALLEL`       | `False` | `bool`          | Enable Expert Parallel for MoE models.                                                                                              |
+| `SCHEDULER_DELAY_FACTOR`       | 0.0     | `float`         | Apply a delay before scheduling next prompt.                                                                                        |
+| `ENABLE_CHUNKED_PREFILL`       | False   | `bool`          | Enable chunked prefill requests.                                                                                                    |
+| `ATTENTION_BACKEND`            | None    | `str`           | Attention backend to use (e.g., `FLASH_ATTN`, `XFORMERS`, `FLASHINFER`).                                                           |
+| `ASYNC_SCHEDULING`             | False   | `bool`          | Enable async scheduling for improved throughput.                                                                                    |
+| `STREAM_INTERVAL`              | 0       | `float`         | Interval in seconds between streaming responses.                                                                                    |
 
 ## Tokenizer Settings
 
@@ -107,14 +112,21 @@ The way this works is that the first request will have a batch size of `DEFAULT_
 
 ## OpenAI Compatibility Settings
 
-| Variable                            | Default     | Type/Choices     | Description                                                                                                                                                                                                       |
-| ----------------------------------- | ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RAW_OPENAI_OUTPUT`                 | `1`         | boolean as `int` | Enables raw OpenAI SSE format string output when streaming. **Required** to be enabled (which it is by default) for OpenAI compatibility.                                                                         |
-| `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | `None`      | `str`            | Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests                                 |
-| `OPENAI_RESPONSE_ROLE`              | `assistant` | `str`            | Role of the LLM's Response in OpenAI Chat Completions.                                                                                                                                                            |
-| `ENABLE_AUTO_TOOL_CHOICE`           | `false`     | `bool`           | Enables automatic tool selection for supported models. Set to `true` to activate.                                                                                                                                 |
-| `TOOL_CALL_PARSER`                  | `None`      | `str`            | Specifies the parser for tool calls. Options: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `llama4_pythonic`, `granite`, `granite-20b-fc`, `deepseek_v3`, `internlm`, `jamba`, `phi4_mini_json`, `pythonic` |
-| `REASONING_PARSER`                  | `None`      | `str`            | Parser for reasoning-capable models (enables reasoning mode). Examples: `deepseek_r1`, `qwen3`, `granite`, `hunyuan_a13b`. Leave unset to disable.                                                                |
+| Variable                                | Default     | Type/Choices     | Description                                                                                                                                                                                                       |
+| --------------------------------------- | ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RAW_OPENAI_OUTPUT`                     | `1`         | boolean as `int` | Enables raw OpenAI SSE format string output when streaming. **Required** to be enabled (which it is by default) for OpenAI compatibility.                                                                         |
+| `OPENAI_SERVED_MODEL_NAME_OVERRIDE`     | `None`      | `str`            | Overrides the name of the served model from model repo/path to specified name, which you will then be able to use the value for the `model` parameter when making OpenAI requests                                 |
+| `OPENAI_RESPONSE_ROLE`                  | `assistant` | `str`            | Role of the LLM's Response in OpenAI Chat Completions.                                                                                                                                                            |
+| `ENABLE_AUTO_TOOL_CHOICE`               | `false`     | `bool`           | Enables automatic tool selection for supported models. Set to `true` to activate.                                                                                                                                 |
+| `TOOL_CALL_PARSER`                      | `None`      | `str`            | Specifies the parser for tool calls. Options: `mistral`, `hermes`, `llama3_json`, `llama4_json`, `llama4_pythonic`, `granite`, `granite-20b-fc`, `deepseek_v3`, `internlm`, `jamba`, `phi4_mini_json`, `pythonic` |
+| `REASONING_PARSER`                      | `None`      | `str`            | Parser for reasoning-capable models (enables reasoning mode). Examples: `deepseek_r1`, `qwen3`, `granite`, `hunyuan_a13b`. Leave unset to disable.                                                                |
+| `TRUST_REQUEST_CHAT_TEMPLATE`           | `false`     | `bool`           | Allow chat templates from incoming requests to override the server default.                                                                                                                                       |
+| `RETURN_TOKENS_AS_TOKEN_IDS`            | `false`     | `bool`           | Return token IDs instead of token strings in responses.                                                                                                                                                           |
+| `EXCLUDE_TOOLS_WHEN_TOOL_CHOICE_NONE`   | `false`     | `bool`           | When tool_choice is 'none', exclude tool definitions from the prompt.                                                                                                                                             |
+| `ENABLE_PROMPT_TOKENS_DETAILS`          | `false`     | `bool`           | Enable detailed prompt token usage in responses.                                                                                                                                                                  |
+| `ENABLE_FORCE_INCLUDE_USAGE`            | `false`     | `bool`           | Force include usage information in all streaming responses.                                                                                                                                                       |
+| `ENABLE_LOG_OUTPUTS`                    | `false`     | `bool`           | Log model outputs for debugging.                                                                                                                                                                                  |
+| `LOG_ERROR_STACK`                       | `false`     | `bool`           | Log full error stack traces.                                                                                                                                                                                      |
 
 ## Serverless & Concurrency Settings
 
@@ -122,18 +134,7 @@ The way this works is that the first request will have a batch size of `DEFAULT_
 | ---------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MAX_CONCURRENCY`      | `30`    | `int`        | Max concurrent requests per worker. vLLM has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency |
 | `DISABLE_LOG_STATS`    | False   | `bool`       | Enables or disables vLLM stats logging.                                                                                                                                    |
-| `DISABLE_LOG_REQUESTS` | False   | `bool`       | Enables or disables vLLM request logging.                                                                                                                                  |
-
-## Advanced Settings
-
-| Variable                    | Default | Type    | Description                                                                                                                                            |
-| --------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MODEL_LOADER_EXTRA_CONFIG` | None    | `dict`  | Extra config for model loader.                                                                                                                         |
-| `PREEMPTION_MODE`           | None    | `str`   | If 'recompute', the engine performs preemption-aware recomputation. If 'save', the engine saves activations into the CPU memory as preemption happens. |
-| `PREEMPTION_CHECK_PERIOD`   | 1.0     | `float` | How frequently the engine checks if a preemption happens.                                                                                              |
-| `PREEMPTION_CPU_CAPACITY`   | 2       | `float` | The percentage of CPU memory used for the saved activations.                                                                                           |
-| `DISABLE_LOGGING_REQUEST`   | False   | `bool`  | Disable logging requests.                                                                                                                              |
-| `MAX_LOG_LEN`               | None    | `int`   | Max number of prompt characters or prompt ID numbers being printed in log.                                                                             |
+| `ENABLE_LOG_REQUESTS`  | False   | `bool`       | Enables vLLM request logging.                                                                                                                                              |
 
 ## Docker Build Arguments
 
@@ -142,13 +143,37 @@ These variables are used when building custom Docker images with models baked in
 | Variable              | Default          | Type  | Description                                       |
 | --------------------- | ---------------- | ----- | ------------------------------------------------- |
 | `BASE_PATH`           | `/runpod-volume` | `str` | Storage directory for huggingface cache and model |
-| `WORKER_CUDA_VERSION` | `12.1.0`         | `str` | CUDA version for the worker image                 |
+| `WORKER_CUDA_VERSION` | `12.9.1`         | `str` | CUDA version for the worker image                 |
 
 ## Deprecated Variables
 
-⚠️ **The following variables are deprecated and will be removed in future versions:**
+> **The following variables are deprecated and will be removed in future versions:**
 
-| Old Variable                 | New Variable             | Note                  |
-| ---------------------------- | ------------------------ | --------------------- |
-| `MAX_CONTEXT_LEN_TO_CAPTURE` | `MAX_SEQ_LEN_TO_CAPTURE` | Use new variable name |
-| `kv_cache_dtype=fp8_e5m2`    | `kv_cache_dtype=fp8`     | Simplified fp8 format |
+| Old Variable                                        | New Variable / Migration                        | Note                                                                  |
+| --------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| `MAX_CONTEXT_LEN_TO_CAPTURE`                        | `MAX_SEQ_LEN_TO_CAPTURE`                        | Use new variable name                                                 |
+| `kv_cache_dtype=fp8_e5m2`                           | `kv_cache_dtype=fp8`                            | Simplified fp8 format                                                 |
+| `DISABLE_LOG_REQUESTS`                              | `ENABLE_LOG_REQUESTS`                           | Logic inverted: `DISABLE_LOG_REQUESTS=true` → `ENABLE_LOG_REQUESTS=false` |
+| `VLLM_ATTENTION_BACKEND`                            | `ATTENTION_BACKEND`                             | Use new variable name                                                 |
+| `WORKER_USE_RAY`                                    | `DISTRIBUTED_EXECUTOR_BACKEND=ray`              | Removed in vLLM 0.15.0                                               |
+| `USE_V2_BLOCK_MANAGER`                              | _(removed)_                                     | V2 block manager is now the default                                   |
+| `NUM_LOOKAHEAD_SLOTS`                               | _(removed)_                                     | No longer a separate config                                           |
+| `ROPE_SCALING`                                      | _(removed)_                                     | Use model config directly                                             |
+| `ROPE_THETA`                                        | _(removed)_                                     | Use model config directly                                             |
+| `TOKENIZER_POOL_SIZE`                               | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `TOKENIZER_POOL_TYPE`                               | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `TOKENIZER_POOL_EXTRA_CONFIG`                       | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `QUANTIZATION_PARAM_PATH`                           | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `LORA_EXTRA_VOCAB_SIZE`                             | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `LONG_LORA_SCALING_FACTORS`                         | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `GUIDED_DECODING_BACKEND`                           | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `SPEC_DECODING_ACCEPTANCE_METHOD`                   | `SPECULATIVE_CONFIG` (JSON)                     | Use JSON config                                                       |
+| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD`     | `SPECULATIVE_CONFIG` (JSON)                     | Use JSON config                                                       |
+| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA`         | `SPECULATIVE_CONFIG` (JSON)                     | Use JSON config                                                       |
+| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE`            | `SPECULATIVE_CONFIG` (JSON) or individual env   | Still supported via env var                                           |
+| `PREEMPTION_MODE`                                   | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `PREEMPTION_CHECK_PERIOD`                           | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `PREEMPTION_CPU_CAPACITY`                           | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `MAX_LOG_LEN`                                       | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
+| `DISABLE_LOGGING_REQUEST`                           | `ENABLE_LOG_REQUESTS`                           | Removed in vLLM 0.15.0                                               |
+| `MAX_SEQ_LEN_TO_CAPTURE`                            | _(removed)_                                     | Removed in vLLM 0.15.0                                               |
