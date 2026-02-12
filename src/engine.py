@@ -182,7 +182,7 @@ class OpenAIvLLMEngine(vLLMEngine):
         # Always defer OpenAI engine initialization to the first request.
         # asyncio.run() creates a temporary event loop that gets closed, but async
         # components (tokenizer pool, serving engines) bind futures to that loop.
-        # When RunPod's serverless handler runs in its own event loop, those futures
+        # When Runpod's serverless handler runs in its own event loop, those futures
         # are "attached to a different loop" causing RuntimeError.
         # This affects all configurations, not just LoRA.
         self._engines_initialized = False
