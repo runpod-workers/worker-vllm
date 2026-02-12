@@ -1,7 +1,7 @@
 ray
 pandas
 pyarrow
-runpod>=1.8,<2.0
+runpod
 huggingface-hub
 packaging
 typing-extensions>=4.8.0
@@ -11,4 +11,4 @@ hf-transfer
 transformers>=4.57.0
 bitsandbytes>=0.45.0
 kernels
-torch==2.6.0
+torch-c-dlpack-ext

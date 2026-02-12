@@ -9,7 +9,7 @@
     "containerDiskInGb": 150,
     "gpuIds": "ADA_80_PRO,AMPERE_80",
     "gpuCount": 1,
-    "allowedCudaVersions": ["12.9", "12.8", "12.7", "12.6", "12.5", "12.4"],
+    "allowedCudaVersions": ["12.9", "12.8"],
     "presets": [
       {
         "name": "deepseek-ai/deepseek-r1-distill-llama-8b",
@@ -182,40 +182,11 @@
         }
       },
       {
-        "key": "QUANTIZATION_PARAM_PATH",
-        "input": {
-          "name": "Quantization Param Path",
-          "type": "string",
-          "description": "Path to the JSON file containing the KV cache scaling factors.",
-          "advanced": true
-        }
-      },
-      {
         "key": "MAX_MODEL_LEN",
         "input": {
           "name": "Max Model Length",
           "type": "number",
           "description": "Model context length.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "GUIDED_DECODING_BACKEND",
-        "input": {
-          "name": "Guided Decoding Backend",
-          "type": "string",
-          "description": "Which engine will be used for guided decoding by default.",
-          "options": [
-            {
-              "label": "outlines",
-              "value": "outlines"
-            },
-            {
-              "label": "lm-format-enforcer",
-              "value": "lm-format-enforcer"
-            }
-          ],
-          "default": "outlines",
           "advanced": true
         }
       },
@@ -235,16 +206,6 @@
               "value": "mp"
             }
           ],
-          "advanced": true
-        }
-      },
-      {
-        "key": "WORKER_USE_RAY",
-        "input": {
-          "name": "Worker Use Ray",
-          "type": "boolean",
-          "description": "Deprecated, use --distributed-executor-backend=ray.",
-          "default": false,
           "advanced": true
         }
       },
@@ -304,26 +265,6 @@
           "type": "boolean",
           "description": "Disables sliding window, capping to sliding window size.",
           "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "USE_V2_BLOCK_MANAGER",
-        "input": {
-          "name": "Use V2 Block Manager",
-          "type": "boolean",
-          "description": "Use BlockSpaceMangerV2.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "NUM_LOOKAHEAD_SLOTS",
-        "input": {
-          "name": "Num Lookahead Slots",
-          "type": "number",
-          "description": "Experimental scheduling config necessary for speculative decoding.",
-          "default": 0,
           "advanced": true
         }
       },
@@ -413,53 +354,6 @@
         }
       },
       {
-        "key": "ROPE_SCALING",
-        "input": {
-          "name": "RoPE Scaling",
-          "type": "string",
-          "description": "RoPE scaling configuration in JSON format.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "ROPE_THETA",
-        "input": {
-          "name": "RoPE Theta",
-          "type": "number",
-          "description": "RoPE theta. Use with rope_scaling.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "TOKENIZER_POOL_SIZE",
-        "input": {
-          "name": "Tokenizer Pool Size",
-          "type": "number",
-          "description": "Size of tokenizer pool to use for asynchronous tokenization.",
-          "default": 0,
-          "advanced": true
-        }
-      },
-      {
-        "key": "TOKENIZER_POOL_TYPE",
-        "input": {
-          "name": "Tokenizer Pool Type",
-          "type": "string",
-          "description": "Type of tokenizer pool to use for asynchronous tokenization.",
-          "default": "ray",
-          "advanced": true
-        }
-      },
-      {
-        "key": "TOKENIZER_POOL_EXTRA_CONFIG",
-        "input": {
-          "name": "Tokenizer Pool Extra Config",
-          "type": "string",
-          "description": "Extra config for tokenizer pool.",
-          "advanced": true
-        }
-      },
-      {
         "key": "ENABLE_LORA",
         "input": {
           "name": "Enable LoRA",
@@ -490,16 +384,6 @@
         }
       },
       {
-        "key": "LORA_EXTRA_VOCAB_SIZE",
-        "input": {
-          "name": "LoRA Extra Vocab Size",
-          "type": "number",
-          "description": "Maximum size of extra vocabulary for LoRA adapters.",
-          "default": 256,
-          "advanced": true
-        }
-      },
-      {
         "key": "LORA_DTYPE",
         "input": {
           "name": "LoRA Data Type",
@@ -524,15 +408,6 @@
             }
           ],
           "default": "auto",
-          "advanced": true
-        }
-      },
-      {
-        "key": "LONG_LORA_SCALING_FACTORS",
-        "input": {
-          "name": "Long LoRA Scaling Factors",
-          "type": "string",
-          "description": "Specify multiple scaling factors for LoRA adapters.",
           "advanced": true
         }
       },
@@ -616,107 +491,6 @@
         }
       },
       {
-        "key": "SPECULATIVE_MODEL",
-        "input": {
-          "name": "Speculative Model",
-          "type": "string",
-          "description": "The name of the draft model to be used in speculative decoding.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "NUM_SPECULATIVE_TOKENS",
-        "input": {
-          "name": "Num Speculative Tokens",
-          "type": "number",
-          "description": "The number of speculative tokens to sample from the draft model.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE",
-        "input": {
-          "name": "Speculative Draft Tensor Parallel Size",
-          "type": "number",
-          "description": "Number of tensor parallel replicas for the draft model.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SPECULATIVE_MAX_MODEL_LEN",
-        "input": {
-          "name": "Speculative Max Model Length",
-          "type": "number",
-          "description": "The maximum sequence length supported by the draft model.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SPECULATIVE_DISABLE_BY_BATCH_SIZE",
-        "input": {
-          "name": "Speculative Disable by Batch Size",
-          "type": "number",
-          "description": "Disable speculative decoding if the number of enqueue requests is larger than this value.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "NGRAM_PROMPT_LOOKUP_MAX",
-        "input": {
-          "name": "Ngram Prompt Lookup Max",
-          "type": "number",
-          "description": "Max size of window for ngram prompt lookup in speculative decoding.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "NGRAM_PROMPT_LOOKUP_MIN",
-        "input": {
-          "name": "Ngram Prompt Lookup Min",
-          "type": "number",
-          "description": "Min size of window for ngram prompt lookup in speculative decoding.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SPEC_DECODING_ACCEPTANCE_METHOD",
-        "input": {
-          "name": "Speculative Decoding Acceptance Method",
-          "type": "string",
-          "description": "Specify the acceptance method for draft token verification in speculative decoding.",
-          "options": [
-            {
-              "label": "rejection_sampler",
-              "value": "rejection_sampler"
-            },
-            {
-              "label": "typical_acceptance_sampler",
-              "value": "typical_acceptance_sampler"
-            }
-          ],
-          "default": "rejection_sampler",
-          "advanced": true
-        }
-      },
-      {
-        "key": "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD",
-        "input": {
-          "name": "Typical Acceptance Sampler Posterior Threshold",
-          "type": "number",
-          "description": "Set the lower bound threshold for the posterior probability of a token to be accepted.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA",
-        "input": {
-          "name": "Typical Acceptance Sampler Posterior Alpha",
-          "type": "number",
-          "description": "A scaling factor for the entropy-based threshold for token acceptance.",
-          "advanced": true
-        }
-      },
-      {
         "key": "MODEL_LOADER_EXTRA_CONFIG",
         "input": {
           "name": "Model Loader Extra Config",
@@ -726,49 +500,11 @@
         }
       },
       {
-        "key": "PREEMPTION_MODE",
+        "key": "ENABLE_LOG_REQUESTS",
         "input": {
-          "name": "Preemption Mode",
-          "type": "string",
-          "description": "If 'recompute', the engine performs preemption-aware recomputation. If 'save', the engine saves activations into the CPU memory as preemption happens.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "PREEMPTION_CHECK_PERIOD",
-        "input": {
-          "name": "Preemption Check Period",
-          "type": "number",
-          "description": "How frequently the engine checks if a preemption happens.",
-          "default": 1,
-          "advanced": true
-        }
-      },
-      {
-        "key": "PREEMPTION_CPU_CAPACITY",
-        "input": {
-          "name": "Preemption CPU Capacity",
-          "type": "number",
-          "description": "The percentage of CPU memory used for the saved activations.",
-          "default": 2,
-          "advanced": true
-        }
-      },
-      {
-        "key": "MAX_LOG_LEN",
-        "input": {
-          "name": "Max Log Length",
-          "type": "number",
-          "description": "Max number of characters or ID numbers being printed in log.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "DISABLE_LOGGING_REQUEST",
-        "input": {
-          "name": "Disable Logging Request",
+          "name": "Enable Log Requests",
           "type": "boolean",
-          "description": "Disable logging requests.",
+          "description": "Enable vLLM request logging.",
           "default": false,
           "advanced": true
         }
@@ -837,16 +573,6 @@
           "type": "boolean",
           "description": "Always use eager-mode PyTorch. If False (0), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility",
           "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "MAX_SEQ_LEN_TO_CAPTURE",
-        "input": {
-          "name": "CUDA Graph Max Content Length",
-          "type": "number",
-          "description": "Maximum context length covered by CUDA graphs. If a sequence has context length larger than this, we fall back to eager mode",
-          "default": 8192,
           "advanced": true
         }
       },
@@ -955,16 +681,6 @@
           "type": "string",
           "description": "Storage directory for Huggingface cache and model",
           "default": "/runpod-volume",
-          "advanced": true
-        }
-      },
-      {
-        "key": "DISABLE_LOG_REQUESTS",
-        "input": {
-          "name": "Disable Log Requests",
-          "type": "boolean",
-          "description": "Enables or disables vLLM request logging",
-          "default": true,
           "advanced": true
         }
       },

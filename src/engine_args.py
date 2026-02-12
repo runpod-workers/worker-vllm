@@ -15,7 +15,8 @@ RENAME_ARGS_MAP = {
 
 DEFAULT_ARGS = {
     "disable_log_stats": os.getenv('DISABLE_LOG_STATS', 'False').lower() == 'true',
-    "disable_log_requests": os.getenv('DISABLE_LOG_REQUESTS', 'False').lower() == 'true',
+    # disable_log_requests is deprecated, use enable_log_requests instead
+    "enable_log_requests": os.getenv('ENABLE_LOG_REQUESTS', 'False').lower() == 'true',
     "gpu_memory_utilization": float(os.getenv('GPU_MEMORY_UTILIZATION', 0.95)),
     "pipeline_parallel_size": int(os.getenv('PIPELINE_PARALLEL_SIZE', 1)),
     "tensor_parallel_size": int(os.getenv('TENSOR_PARALLEL_SIZE', 1)),
@@ -38,9 +39,15 @@ DEFAULT_ARGS = {
     "block_size": int(os.getenv('BLOCK_SIZE', 16)),
     "enable_prefix_caching": os.getenv('ENABLE_PREFIX_CACHING', 'False').lower() == 'true',
     "disable_sliding_window": os.getenv('DISABLE_SLIDING_WINDOW', 'False').lower() == 'true',
-    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'False').lower() == 'true',
+    # attention_backend replaces deprecated VLLM_ATTENTION_BACKEND env var
+    "attention_backend": os.getenv('ATTENTION_BACKEND', None),
+    # Enabled by default for improved throughput. Set to False to disable if experiencing issues
+    "async_scheduling": None if os.getenv('ASYNC_SCHEDULING') is None else os.getenv('ASYNC_SCHEDULING', 'True').lower() == 'true',
+    # Controls how often to yield streaming results
+    "stream_interval": int(os.getenv('STREAM_INTERVAL', 1)),
     "swap_space": int(os.getenv('SWAP_SPACE', 4)),  # GiB
     "cpu_offload_gb": int(os.getenv('CPU_OFFLOAD_GB', 0)),  # GiB
+    # vLLM defaults None to 2048; keep 0 as None to let vLLM auto-calculate
     "max_num_batched_tokens": int(os.getenv('MAX_NUM_BATCHED_TOKENS', 0)) or None,
     "max_num_seqs": int(os.getenv('MAX_NUM_SEQS', 256)),
     "max_logprobs": int(os.getenv('MAX_LOGPROBS', 20)),  # Default value for OpenAI Chat Completions API
@@ -92,7 +99,6 @@ DEFAULT_ARGS = {
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
     "disable_logprobs_during_spec_decoding": os.getenv('DISABLE_LOGPROBS_DURING_SPEC_DECODING', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
-    "use_v2_block_manager": os.getenv('USE_V2_BLOCK_MANAGER', 'true'),
 }
 limit_mm_env = os.getenv('LIMIT_MM_PER_PROMPT')
 if limit_mm_env is not None:
@@ -175,5 +181,30 @@ def get_engine_args():
     # if "gemma-2" in args.get("model", "").lower():
     #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
     #     logging.info("Using FLASHINFER for gemma-2 model.")
-        
+    
+    # When max_num_batched_tokens is None (env var was 0), set to max_model_len
+    # to preserve "unlimited" behavior. vLLM defaults None to 2048.
+    if args.get("max_num_batched_tokens") is None and args.get("max_model_len") is not None:
+        args["max_num_batched_tokens"] = args["max_model_len"]
+        logging.info(f"Setting max_num_batched_tokens to max_model_len ({args['max_model_len']}) for unlimited batching.")
+    
+    # VLLM_ATTENTION_BACKEND is deprecated, migrate to attention_backend
+    if os.getenv('VLLM_ATTENTION_BACKEND'):
+        logging.warning(
+            "VLLM_ATTENTION_BACKEND env var is deprecated. "
+            "Use ATTENTION_BACKEND instead (maps to --attention-backend CLI arg)."
+        )
+        if not args.get('attention_backend'):
+            args['attention_backend'] = os.getenv('VLLM_ATTENTION_BACKEND')
+
+    # DISABLE_LOG_REQUESTS is deprecated, use ENABLE_LOG_REQUESTS instead
+    if os.getenv('DISABLE_LOG_REQUESTS'):
+        logging.warning(
+            "DISABLE_LOG_REQUESTS env var is deprecated. "
+            "Use ENABLE_LOG_REQUESTS instead (default: False)."
+        )
+        # Honor old behavior: if DISABLE_LOG_REQUESTS=true, don't enable logging
+        if os.getenv('DISABLE_LOG_REQUESTS', 'False').lower() == 'true':
+            args['enable_log_requests'] = False
+
     return AsyncEngineArgs(**args)
