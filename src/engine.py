@@ -219,7 +219,7 @@ class OpenAIvLLMEngine(vLLMEngine):
     async def _ensure_engines_initialized(self):
         """Initialize engines on first request to avoid event loop mismatch.
 
-        In RunPod Serverless, the startup code runs outside the handler's event
+        In Runpod Serverless, the startup code runs outside the handler's event
         loop. Deferring initialization to the first request ensures all async
         components (tokenizer pool, serving engines, LoRA state) are created in
         the correct event loop context.
