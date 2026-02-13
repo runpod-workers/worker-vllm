@@ -6,7 +6,6 @@ import time
 from typing import AsyncGenerator, Optional
 
 from dotenv import load_dotenv
-
 from vllm import AsyncLLMEngine
 from vllm.entrypoints.logger import RequestLogger
 from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
@@ -17,10 +16,10 @@ from vllm.entrypoints.openai.engine.protocol import ErrorResponse
 from vllm.entrypoints.openai.models.protocol import BaseModelPath, LoRAModulePath
 from vllm.entrypoints.openai.models.serving import OpenAIServingModels
 
-from utils import DummyRequest, JobInput, BatchSize, create_error_response
-from constants import DEFAULT_MAX_CONCURRENCY, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MIN_BATCH_SIZE
-from tokenizer import TokenizerWrapper
+from constants import DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MAX_CONCURRENCY, DEFAULT_MIN_BATCH_SIZE
 from engine_args import get_engine_args
+from tokenizer import TokenizerWrapper
+from utils import BatchSize, DummyRequest, JobInput, create_error_response
 
 class vLLMEngine:
     def __init__(self, engine = None):
@@ -179,11 +178,21 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.served_model_name or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
         self.lora_adapters = self._load_lora_adapters()
+
+        # Always defer OpenAI engine initialization to the first request.
+        # asyncio.run() creates a temporary event loop that gets closed, but async
+        # components (tokenizer pool, serving engines) bind futures to that loop.
+        # When Runpod's serverless handler runs in its own event loop, those futures
+        # are "attached to a different loop" causing RuntimeError.
+        # This affects all configurations, not just LoRA.
         self._engines_initialized = False
         if self.lora_adapters:
-            logging.info(f"Deferring OpenAI engine initialization with {len(self.lora_adapters)} LoRA adapter(s) until first request")
+            logging.info(f"LoRA mode: {len(self.lora_adapters)} adapter(s) will load on first request")
+            for adapter in self.lora_adapters:
+                logging.info(f"  - {adapter.name}: {adapter.path}")
         else:
-            logging.info("Deferring OpenAI engine initialization until first request")
+            logging.info("OpenAI engines will initialize on first request")
+
         # Handle both integer and boolean string values for RAW_OPENAI_OUTPUT
         raw_output_env = os.getenv("RAW_OPENAI_OUTPUT", "1")
         if raw_output_env.lower() in ('true', 'false'):
@@ -208,12 +217,21 @@ class OpenAIvLLMEngine(vLLMEngine):
         return adapters
 
     async def _ensure_engines_initialized(self):
+        """Initialize engines on first request to avoid event loop mismatch.
+
+        In Runpod Serverless, the startup code runs outside the handler's event
+        loop. Deferring initialization to the first request ensures all async
+        components (tokenizer pool, serving engines, LoRA state) are created in
+        the correct event loop context.
+        """
         if not self._engines_initialized:
+            logging.info("Initializing OpenAI serving engines...")
             await self._initialize_engines()
             self._engines_initialized = True
+            logging.info("OpenAI serving engines initialized successfully")
 
     async def _initialize_engines(self):
-        logging.info("Initializing OpenAI serving engines...")
+        self.model_config = self.llm.model_config
         self.base_model_paths = [
             BaseModelPath(name=self.served_model_name, model_path=self.engine_args.model)
         ]
@@ -237,13 +255,13 @@ class OpenAIvLLMEngine(vLLMEngine):
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",
-            reasoning_parser=os.getenv('REASONING_PARSER', "") or None,
-            enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
-            tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
-            enable_prompt_tokens_details=os.getenv('ENABLE_PROMPT_TOKENS_DETAILS', 'false').lower() == 'true',
             trust_request_chat_template=os.getenv('TRUST_REQUEST_CHAT_TEMPLATE', 'false').lower() == 'true',
             return_tokens_as_token_ids=os.getenv('RETURN_TOKENS_AS_TOKEN_IDS', 'false').lower() == 'true',
+            reasoning_parser=os.getenv('REASONING_PARSER', "") or "",
+            enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
             exclude_tools_when_tool_choice_none=os.getenv('EXCLUDE_TOOLS_WHEN_TOOL_CHOICE_NONE', 'false').lower() == 'true',
+            tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
+            enable_prompt_tokens_details=os.getenv('ENABLE_PROMPT_TOKENS_DETAILS', 'false').lower() == 'true',
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
             enable_log_outputs=os.getenv('ENABLE_LOG_OUTPUTS', 'false').lower() == 'true',
             log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
@@ -261,10 +279,10 @@ class OpenAIvLLMEngine(vLLMEngine):
         if hasattr(self.chat_engine, 'warmup'):
             await self.chat_engine.warmup()
 
-        logging.info("OpenAI serving engines initialized successfully")
-
     async def generate(self, openai_request: JobInput):
+        # Ensure engines are ready (no-op if already initialized at startup)
         await self._ensure_engines_initialized()
+
         if openai_request.openai_route == "/v1/models":
             yield await self._handle_model_request()
         elif openai_request.openai_route in ["/v1/chat/completions", "/v1/completions"]:

@@ -646,16 +646,6 @@
         }
       },
       {
-        "key": "MAX_SEQ_LEN_TO_CAPTURE",
-        "input": {
-          "name": "CUDA Graph Max Content Length",
-          "type": "number",
-          "description": "Maximum context length covered by CUDA graphs. If a sequence has context length larger than this, we fall back to eager mode",
-          "default": 8192,
-          "advanced": true
-        }
-      },
-      {
         "key": "DISABLE_CUSTOM_ALL_REDUCE",
         "input": {
           "name": "Disable Custom All Reduce",
@@ -789,16 +779,6 @@
           "type": "string",
           "description": "Storage directory for Huggingface cache and model",
           "default": "/runpod-volume",
-          "advanced": true
-        }
-      },
-      {
-        "key": "ENABLE_LOG_REQUESTS",
-        "input": {
-          "name": "Enable Log Requests",
-          "type": "boolean",
-          "description": "Enables vLLM request logging",
-          "default": false,
           "advanced": true
         }
       },
