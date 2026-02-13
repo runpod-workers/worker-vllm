@@ -9,7 +9,7 @@
     "containerDiskInGb": 150,
     "gpuIds": "ADA_80_PRO,AMPERE_80",
     "gpuCount": 1,
-    "minimumCudaVersion": "12.4",
+    "allowedCudaVersions": ["12.9", "12.8"],
     "presets": [
       {
         "name": "deepseek-ai/deepseek-r1-distill-llama-8b",
