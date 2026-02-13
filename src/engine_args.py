@@ -38,6 +38,9 @@ DEFAULT_ARGS = {
     "block_size": int(os.getenv('BLOCK_SIZE', 16)),
     "enable_prefix_caching": os.getenv('ENABLE_PREFIX_CACHING', 'False').lower() == 'true',
     "disable_sliding_window": os.getenv('DISABLE_SLIDING_WINDOW', 'False').lower() == 'true',
+    "attention_backend": os.getenv('ATTENTION_BACKEND', None),
+    "async_scheduling": os.getenv('ASYNC_SCHEDULING', 'False').lower() == 'true',
+    "stream_interval": float(os.getenv('STREAM_INTERVAL', 0)),
     "swap_space": int(os.getenv('SWAP_SPACE', 4)),  # GiB
     "cpu_offload_gb": int(os.getenv('CPU_OFFLOAD_GB', 0)),  # GiB
     # vLLM defaults None to 2048; keep 0 as None to let vLLM auto-calculate
@@ -73,29 +76,14 @@ DEFAULT_ARGS = {
     "enable_expert_parallel": bool(os.getenv('ENABLE_EXPERT_PARALLEL', 'False').lower() == 'true'),
     "qlora_adapter_name_or_path": os.getenv('QLORA_ADAPTER_NAME_OR_PATH', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
-    "attention_backend": os.getenv('ATTENTION_BACKEND', None),
-    "async_scheduling": os.getenv('ASYNC_SCHEDULING', 'False').lower() == 'true',
-    "stream_interval": float(os.getenv('STREAM_INTERVAL', 0)),
 }
 
-
 def get_speculative_config():
-    """
-    Build speculative decoding configuration from environment variables.
+    """Build speculative decoding configuration from environment variables.
 
     Supports two modes:
     1. Full JSON config via SPECULATIVE_CONFIG env var
     2. Individual env vars for common settings
-
-    Speculative Methods:
-    - "draft_model": Use a smaller draft model for speculation
-    - "ngram": Use n-gram based prompt lookup (no additional model needed)
-    - "eagle" / "eagle3": Use EAGLE-based speculation
-    - "medusa": Use Medusa heads for speculation
-    - "mlp_speculator": Use MLP-based speculator
-
-    Returns:
-        dict | None: Speculative config dictionary or None if not configured
     """
     # Option 1: Full JSON configuration
     spec_config_json = os.getenv('SPECULATIVE_CONFIG')
@@ -109,15 +97,12 @@ def get_speculative_config():
             return None
 
     # Option 2: Build config from individual environment variables
-    spec_method = os.getenv('SPECULATIVE_METHOD')  # ngram, draft_model, eagle, eagle3, medusa, mlp_speculator
+    spec_method = os.getenv('SPECULATIVE_METHOD')
     spec_model = os.getenv('SPECULATIVE_MODEL')
     num_spec_tokens = os.getenv('NUM_SPECULATIVE_TOKENS')
-
-    # N-gram specific settings
     ngram_max = os.getenv('NGRAM_PROMPT_LOOKUP_MAX')
     ngram_min = os.getenv('NGRAM_PROMPT_LOOKUP_MIN')
 
-    # Check if any speculative decoding is configured
     if not any([spec_method, spec_model, ngram_max]):
         return None
 
@@ -129,7 +114,6 @@ def get_speculative_config():
     elif ngram_max and not spec_model:
         config['method'] = 'ngram'
     elif spec_model:
-        # Auto-detect method based on model name if not specified
         model_lower = spec_model.lower()
         if 'eagle3' in model_lower:
             config['method'] = 'eagle3'
@@ -140,46 +124,35 @@ def get_speculative_config():
         else:
             config['method'] = 'draft_model'
 
-    # Model configuration
     if spec_model:
         config['model'] = spec_model
-
-    # Number of speculative tokens
     if num_spec_tokens:
         config['num_speculative_tokens'] = int(num_spec_tokens)
-
-    # N-gram settings
     if ngram_max:
         config['prompt_lookup_max'] = int(ngram_max)
     if ngram_min:
         config['prompt_lookup_min'] = int(ngram_min)
 
-    # Draft model tensor parallel size
     draft_tp = os.getenv('SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE')
     if draft_tp:
         config['draft_tensor_parallel_size'] = int(draft_tp)
 
-    # Max model length for draft
     spec_max_len = os.getenv('SPECULATIVE_MAX_MODEL_LEN')
     if spec_max_len:
         config['max_model_len'] = int(spec_max_len)
 
-    # Disable by batch size
     disable_batch = os.getenv('SPECULATIVE_DISABLE_BY_BATCH_SIZE')
     if disable_batch:
         config['disable_by_batch_size'] = int(disable_batch)
 
-    # Draft model quantization
     spec_quant = os.getenv('SPECULATIVE_QUANTIZATION')
     if spec_quant:
         config['quantization'] = spec_quant
 
-    # Draft model revision
     spec_revision = os.getenv('SPECULATIVE_MODEL_REVISION')
     if spec_revision:
         config['revision'] = spec_revision
 
-    # Enforce eager mode for draft model
     spec_eager = os.getenv('SPECULATIVE_ENFORCE_EAGER')
     if spec_eager:
         config['enforce_eager'] = spec_eager.lower() == 'true'
@@ -209,7 +182,6 @@ def match_vllm_args(args):
     renamed_args = {RENAME_ARGS_MAP.get(k, k): v for k, v in args.items()}
     matched_args = {k: v for k, v in renamed_args.items() if k in AsyncEngineArgs.__dataclass_fields__}
     return {k: v for k, v in matched_args.items() if v not in [None, "", "None"]}
-
 def get_local_args():
     """
     Retrieve local arguments from a JSON file.
@@ -231,7 +203,6 @@ def get_local_args():
     os.environ["HF_HUB_OFFLINE"] = "1"
 
     return local_args
-
 def get_engine_args():
     # Start with default args
     args = DEFAULT_ARGS

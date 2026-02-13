@@ -45,12 +45,11 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
-RUN if [ -n "${VLLM_NIGHTLY}" ]; then \
+RUN if [ "${VLLM_NIGHTLY}" = "true" ]; then \
     pip install -U vllm --pre --index-url https://pypi.org/simple --extra-index-url https://wheels.vllm.ai/nightly && \
     apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/* && \
     pip install git+https://github.com/huggingface/transformers.git; \
 fi
-
 
 COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \

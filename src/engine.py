@@ -26,20 +26,20 @@ class vLLMEngine:
         load_dotenv() # For local development
         self.engine_args = get_engine_args()
         logging.info(f"Engine args: {self.engine_args}")
-
+        
         # Initialize vLLM engine first
         self.llm = self._initialize_llm() if engine is None else engine.llm
-
+        
         # Only create custom tokenizer wrapper if not using mistral tokenizer mode
         # For mistral models, let vLLM handle tokenizer initialization
         if self.engine_args.tokenizer_mode != 'mistral':
-            self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model,
-                                              self.engine_args.tokenizer_revision,
+            self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
+                                              self.engine_args.tokenizer_revision, 
                                               self.engine_args.trust_remote_code)
         else:
             # For mistral models, we'll get the tokenizer from vLLM later
             self.tokenizer = None
-
+            
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
         self.batch_size_growth_factor = int(os.getenv("BATCH_SIZE_GROWTH_FACTOR", DEFAULT_BATCH_SIZE_GROWTH_FACTOR))
@@ -67,7 +67,7 @@ class vLLMEngine:
                         self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)
                         if self.custom_chat_template and isinstance(self.custom_chat_template, str):
                             self.tokenizer.chat_template = self.custom_chat_template
-
+                    
                     def apply_chat_template(self, input):
                         if isinstance(input, list):
                             if not self.has_chat_template:
@@ -78,11 +78,11 @@ class vLLMEngine:
                             input = [{"role": "user", "content": input}]
                         else:
                             raise ValueError("Input must be a string or a list of messages")
-
+                        
                         return self.tokenizer.apply_chat_template(
                             input, tokenize=False, add_generation_prompt=True
                         )
-
+                
                 return MinimalTokenizerWrapper(tokenizer)
             except Exception as e:
                 logging.error(f"Failed to create fallback tokenizer: {e}")
@@ -90,7 +90,7 @@ class vLLMEngine:
 
     def dynamic_batch_size(self, current_batch_size, batch_size_growth_factor):
         return min(current_batch_size*batch_size_growth_factor, self.default_batch_size)
-
+                           
     async def generate(self, job_input: JobInput):
         try:
             async for batch in self._generate_vllm(
@@ -118,11 +118,11 @@ class vLLMEngine:
         batch = {
             "choices": [{"tokens": []} for _ in range(n_responses)],
         }
-
+        
         max_batch_size = batch_size or self.default_batch_size
         batch_size_growth_factor, min_batch_size = batch_size_growth_factor or self.batch_size_growth_factor, min_batch_size or self.min_batch_size
         batch_size = BatchSize(max_batch_size, min_batch_size, batch_size_growth_factor)
-
+    
 
         async for request_output in results_generator:
             if is_first_output:  # Count input tokens only once
@@ -242,14 +242,14 @@ class OpenAIvLLMEngine(vLLMEngine):
             lora_modules=self.lora_adapters,
         )
         await self.serving_models.init_static_loras()
-
+        
         # Get chat template from vLLM tokenizer if available
         chat_template = None
         if self.tokenizer and hasattr(self.tokenizer, 'tokenizer'):
             chat_template = self.tokenizer.tokenizer.chat_template
-
+        
         self.chat_engine = OpenAIServingChat(
-            engine_client=self.llm,
+            engine_client=self.llm, 
             models=self.serving_models,
             response_role=self.response_role,
             request_logger=None,
@@ -290,11 +290,11 @@ class OpenAIvLLMEngine(vLLMEngine):
                 yield response
         else:
             yield create_error_response("Invalid route").model_dump()
-
+    
     async def _handle_model_request(self):
         models = await self.serving_models.show_available_models()
         return models.model_dump()
-
+    
     async def _handle_chat_or_completion_request(self, openai_request: JobInput):
         if openai_request.openai_route == "/v1/chat/completions":
             request_class = ChatCompletionRequest
@@ -302,7 +302,7 @@ class OpenAIvLLMEngine(vLLMEngine):
         elif openai_request.openai_route == "/v1/completions":
             request_class = CompletionRequest
             generator_function = self.completion_engine.create_completion
-
+        
         try:
             request = request_class(
                 **openai_request.openai_input
@@ -310,7 +310,7 @@ class OpenAIvLLMEngine(vLLMEngine):
         except Exception as e:
             yield create_error_response(str(e)).model_dump()
             return
-
+        
         dummy_request = DummyRequest()
         response_generator = await generator_function(request, raw_request=dummy_request)
 
@@ -320,7 +320,7 @@ class OpenAIvLLMEngine(vLLMEngine):
             batch = []
             batch_token_counter = 0
             batch_size = BatchSize(self.default_batch_size, self.min_batch_size, self.batch_size_growth_factor)
-
+        
             async for chunk_str in response_generator:
                 if "data" in chunk_str:
                     if self.raw_openai_output:
@@ -342,3 +342,4 @@ class OpenAIvLLMEngine(vLLMEngine):
                 if self.raw_openai_output:
                     batch = "".join(batch)
                 yield batch
+            
