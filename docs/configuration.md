@@ -17,8 +17,11 @@ Complete guide to all environment variables and configuration options for worker
 | `HF_TOKEN`                     | -                   | `str`                                                       | Hugging Face token for private and gated models.                                |
 | `DTYPE`                        | 'auto'              | ['auto', 'half', 'float16', 'bfloat16', 'float', 'float32'] | Data type for model weights and activations.                                    |
 | `KV_CACHE_DTYPE`               | 'auto'              | ['auto', 'fp8']                                             | Data type for KV cache storage.                                                 |
+| `QUANTIZATION_PARAM_PATH`      | None                | `str`                                                       | Path to the JSON file containing the KV cache scaling factors.                  |
 | `MAX_MODEL_LEN`                | None                | `int`                                                       | Model context length.                                                           |
+| `GUIDED_DECODING_BACKEND`      | 'outlines'          | ['outlines', 'lm-format-enforcer']                          | Which engine will be used for guided decoding by default.                       |
 | `DISTRIBUTED_EXECUTOR_BACKEND` | None                | ['ray', 'mp']                                               | Backend to use for distributed serving.                                         |
+| `WORKER_USE_RAY`               | False               | `bool`                                                      | Deprecated, use --distributed-executor-backend=ray.                             |
 | `PIPELINE_PARALLEL_SIZE`       | 1                   | `int`                                                       | Number of pipeline stages.                                                      |
 | `TENSOR_PARALLEL_SIZE`         | 1                   | `int`                                                       | Number of tensor parallel replicas.                                             |
 | `MAX_PARALLEL_LOADING_WORKERS` | None                | `int`                                                       | Load model sequentially in multiple batches.                                    |
@@ -33,6 +36,11 @@ Complete guide to all environment variables and configuration options for worker
 | `MAX_LOGPROBS`                 | 20                  | `int`                                                       | Max number of log probs to return when logprobs is specified in SamplingParams. |
 | `DISABLE_LOG_STATS`            | False               | `bool`                                                      | Disable logging statistics.                                                     |
 | `QUANTIZATION`                 | None                | ['awq', 'squeezellm', 'gptq', 'bitsandbytes']               | Method used to quantize the weights.                                            |
+| `ROPE_SCALING`                 | None                | `dict`                                                      | RoPE scaling configuration in JSON format.                                      |
+| `ROPE_THETA`                   | None                | `float`                                                     | RoPE theta. Use with rope_scaling.                                              |
+| `TOKENIZER_POOL_SIZE`          | 0                   | `int`                                                       | Size of tokenizer pool to use for asynchronous tokenization.                    |
+| `TOKENIZER_POOL_TYPE`          | 'ray'               | `str`                                                       | Type of tokenizer pool to use for asynchronous tokenization.                    |
+| `TOKENIZER_POOL_EXTRA_CONFIG`  | None                | `dict`                                                      | Extra config for tokenizer pool.                                                |
 
 ## LoRA (Low-Rank Adaptation) Settings
 
@@ -41,7 +49,9 @@ Complete guide to all environment variables and configuration options for worker
 | `ENABLE_LORA`               | False   | `bool`                                     | If True, enable handling of LoRA adapters.                                                                |
 | `MAX_LORAS`                 | 1       | `int`                                      | Max number of LoRAs in a single batch.                                                                    |
 | `MAX_LORA_RANK`             | 16      | `int`                                      | Max LoRA rank.                                                                                            |
+| `LORA_EXTRA_VOCAB_SIZE`     | 256     | `int`                                      | Maximum size of extra vocabulary for LoRA adapters.                                                       |
 | `LORA_DTYPE`                | 'auto'  | ['auto', 'float16', 'bfloat16', 'float32'] | Data type for LoRA.                                                                                       |
+| `LONG_LORA_SCALING_FACTORS` | None    | `tuple`                                    | Specify multiple scaling factors for LoRA adapters.                                                       |
 | `MAX_CPU_LORAS`             | None    | `int`                                      | Maximum number of LoRAs to store in CPU memory.                                                           |
 | `FULLY_SHARDED_LORAS`       | False   | `bool`                                     | Enable fully sharded LoRA layers.                                                                         |
 | `LORA_MODULES`              | `[]`    | `list[dict]`                               | Add lora adapters from Hugging Face `[{"name": "xx", "path": "xxx/xxxx", "base_model_name": "xxx/xxxx"}]` |
@@ -153,11 +163,11 @@ These variables are used when building custom Docker images with models baked in
 | Variable              | Default          | Type  | Description                                       |
 | --------------------- | ---------------- | ----- | ------------------------------------------------- |
 | `BASE_PATH`           | `/runpod-volume` | `str` | Storage directory for huggingface cache and model |
-| `WORKER_CUDA_VERSION` | `12.9.1`         | `str` | CUDA version for the worker image                 |
+| `WORKER_CUDA_VERSION` | `12.1.0`         | `str` | CUDA version for the worker image                 |
 
 ## Deprecated Variables
 
-> **The following variables are deprecated and will be removed in future versions:**
+⚠️ **The following variables are deprecated and will be removed in future versions:**
 
 | Old Variable                 | New Variable             | Note                                                                 |
 | ---------------------------- | ------------------------ | -------------------------------------------------------------------- |

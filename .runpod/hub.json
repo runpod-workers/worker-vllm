@@ -509,34 +509,13 @@
           "type": "string",
           "description": "Speculative decoding method to use.",
           "options": [
-            {
-              "label": "None",
-              "value": ""
-            },
-            {
-              "label": "Draft Model",
-              "value": "draft_model"
-            },
-            {
-              "label": "N-gram",
-              "value": "ngram"
-            },
-            {
-              "label": "EAGLE",
-              "value": "eagle"
-            },
-            {
-              "label": "EAGLE3",
-              "value": "eagle3"
-            },
-            {
-              "label": "Medusa",
-              "value": "medusa"
-            },
-            {
-              "label": "MLP Speculator",
-              "value": "mlp_speculator"
-            }
+            { "label": "None", "value": "" },
+            { "label": "Draft Model", "value": "draft_model" },
+            { "label": "N-gram", "value": "ngram" },
+            { "label": "EAGLE", "value": "eagle" },
+            { "label": "EAGLE3", "value": "eagle3" },
+            { "label": "Medusa", "value": "medusa" },
+            { "label": "MLP Speculator", "value": "mlp_speculator" }
           ],
           "default": "",
           "advanced": true
@@ -575,6 +554,16 @@
           "name": "Model Loader Extra Config",
           "type": "string",
           "description": "Extra config for model loader.",
+          "advanced": true
+        }
+      },
+      {
+        "key": "ENABLE_LOG_REQUESTS",
+        "input": {
+          "name": "Enable Log Requests",
+          "type": "boolean",
+          "description": "Enable vLLM request logging.",
+          "default": false,
           "advanced": true
         }
       },
@@ -652,35 +641,6 @@
           "type": "boolean",
           "description": "Enables or disables custom all reduce",
           "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "ATTENTION_BACKEND",
-        "input": {
-          "name": "Attention Backend",
-          "type": "string",
-          "description": "Attention backend to use (e.g., FLASH_ATTN, XFORMERS, FLASHINFER).",
-          "advanced": true
-        }
-      },
-      {
-        "key": "ASYNC_SCHEDULING",
-        "input": {
-          "name": "Async Scheduling",
-          "type": "boolean",
-          "description": "Enable async scheduling for improved throughput.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "STREAM_INTERVAL",
-        "input": {
-          "name": "Stream Interval",
-          "type": "number",
-          "description": "Interval in seconds between streaming responses.",
-          "default": 1,
           "advanced": true
         }
       },
@@ -842,76 +802,6 @@
             { "label": "Hunyuan A13B", "value": "hunyuan_a13b" }
           ],
           "default": "",
-          "advanced": true
-        }
-      },
-      {
-        "key": "TRUST_REQUEST_CHAT_TEMPLATE",
-        "input": {
-          "name": "Trust Request Chat Template",
-          "type": "boolean",
-          "description": "Allow chat templates from incoming requests to override the server default.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "RETURN_TOKENS_AS_TOKEN_IDS",
-        "input": {
-          "name": "Return Tokens as Token IDs",
-          "type": "boolean",
-          "description": "Return token IDs instead of token strings in responses.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "EXCLUDE_TOOLS_WHEN_TOOL_CHOICE_NONE",
-        "input": {
-          "name": "Exclude Tools When Tool Choice None",
-          "type": "boolean",
-          "description": "When tool_choice is 'none', exclude tool definitions from the prompt.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "ENABLE_PROMPT_TOKENS_DETAILS",
-        "input": {
-          "name": "Enable Prompt Tokens Details",
-          "type": "boolean",
-          "description": "Enable detailed prompt token usage in responses.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "ENABLE_FORCE_INCLUDE_USAGE",
-        "input": {
-          "name": "Enable Force Include Usage",
-          "type": "boolean",
-          "description": "Force include usage information in all streaming responses.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "ENABLE_LOG_OUTPUTS",
-        "input": {
-          "name": "Enable Log Outputs",
-          "type": "boolean",
-          "description": "Log model outputs for debugging.",
-          "default": false,
-          "advanced": true
-        }
-      },
-      {
-        "key": "LOG_ERROR_STACK",
-        "input": {
-          "name": "Log Error Stack",
-          "type": "boolean",
-          "description": "Log full error stack traces.",
-          "default": false,
           "advanced": true
         }
       }
