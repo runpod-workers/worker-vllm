@@ -187,6 +187,7 @@
           "name": "Max Model Length",
           "type": "number",
           "description": "Model context length.",
+          "default": null,
           "advanced": true
         }
       },
@@ -206,7 +207,8 @@
               "value": "mp"
             }
           ],
-          "advanced": true
+          "advanced": true,
+          "default": "mp"
         }
       },
       {
@@ -293,6 +295,7 @@
           "name": "Max Num Batched Tokens",
           "type": "number",
           "description": "Maximum number of batched tokens per iteration.",
+          "default": null,
           "advanced": true
         }
       },
@@ -687,7 +690,7 @@
           "name": "Stream Interval",
           "type": "number",
           "description": "Interval in seconds between streaming responses.",
-          "default": 0,
+          "default": 1,
           "advanced": true
         }
       },
