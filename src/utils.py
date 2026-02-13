@@ -6,7 +6,7 @@ from time import time
 
 try:
     from vllm.utils import random_uuid
-    from vllm.entrypoints.openai.engine.protocol import ErrorResponse, RequestResponseMetadata
+    from vllm.entrypoints.openai.engine.protocol import ErrorResponse, ErrorInfo, RequestResponseMetadata
     from vllm import SamplingParams
 except ImportError:
     logging.warning("Error importing vllm, skipping related imports. This is ONLY expected when baking model into docker image from a machine without GPUs")
@@ -87,9 +87,9 @@ class BatchSize:
             self.current_batch_size = min(self.current_batch_size*self.batch_size_growth_factor, self.max_batch_size)
         
 def create_error_response(message: str, err_type: str = "BadRequestError", status_code: HTTPStatus = HTTPStatus.BAD_REQUEST) -> ErrorResponse:
-    return ErrorResponse(message=message,
-                            type=err_type,
-                            code=status_code.value)
+    return ErrorResponse(error=ErrorInfo(message=message,
+                                         type=err_type,
+                                         code=status_code.value))
     
 def get_int_bool_env(env_var: str, default: bool) -> bool:
     return int(os.getenv(env_var, int(default))) == 1

@@ -60,22 +60,32 @@ Complete guide to all environment variables and configuration options for worker
 
 ## Speculative Decoding Settings
 
-| Variable                                         | Default             | Type/Choices                                        | Description                                                                               |
-| ------------------------------------------------ | ------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `SCHEDULER_DELAY_FACTOR`                         | 0.0                 | `float`                                             | Apply a delay before scheduling next prompt.                                              |
-| `ENABLE_CHUNKED_PREFILL`                         | False               | `bool`                                              | Enable chunked prefill requests.                                                          |
-| `SPECULATIVE_MODEL`                              | None                | `str`                                               | The name of the draft model to be used in speculative decoding.                           |
-| `NUM_SPECULATIVE_TOKENS`                         | None                | `int`                                               | The number of speculative tokens to sample from the draft model.                          |
-| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE`         | None                | `int`                                               | Number of tensor parallel replicas for the draft model.                                   |
-| `SPECULATIVE_MAX_MODEL_LEN`                      | None                | `int`                                               | The maximum sequence length supported by the draft model.                                 |
-| `SPECULATIVE_DISABLE_BY_BATCH_SIZE`              | None                | `int`                                               | Disable speculative decoding if the number of enqueue requests is larger than this value. |
-| `NGRAM_PROMPT_LOOKUP_MAX`                        | None                | `int`                                               | Max size of window for ngram prompt lookup in speculative decoding.                       |
-| `NGRAM_PROMPT_LOOKUP_MIN`                        | None                | `int`                                               | Min size of window for ngram prompt lookup in speculative decoding.                       |
-| `SPEC_DECODING_ACCEPTANCE_METHOD`                | 'rejection_sampler' | ['rejection_sampler', 'typical_acceptance_sampler'] | Specify the acceptance method for draft token verification in speculative decoding.       |
-| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD` | None                | `float`                                             | Set the lower bound threshold for the posterior probability of a token to be accepted.    |
-| `TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA`     | None                | `float`                                             | A scaling factor for the entropy-based threshold for token acceptance.                    |
+Speculative decoding can be configured in two ways:
 
-## System Performance Settings
+### Option 1: JSON Configuration
+
+Set `SPECULATIVE_CONFIG` to a JSON string with your full speculative decoding configuration:
+
+```bash
+SPECULATIVE_CONFIG='{"method": "ngram", "num_speculative_tokens": 5, "prompt_lookup_max": 4}'
+```
+
+### Option 2: Individual Environment Variables
+
+| Variable                                 | Default | Type/Choices                                                       | Description                                                                               |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `SPECULATIVE_METHOD`                     | None    | ['draft_model', 'ngram', 'eagle', 'eagle3', 'medusa', 'mlp_speculator'] | Speculative decoding method to use.                                                       |
+| `SPECULATIVE_MODEL`                      | None    | `str`                                                              | The name of the draft model to be used in speculative decoding.                           |
+| `NUM_SPECULATIVE_TOKENS`                 | None    | `int`                                                              | The number of speculative tokens to sample from the draft model.                          |
+| `SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE` | None    | `int`                                                              | Number of tensor parallel replicas for the draft model.                                   |
+| `SPECULATIVE_MAX_MODEL_LEN`              | None    | `int`                                                              | The maximum sequence length supported by the draft model.                                 |
+| `SPECULATIVE_DISABLE_BY_BATCH_SIZE`      | None    | `int`                                                              | Disable speculative decoding if the number of enqueue requests is larger than this value. |
+| `NGRAM_PROMPT_LOOKUP_MAX`                | None    | `int`                                                              | Max size of window for ngram prompt lookup in speculative decoding.                       |
+| `NGRAM_PROMPT_LOOKUP_MIN`                | None    | `int`                                                              | Min size of window for ngram prompt lookup in speculative decoding.                       |
+
+If `SPECULATIVE_CONFIG` is set, it takes priority over individual env vars. When using individual env vars without `SPECULATIVE_METHOD`, the method is auto-detected from the model name or configuration.
+
+## Scheduling & Performance Settings
 
 | Variable                       | Default | Type/Choices    | Description                                                                                                                         |
 | ------------------------------ | ------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |

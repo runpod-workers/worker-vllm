@@ -100,6 +100,110 @@ DEFAULT_ARGS = {
     "disable_logprobs_during_spec_decoding": os.getenv('DISABLE_LOGPROBS_DURING_SPEC_DECODING', None),
     "otlp_traces_endpoint": os.getenv('OTLP_TRACES_ENDPOINT', None),
 }
+
+def get_speculative_config():
+    """Build speculative decoding configuration from environment variables.
+
+    Supports two modes:
+    1. Full JSON config via SPECULATIVE_CONFIG env var
+    2. Individual env vars for common settings
+    """
+    # Option 1: Full JSON configuration
+    spec_config_json = os.getenv('SPECULATIVE_CONFIG')
+    if spec_config_json:
+        try:
+            config = json.loads(spec_config_json)
+            logging.info(f"Using speculative config from SPECULATIVE_CONFIG: {config}")
+            return config
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to parse SPECULATIVE_CONFIG JSON: {e}")
+            return None
+
+    # Option 2: Build config from individual environment variables
+    spec_method = os.getenv('SPECULATIVE_METHOD')
+    spec_model = os.getenv('SPECULATIVE_MODEL')
+    num_spec_tokens = os.getenv('NUM_SPECULATIVE_TOKENS')
+    ngram_max = os.getenv('NGRAM_PROMPT_LOOKUP_MAX')
+    ngram_min = os.getenv('NGRAM_PROMPT_LOOKUP_MIN')
+
+    if not any([spec_method, spec_model, ngram_max]):
+        return None
+
+    config = {}
+
+    # Determine method
+    if spec_method:
+        config['method'] = spec_method
+    elif ngram_max and not spec_model:
+        config['method'] = 'ngram'
+    elif spec_model:
+        model_lower = spec_model.lower()
+        if 'eagle3' in model_lower:
+            config['method'] = 'eagle3'
+        elif 'eagle' in model_lower:
+            config['method'] = 'eagle'
+        elif 'medusa' in model_lower:
+            config['method'] = 'medusa'
+        else:
+            config['method'] = 'draft_model'
+
+    if spec_model:
+        config['model'] = spec_model
+    if num_spec_tokens:
+        config['num_speculative_tokens'] = int(num_spec_tokens)
+    if ngram_max:
+        config['prompt_lookup_max'] = int(ngram_max)
+    if ngram_min:
+        config['prompt_lookup_min'] = int(ngram_min)
+
+    draft_tp = os.getenv('SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE')
+    if draft_tp:
+        config['draft_tensor_parallel_size'] = int(draft_tp)
+
+    spec_max_len = os.getenv('SPECULATIVE_MAX_MODEL_LEN')
+    if spec_max_len:
+        config['max_model_len'] = int(spec_max_len)
+
+    disable_batch = os.getenv('SPECULATIVE_DISABLE_BY_BATCH_SIZE')
+    if disable_batch:
+        config['disable_by_batch_size'] = int(disable_batch)
+
+    spec_quant = os.getenv('SPECULATIVE_QUANTIZATION')
+    if spec_quant:
+        config['quantization'] = spec_quant
+
+    spec_revision = os.getenv('SPECULATIVE_MODEL_REVISION')
+    if spec_revision:
+        config['revision'] = spec_revision
+
+    spec_eager = os.getenv('SPECULATIVE_ENFORCE_EAGER')
+    if spec_eager:
+        config['enforce_eager'] = spec_eager.lower() == 'true'
+
+    if config:
+        logging.info(f"Built speculative config from env vars: {config}")
+        return config
+
+    return None
+
+def _resolve_max_model_len(model, trust_remote_code=False, revision=None):
+    """Resolve max_model_len from the model's HuggingFace config."""
+    try:
+        from transformers import AutoConfig
+        config = AutoConfig.from_pretrained(
+            model,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+        )
+        for attr in ('max_position_embeddings', 'n_positions', 'max_seq_len', 'seq_length'):
+            val = getattr(config, attr, None)
+            if val is not None:
+                logging.info(f"Resolved max_model_len={val} from model config ({attr})")
+                return val
+    except Exception as e:
+        logging.warning(f"Could not resolve max_model_len from model config: {e}")
+    return None
+
 limit_mm_env = os.getenv('LIMIT_MM_PER_PROMPT')
 if limit_mm_env is not None:
     DEFAULT_ARGS["limit_mm_per_prompt"] = convert_limit_mm_per_prompt(limit_mm_env)
@@ -182,11 +286,19 @@ def get_engine_args():
     #     os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
     #     logging.info("Using FLASHINFER for gemma-2 model.")
     
-    # When max_num_batched_tokens is None (env var was 0), set to max_model_len
-    # to preserve "unlimited" behavior. vLLM defaults None to 2048.
-    if args.get("max_num_batched_tokens") is None and args.get("max_model_len") is not None:
-        args["max_num_batched_tokens"] = args["max_model_len"]
-        logging.info(f"Setting max_num_batched_tokens to max_model_len ({args['max_model_len']}) for unlimited batching.")
+    # Set max_num_batched_tokens to max_model_len for unlimited batching.
+    # vLLM defaults max_num_batched_tokens to 2048 when None, which is too low.
+    if args.get("max_num_batched_tokens") is None:
+        max_model_len = args.get("max_model_len")
+        if max_model_len is None:
+            max_model_len = _resolve_max_model_len(
+                args.get("model"),
+                trust_remote_code=args.get("trust_remote_code", False),
+                revision=args.get("revision"),
+            )
+        if max_model_len is not None:
+            args["max_num_batched_tokens"] = max_model_len
+            logging.info(f"Setting max_num_batched_tokens to {max_model_len}")
     
     # VLLM_ATTENTION_BACKEND is deprecated, migrate to attention_backend
     if os.getenv('VLLM_ATTENTION_BACKEND'):
@@ -206,5 +318,10 @@ def get_engine_args():
         # Honor old behavior: if DISABLE_LOG_REQUESTS=true, don't enable logging
         if os.getenv('DISABLE_LOG_REQUESTS', 'False').lower() == 'true':
             args['enable_log_requests'] = False
+
+    # Add speculative decoding configuration if present
+    speculative_config = get_speculative_config()
+    if speculative_config:
+        args["speculative_config"] = speculative_config
 
     return AsyncEngineArgs(**args)

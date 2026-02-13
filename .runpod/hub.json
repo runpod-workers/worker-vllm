@@ -187,6 +187,7 @@
           "name": "Max Model Length",
           "type": "number",
           "description": "Model context length.",
+          "default": null,
           "advanced": true
         }
       },
@@ -206,7 +207,8 @@
               "value": "mp"
             }
           ],
-          "advanced": true
+          "advanced": true,
+          "default": "mp"
         }
       },
       {
@@ -293,6 +295,7 @@
           "name": "Max Num Batched Tokens",
           "type": "number",
           "description": "Maximum number of batched tokens per iteration.",
+          "default": null,
           "advanced": true
         }
       },
@@ -487,6 +490,61 @@
           "type": "boolean",
           "description": "Enable chunked prefill requests.",
           "default": false,
+          "advanced": true
+        }
+      },
+      {
+        "key": "SPECULATIVE_CONFIG",
+        "input": {
+          "name": "Speculative Config (JSON)",
+          "type": "string",
+          "description": "Full speculative decoding configuration as a JSON string. Overrides individual speculative env vars.",
+          "advanced": true
+        }
+      },
+      {
+        "key": "SPECULATIVE_METHOD",
+        "input": {
+          "name": "Speculative Method",
+          "type": "string",
+          "description": "Speculative decoding method to use.",
+          "options": [
+            { "label": "None", "value": "" },
+            { "label": "Draft Model", "value": "draft_model" },
+            { "label": "N-gram", "value": "ngram" },
+            { "label": "EAGLE", "value": "eagle" },
+            { "label": "EAGLE3", "value": "eagle3" },
+            { "label": "Medusa", "value": "medusa" },
+            { "label": "MLP Speculator", "value": "mlp_speculator" }
+          ],
+          "default": "",
+          "advanced": true
+        }
+      },
+      {
+        "key": "SPECULATIVE_MODEL",
+        "input": {
+          "name": "Speculative Model",
+          "type": "string",
+          "description": "The name of the draft model to be used in speculative decoding.",
+          "advanced": true
+        }
+      },
+      {
+        "key": "NUM_SPECULATIVE_TOKENS",
+        "input": {
+          "name": "Num Speculative Tokens",
+          "type": "number",
+          "description": "The number of speculative tokens to sample from the draft model.",
+          "advanced": true
+        }
+      },
+      {
+        "key": "NGRAM_PROMPT_LOOKUP_MAX",
+        "input": {
+          "name": "Ngram Prompt Lookup Max",
+          "type": "number",
+          "description": "Max size of window for ngram prompt lookup in speculative decoding.",
           "advanced": true
         }
       },

@@ -23,6 +23,7 @@ ARG BASE_PATH="/runpod-volume"
 ARG QUANTIZATION=""
 ARG MODEL_REVISION=""
 ARG TOKENIZER_REVISION=""
+ARG VLLM_NIGHTLY="false"
 
 ENV MODEL_NAME=$MODEL_NAME \
     MODEL_REVISION=$MODEL_REVISION \
@@ -44,6 +45,11 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
+RUN if [ "${VLLM_NIGHTLY}" = "true" ]; then \
+    pip install -U vllm --pre --index-url https://pypi.org/simple --extra-index-url https://wheels.vllm.ai/nightly && \
+    apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/* && \
+    pip install git+https://github.com/huggingface/transformers.git; \
+fi
 
 COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \

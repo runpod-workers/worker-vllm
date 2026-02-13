@@ -175,7 +175,7 @@ class vLLMEngine:
 class OpenAIvLLMEngine(vLLMEngine):
     def __init__(self, vllm_engine):
         super().__init__(vllm_engine)
-        self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.model
+        self.served_model_name = os.getenv("OPENAI_SERVED_MODEL_NAME_OVERRIDE") or self.engine_args.served_model_name or self.engine_args.model
         self.response_role = os.getenv("OPENAI_RESPONSE_ROLE") or "assistant"
         self.lora_adapters = self._load_lora_adapters()
 
@@ -233,7 +233,7 @@ class OpenAIvLLMEngine(vLLMEngine):
     async def _initialize_engines(self):
         self.model_config = self.llm.model_config
         self.base_model_paths = [
-            BaseModelPath(name=self.engine_args.model, model_path=self.engine_args.model)
+            BaseModelPath(name=self.served_model_name, model_path=self.engine_args.model)
         ]
 
         self.serving_models = OpenAIServingModels(
