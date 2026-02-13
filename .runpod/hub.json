@@ -536,6 +536,7 @@
           "name": "Num Speculative Tokens",
           "type": "number",
           "description": "The number of speculative tokens to sample from the draft model.",
+          "default": 1,
           "advanced": true
         }
       },
@@ -545,6 +546,7 @@
           "name": "Ngram Prompt Lookup Max",
           "type": "number",
           "description": "Max size of window for ngram prompt lookup in speculative decoding.",
+          "default": 1,
           "advanced": true
         }
       },
@@ -641,6 +643,16 @@
           "type": "boolean",
           "description": "Enables or disables custom all reduce",
           "default": false,
+          "advanced": true
+        }
+      },
+      {
+        "key": "STREAM_INTERVAL",
+        "input": {
+          "name": "Stream Interval",
+          "type": "number",
+          "description": "Interval in seconds between streaming responses.",
+          "default": 1,
           "advanced": true
         }
       },
