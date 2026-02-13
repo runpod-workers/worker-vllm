@@ -288,6 +288,13 @@ def get_engine_args():
     
     # Set max_num_batched_tokens to max_model_len for unlimited batching.
     # vLLM defaults max_num_batched_tokens to 2048 when None, which is too low.
+
+    if args.get("max_model_len") == 0:
+        args["max_model_len"] = None
+
+    if args.get("max_num_batched_tokens") == 0:
+        args["max_num_batched_tokens"] = None
+
     if args.get("max_num_batched_tokens") is None:
         max_model_len = args.get("max_model_len")
         if max_model_len is None:
