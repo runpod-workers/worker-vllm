@@ -122,9 +122,14 @@ def get_speculative_config():
     # Option 2: Build config from individual environment variables
     spec_method = os.getenv('SPECULATIVE_METHOD')
     spec_model = os.getenv('SPECULATIVE_MODEL')
-    num_spec_tokens = os.getenv('NUM_SPECULATIVE_TOKENS')
-    ngram_max = os.getenv('NGRAM_PROMPT_LOOKUP_MAX')
-    ngram_min = os.getenv('NGRAM_PROMPT_LOOKUP_MIN')
+    _num_spec_tokens = os.getenv('NUM_SPECULATIVE_TOKENS')
+    _ngram_max = os.getenv('NGRAM_PROMPT_LOOKUP_MAX')
+    _ngram_min = os.getenv('NGRAM_PROMPT_LOOKUP_MIN')
+
+    # Convert numeric vars to int so '0' (hub.json default) is treated as unset
+    num_spec_tokens = (int(_num_spec_tokens) or None) if _num_spec_tokens else None
+    ngram_max = (int(_ngram_max) or None) if _ngram_max else None
+    ngram_min = (int(_ngram_min) or None) if _ngram_min else None
 
     if not any([spec_method, spec_model, ngram_max]):
         return None
@@ -150,11 +155,11 @@ def get_speculative_config():
     if spec_model:
         config['model'] = spec_model
     if num_spec_tokens:
-        config['num_speculative_tokens'] = int(num_spec_tokens)
+        config['num_speculative_tokens'] = num_spec_tokens
     if ngram_max:
-        config['prompt_lookup_max'] = int(ngram_max)
+        config['prompt_lookup_max'] = ngram_max
     if ngram_min:
-        config['prompt_lookup_min'] = int(ngram_min)
+        config['prompt_lookup_min'] = ngram_min
 
     draft_tp = os.getenv('SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE')
     if draft_tp:
