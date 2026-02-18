@@ -80,6 +80,7 @@ To build an image with the model baked in, you must specify the following docker
   - `WORKER_CUDA_VERSION`: `12.1.0` (`12.1.0` is recommended for optimal performance).
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
   - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `main`).
+  - `VLLM_NIGHTLY`: Set to `true` to replace the pinned vLLM release with the latest nightly build and the latest `transformers` from source. Useful for testing unreleased vLLM features. (default: `false`)
 
 For the remaining settings, you may apply them as environment variables when running the container. Supported environment variables are listed in the [Environment Variables](#environment-variables) section.
 
@@ -87,6 +88,20 @@ For the remaining settings, you may apply them as environment variables when run
 
 ```bash
 docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg BASE_PATH="/models" .
+```
+
+### Example: Building with vLLM Nightly
+
+To use the latest unreleased vLLM build (installs from the nightly wheel index and `transformers` from source):
+
+```bash
+docker build -t username/image:tag --build-arg VLLM_NIGHTLY=true .
+```
+
+You can combine it with other arguments:
+
+```bash
+docker build -t username/image:tag --build-arg VLLM_NIGHTLY=true --build-arg MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct" --build-arg BASE_PATH="/models" .
 ```
 
 ### (Optional) Including Huggingface Token
