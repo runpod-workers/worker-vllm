@@ -53,7 +53,7 @@ DEFAULT_ARGS = {
     "max_logprobs": int(os.getenv('MAX_LOGPROBS', 20)),  # Default value for OpenAI Chat Completions API
     "revision": os.getenv('REVISION', None),
     "code_revision": os.getenv('CODE_REVISION', None),
-    "rope_scaling": os.getenv('ROPE_SCALING', None),
+    "rope_scaling": json.loads(os.getenv("ROPE_SCALING", "null")),
     "rope_theta": float(os.getenv('ROPE_THETA', 0)) or None,
     "tokenizer_revision": os.getenv('TOKENIZER_REVISION', None),
     "quantization": os.getenv('QUANTIZATION', None),
