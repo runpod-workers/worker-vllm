@@ -75,6 +75,7 @@ DEFAULT_ARGS = {
     "long_lora_scaling_factors": tuple(map(float, os.getenv('LONG_LORA_SCALING_FACTORS', '').split(','))) if os.getenv('LONG_LORA_SCALING_FACTORS') else None,
     "lora_dtype": os.getenv('LORA_DTYPE', 'auto'),
     "max_cpu_loras": int(os.getenv('MAX_CPU_LORAS', 0)) or None,
+    "task": os.getenv('TASK', 'auto'),
     "device": os.getenv('DEVICE', 'auto'),
     "ray_workers_use_nsight": os.getenv('RAY_WORKERS_USE_NSIGHT', 'False').lower() == 'true',
     "num_gpu_blocks_override": int(os.getenv('NUM_GPU_BLOCKS_OVERRIDE', 0)) or None,

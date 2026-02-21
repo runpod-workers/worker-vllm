@@ -8,6 +8,7 @@ Complete guide to all environment variables and configuration options for worker
 | ------------------------------ | ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `MODEL_NAME`                   | 'facebook/opt-125m' | `str`                                                       | Name or path of the Hugging Face model to use.                                  |
 | `MODEL_REVISION`               | 'main'              | `str`                                                       | Model revision to load (default: main).                                         |
+| `TASK`                         | 'auto'              | `str`                                                       | The task to use for the model (e.g., `embed` for embedding models).             |
 | `TOKENIZER`                    | None                | `str`                                                       | Name or path of the Hugging Face tokenizer to use.                              |
 | `SKIP_TOKENIZER_INIT`          | False               | `bool`                                                      | Skip initialization of tokenizer and detokenizer.                               |
 | `TOKENIZER_MODE`               | 'auto'              | ['auto', 'slow']                                            | The tokenizer mode.                                                             |
