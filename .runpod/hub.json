@@ -281,15 +281,6 @@
         }
       },
       {
-        "key": "NUM_GPU_BLOCKS_OVERRIDE",
-        "input": {
-          "name": "Num GPU Blocks Override",
-          "type": "number",
-          "description": "If specified, ignore GPU profiling result and use this number of GPU blocks.",
-          "advanced": true
-        }
-      },
-      {
         "key": "MAX_NUM_BATCHED_TOKENS",
         "input": {
           "name": "Max Num Batched Tokens",
