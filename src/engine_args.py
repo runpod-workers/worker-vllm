@@ -286,6 +286,50 @@ def _local_args_to_engine_args(local: dict) -> dict:
     return out
 
 
+def _sanitize_hf_overrides(hf_overrides: dict) -> dict | None:
+    """Strip rope_scaling from hf_overrides sub-configs if vLLM rejects them.
+
+    Older vLLM (<0.7) required explicit mrope rope_scaling in hf_overrides for
+    models like Qwen2-VL. Newer vLLM auto-detects mrope and raises a ValueError
+    in patch_rope_scaling_dict when it finds conflicting rope_type values. Strip
+    the offending rope_scaling so the model loads with its native config.
+    """
+    if not isinstance(hf_overrides, dict):
+        return hf_overrides
+
+    try:
+        from vllm.transformers_utils.config import patch_rope_scaling_dict
+    except ImportError:
+        return hf_overrides
+
+    import copy
+    cleaned = {}
+    changed = False
+    for key, value in hf_overrides.items():
+        if isinstance(value, dict) and "rope_scaling" in value:
+            rope_scaling = value.get("rope_scaling")
+            if isinstance(rope_scaling, dict):
+                try:
+                    patch_rope_scaling_dict(copy.deepcopy(rope_scaling))
+                except (ValueError, Exception) as e:
+                    logging.warning(
+                        "Stripping hf_overrides['%s']['rope_scaling'] because vLLM "
+                        "rejected it (%s). Newer vLLM auto-detects rope scaling from "
+                        "the model config.", key, e
+                    )
+                    stripped = {k: v for k, v in value.items() if k != "rope_scaling"}
+                    cleaned[key] = stripped if stripped else None
+                    changed = True
+                    continue
+        cleaned[key] = value
+
+    if not changed:
+        return hf_overrides
+
+    result = {k: v for k, v in cleaned.items() if v is not None}
+    return result or None
+
+
 def get_local_args():
     """
     Retrieve local arguments from a JSON file.
@@ -338,6 +382,13 @@ def get_engine_args():
     #     args["load_format"] = "tensorizer"
     #     args["model_loader_extra_config"] = TensorizerConfig(tensorizer_uri=args["TENSORIZER_URI"], num_readers=None)
     #     logging.info(f"Using tensorized model from {args['TENSORIZER_URI']}")
+
+    if "hf_overrides" in args:
+        sanitized = _sanitize_hf_overrides(args["hf_overrides"])
+        if sanitized:
+            args["hf_overrides"] = sanitized
+        else:
+            del args["hf_overrides"]
 
     if args.get("load_format") == "bitsandbytes":
         args["quantization"] = args["load_format"]
