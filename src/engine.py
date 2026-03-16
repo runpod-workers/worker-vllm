@@ -108,7 +108,7 @@ class vLLMEngine:
             yield {"error": create_error_response(str(e)).model_dump()}
 
     async def _generate_vllm(self, llm_input, validated_sampling_params, batch_size, stream, apply_chat_template, request_id, batch_size_growth_factor, min_batch_size: str) -> AsyncGenerator[dict, None]:
-        if apply_chat_template or isinstance(llm_input, list):
+        if apply_chat_template:
             tokenizer_wrapper = self._get_tokenizer_for_chat_template()
             llm_input = tokenizer_wrapper.apply_chat_template(llm_input)
         results_generator = self.llm.generate(llm_input, validated_sampling_params, request_id)

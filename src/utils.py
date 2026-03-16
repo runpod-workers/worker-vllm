@@ -41,12 +41,39 @@ def count_physical_cores():
     return len(cores)
 
 
+# These are to support sending multiple prompts or token arrays in a single request
+def prompt_to_vllm_prompt(prompt):
+    if len(prompt) == 0:
+        return vllm.TextPrompt(prompt=prompt)
+    elif prompt is list:
+        return [vllm.TextPrompt(prompt=p) for p in prompt]
+    else:
+        return vllm.TextPrompt(prompt=prompt)
+
+def tokens_to_vllm_prompt(tokens):
+    if len(tokens) == 0:
+        return vllm.TokensPrompt(prompt_token_ids=tokens)
+    elif tokens[0] is list: # Multiple prompts in one entry
+        return [vllm.TokensPrompt(prompt_token_ids=toks) for toks in tokens]
+    else:
+        return vllm.TokensPrompt(prompt_token_ids=tokens)
+
+def get_llm_input(job):
+    for k, fn in [
+        ("messages", lambda messages: messages),
+        ("prompt", prompt_to_vllm_prompt),
+        ("tokens", tokens_to_vllm_prompt)]:
+        value = job.get(k)
+        if value:
+            return fn(value)
+    return None
+
 class JobInput:
     def __init__(self, job):
-        self.llm_input = job.get("messages", job.get("prompt"))
+        self.llm_input = get_llm_input(job)
         self.stream = job.get("stream", False)
         self.max_batch_size = job.get("max_batch_size")
-        self.apply_chat_template = job.get("apply_chat_template", False)
+        self.apply_chat_template = job.get("apply_chat_template", job.get("messages") is not None)
         self.use_openai_format = job.get("use_openai_format", False)
         samp_param = job.get("sampling_params", {})
         if "max_tokens" not in samp_param:
