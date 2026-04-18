@@ -5,9 +5,9 @@ RUN apt-get update -y \
 
 RUN ldconfig /usr/local/cuda-12.9/compat/
 
-# Install vLLM with FlashInfer - use CUDA 12.8 PyTorch wheels (compatible with vLLM 0.15.1)
+# Install vLLM with FlashInfer - use CUDA 12.8 PyTorch wheels
 RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install "vllm[flashinfer]==0.16.0" --extra-index-url https://download.pytorch.org/whl/cu129
+    python3 -m pip install "vllm[flashinfer]==0.19.0" --extra-index-url https://download.pytorch.org/whl/cu129
 
 
 
@@ -17,13 +17,20 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade -r /requirements.txt
 
 # Setup for Option 2: Building the Image with the Model included
-ARG MODEL_NAME=""
+ARG MODEL_NAME="sakamakismile/Huihui-Qwen3.6-35B-A3B-abliterated-NVFP4"
 ARG TOKENIZER_NAME=""
-ARG BASE_PATH="/runpod-volume"
+ARG BASE_PATH="/models"
 ARG QUANTIZATION=""
 ARG MODEL_REVISION=""
 ARG TOKENIZER_REVISION=""
 ARG VLLM_NIGHTLY="false"
+
+# Add default args for the config
+ARG KV_CACHE_DTYPE="fp8"
+ARG MAX_MODEL_LEN=175000
+ARG REASONING_PARSER="qwen3"
+ARG ENABLE_AUTO_TOOL_CHOICE="true"
+ARG TOOL_CALL_PARSER="qwen3_coder"
 
 ENV MODEL_NAME=$MODEL_NAME \
     MODEL_REVISION=$MODEL_REVISION \
@@ -41,7 +48,13 @@ ENV MODEL_NAME=$MODEL_NAME \
     # Prevent rayon thread pool panic in containers where ulimit -u < nproc
     # (tokenizers uses Rust's rayon which tries to spawn threads = CPU cores)
     TOKENIZERS_PARALLELISM=false \
-    RAYON_NUM_THREADS=4
+    RAYON_NUM_THREADS=4 \
+    # new cfg
+    KV_CACHE_DTYPE=$KV_CACHE_DTYPE \
+    MAX_MODEL_LEN=$MAX_MODEL_LEN \
+    REASONING_PARSER=$REASONING_PARSER \
+    ENABLE_AUTO_TOOL_CHOICE=$ENABLE_AUTO_TOOL_CHOICE \
+    TOOL_CALL_PARSER=$TOOL_CALL_PARSER
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
