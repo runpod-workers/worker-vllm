@@ -8,7 +8,7 @@ def get_engine_args():
     """
     # The model path is determined by the download script and stored in /local_model_args.json
     # but we can also use the environment variable set in the Dockerfile.
-    model_path = os.getenv("MODEL_NAME", "sakamakismile/Huihui-Qwen3.6-35B-A3B-abliterated-NVFP4")
+    model_path = os.getenv("MODEL_NAME", "sakamakismile/Huihui-Qwen3.5-4B-abliterated-NVFP4")
     
     # If /local_model_args.json exists, it means the model was baked in.
     # We should use the path from there as it will be the absolute path to the downloaded files.

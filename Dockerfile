@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade -r /requirements.txt
 
 # Hardcoded Model Configuration
-ENV MODEL_NAME="sakamakismile/Huihui-Qwen3.6-35B-A3B-abliterated-NVFP4" \
+ENV MODEL_NAME="sakamakismile/Huihui-Qwen3.5-4B-abliterated-NVFP4" \
     BASE_PATH="/model" \
     KV_CACHE_DTYPE="fp8" \
     MAX_MODEL_LEN="175000" \
