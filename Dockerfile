@@ -11,8 +11,7 @@ RUN python3 -m pip install --upgrade pip && \
 
 # Install additional Python dependencies
 COPY builder/requirements.txt /requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python3 -m pip install --upgrade -r /requirements.txt
+RUN python3 -m pip install --upgrade -r /requirements.txt
 
 # Hardcoded Model Configuration
 ENV MODEL_NAME="sakamakismile/Huihui-Qwen3.5-4B-abliterated-NVFP4" \
@@ -37,11 +36,7 @@ ENV MODEL_NAME="sakamakismile/Huihui-Qwen3.5-4B-abliterated-NVFP4" \
 COPY src /src
 
 # Download the model at build time
-RUN --mount=type=secret,id=HF_TOKEN,required=false \
-    if [ -f /run/secrets/HF_TOKEN ]; then \
-    export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
-    fi && \
-    python3 /src/download_model.py
+RUN python3 /src/download_model.py
 
 # Start the handler
 CMD ["python3", "/src/handler.py"]
