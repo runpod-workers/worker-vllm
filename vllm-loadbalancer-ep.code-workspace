@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../vllm-loadbalancer-ep"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
