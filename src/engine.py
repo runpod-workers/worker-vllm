@@ -285,7 +285,6 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.openai_serving_render = OpenAIServingRender(
             model_config=self.llm.model_config,
             renderer=self.llm.renderer,
-            io_processor=self.llm.io_processor,
             model_registry=self.serving_models.registry,
             request_logger=None,
             chat_template=chat_template,
