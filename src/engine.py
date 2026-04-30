@@ -206,19 +206,48 @@ class OpenAIvLLMEngine(vLLMEngine):
             self.raw_openai_output = bool(int(raw_output_env))
 
     def _load_lora_adapters(self):
-        adapters = []
-        try:
-            adapters = json.loads(os.getenv("LORA_MODULES", '[]'))
-        except Exception as e:
-            logging.info(f"---Initialized adapter json load error: {e}")
+        lora_modules_env = os.getenv("LORA_MODULES", "")
+        if not lora_modules_env:
+            return []
 
-        for i, adapter in enumerate(adapters):
+        try:
+            parsed = json.loads(lora_modules_env)
+        except json.JSONDecodeError as e:
+            logging.error(
+                "LORA_MODULES could not be parsed as JSON: %s — no LoRA adapters loaded. Value: %r",
+                e, lora_modules_env,
+            )
+            return []
+
+        # Accept a single adapter dict as well as an array
+        if isinstance(parsed, dict):
+            parsed = [parsed]
+
+        if not isinstance(parsed, list):
+            logging.error(
+                "LORA_MODULES must be a JSON array of adapter objects, got %s — no LoRA adapters loaded.",
+                type(parsed).__name__,
+            )
+            return []
+
+        adapters = []
+        for i, adapter in enumerate(parsed):
             try:
-                adapters[i] = LoRAModulePath(**adapter)
-                logging.info(f"---Initialized adapter: {adapter}")
+                adapters.append(LoRAModulePath(**adapter))
+                logging.info("Loaded LoRA adapter config [%d]: %s", i, adapter)
             except Exception as e:
-                logging.info(f"---Initialized adapter not worked: {e}")
-                continue
+                logging.error(
+                    "Failed to parse LoRA adapter at index %d: %s. Config: %r",
+                    i, e, adapter,
+                )
+
+        if parsed and not adapters:
+            logging.error(
+                "LORA_MODULES specified %d adapter(s) but none could be loaded — "
+                "OpenAI model name lookups for LoRA adapters will fail.",
+                len(parsed),
+            )
+
         return adapters
 
     async def _ensure_engines_initialized(self):
