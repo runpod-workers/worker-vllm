@@ -6,6 +6,8 @@ Run LLMs using [vLLM](https://docs.vllm.ai) with an OpenAI-compatible API
 
 [![RunPod](https://api.runpod.io/badge/runpod-workers/worker-vllm)](https://www.runpod.io/console/hub/runpod-workers/worker-vllm)
 
+Current vLLM version: [0.19.1](https://github.com/vllm-project/vllm/releases/tag/v0.16.0)
+
 ---
 
 ## Endpoint Configuration
