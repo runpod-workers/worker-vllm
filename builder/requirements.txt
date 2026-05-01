@@ -1,7 +1,7 @@
 ray
 pandas
 pyarrow
-runpod
+runpod==1.9.0
 huggingface-hub
 lmcache==0.4.2
 packaging>=24.2
@@ -9,7 +9,7 @@ typing-extensions>=4.8.0
 pydantic
 pydantic-settings
 hf-transfer
-transformers>=4.57.0,<5
+transformers>=5
 bitsandbytes>=0.45.0
 kernels
 torch-c-dlpack-ext
