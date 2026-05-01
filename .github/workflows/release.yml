@@ -76,11 +76,23 @@ jobs:
 
       - name: Release Summary
         run: |
-          echo "🚀 Release completed!"
+          echo "Release completed!"
           echo "Version: ${{ env.RELEASE_VERSION }}"
           echo "Docker Image: ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}"
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "Trigger: Manual workflow dispatch"
-          else
-            echo "Trigger: GitHub release (tag: ${{ github.ref_name }})"
-          fi
+
+      - name: Notify Slack
+        run: |
+          curl -sf -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":rocket: New :runpod-new-whiteonpurple: Runpod worker-vllm release: *${{ env.RELEASE_VERSION }}*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":banana-dance: *New Release — worker-vllm ${{ env.RELEASE_VERSION }}*\n*Docker:* `${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}`\n<https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_VERSION }}|View release on GitHub>"
+                  }
+                }
+              ]
+            }'
