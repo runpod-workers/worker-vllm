@@ -1,9 +1,11 @@
 name: Release
 
 on:
+  release:
+    types: [published]
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*" # Trigger on version tags like v1.0.0, v2.1.0, etc.
+      - "v[0-9]+.[0-9]+.[0-9]+*"
   workflow_dispatch:
     inputs:
       version:
@@ -53,16 +55,13 @@ jobs:
 
           # Determine version based on trigger type
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger: use input version
             VERSION="${{ github.event.inputs.version }}"
-            echo "RELEASE_VERSION=${VERSION}" >> $GITHUB_ENV
-            echo "IS_MANUAL_RELEASE=true" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
           else
-            # Tag trigger: use tag name (remove refs/tags/ prefix)
             VERSION=${GITHUB_REF#refs/tags/}
-            echo "RELEASE_VERSION=${VERSION}" >> $GITHUB_ENV
-            echo "IS_MANUAL_RELEASE=false" >> $GITHUB_ENV
           fi
+          echo "RELEASE_VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Build and push the images to Docker Hub
         uses: docker/bake-action@v2
@@ -80,19 +79,41 @@ jobs:
           echo "Version: ${{ env.RELEASE_VERSION }}"
           echo "Docker Image: ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}"
 
+      - name: Fetch Release Notes
+        run: |
+          RESPONSE=$(curl -sf \
+            -H "Authorization: token ${{ github.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.RELEASE_VERSION }}" 2>/dev/null) || true
+          if [[ -n "$RESPONSE" ]]; then
+            NOTES=$(echo "$RESPONSE" | jq -r '.body // empty')
+          fi
+          printf '%s' "${NOTES:-No release notes available.}" > /tmp/release_notes.txt
+
       - name: Notify Slack
         run: |
-          curl -sf -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "text": ":rocket: New :runpod-new-whiteonpurple: Runpod worker-vllm release: *${{ env.RELEASE_VERSION }}*",
-              "blocks": [
+          jq -n \
+            --arg version "${{ env.RELEASE_VERSION }}" \
+            --arg docker "${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}" \
+            --rawfile notes /tmp/release_notes.txt \
+            --arg url "https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_VERSION }}" \
+            '{
+              text: (":rocket: New :runpod-new-whiteonpurple: Runpod worker-vllm release: *" + $version + "*"),
+              blocks: [
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":banana-dance: *New Release — worker-vllm ${{ env.RELEASE_VERSION }}*\n*Docker:* `${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMG }}:${{ env.RELEASE_VERSION }}`\n<https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_VERSION }}|View release on GitHub>"
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: (":banana-dance: *New Release — worker-vllm " + $version + "*\n*Docker:* `" + $docker + "`\n<" + $url + "|View release on GitHub>")
+                  }
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: ("*Release Notes:*\n" + $notes)
                   }
                 }
               ]
-            }'
+            }' | curl -sf -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H "Content-Type: application/json" \
+              -d @-
