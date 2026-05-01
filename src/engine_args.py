@@ -352,6 +352,58 @@ def _sanitize_hf_overrides(hf_overrides: dict) -> dict | None:
     return result or None
 
 
+def _resolve_cached_model_path(model_name: str) -> str:
+    """Return a local snapshot path when the HF cache was stored with lowercase names.
+
+    Some model stores (e.g. RunPod pre-cached volumes) normalize repo IDs to
+    lowercase. HuggingFace Hub stores caches as
+    ``models--{org}--{model}/snapshots/{hash}/`` preserving the original casing,
+    so MODEL_NAME=Qwen/Qwen2.5-Coder-32B-Instruct-AWQ will miss a cache stored
+    as ``models--qwen--qwen2.5-coder-32b-instruct-awq/``.
+
+    If the exact-case cache directory is absent but a lowercase variant exists,
+    the latest snapshot path is returned so vLLM loads from disk rather than
+    attempting a redundant download.
+    """
+    if os.path.isabs(model_name):
+        return model_name
+
+    cache_dir = (
+        os.getenv("HUGGINGFACE_HUB_CACHE")
+        or os.getenv("HF_HOME")
+        or os.path.expanduser("~/.cache/huggingface/hub")
+    )
+
+    folder_name = f"models--{model_name.replace('/', '--')}"
+
+    if os.path.isdir(os.path.join(cache_dir, folder_name)):
+        return model_name
+
+    lower_dir = os.path.join(cache_dir, folder_name.lower())
+    if not os.path.isdir(lower_dir):
+        return model_name
+
+    snapshots_dir = os.path.join(lower_dir, "snapshots")
+    if not os.path.isdir(snapshots_dir):
+        return model_name
+
+    try:
+        snapshots = sorted(os.listdir(snapshots_dir))
+    except OSError:
+        return model_name
+
+    if not snapshots:
+        return model_name
+
+    resolved = os.path.join(snapshots_dir, snapshots[-1])
+    logging.info(
+        "MODEL_NAME %r not found at original casing in HF cache; "
+        "resolved to lowercase cached snapshot at %r",
+        model_name, resolved,
+    )
+    return resolved
+
+
 def get_local_args():
     """
     Retrieve local arguments from a JSON file.
@@ -526,5 +578,9 @@ def get_engine_args():
     speculative_config = get_speculative_config()
     if speculative_config:
         args["speculative_config"] = speculative_config
+
+    # Resolve lowercase HF cache paths (FDE-174)
+    if args.get("model"):
+        args["model"] = _resolve_cached_model_path(args["model"])
 
     return AsyncEngineArgs(**args)
