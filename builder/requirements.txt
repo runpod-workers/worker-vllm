@@ -1,7 +1,7 @@
 ray
 pandas
 pyarrow
-runpod
+runpod==1.9.0
 huggingface-hub
 lmcache==0.4.2
 packaging>=24.2

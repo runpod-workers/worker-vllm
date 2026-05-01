@@ -1,0 +1,41 @@
+name: Slack PR Notifications
+
+on:
+  pull_request:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+    contents: read
+   
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack - New PR
+        if: github.event_name == 'pull_request'
+        run: |
+          curl -sf -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":rocket: New PR in worker-vllm: *${{ github.event.pull_request.title }}*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rocket: *New Pull Request — worker-vllm*\n*<${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>*\nOpened by *${{ github.event.pull_request.user.login }}*"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ github.event.pull_request.base.ref }} ← ${{ github.event.pull_request.head.ref }}"
+                    }
+                  ]
+                }
+              ]
+            }'
