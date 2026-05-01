@@ -21,13 +21,13 @@ jobs:
         run: |
           echo "Fetching the current runpod version from requirements.txt..."
           
-          # Get current version, allowing both == and ~= in the search pattern
-          current_version=$(grep -oP 'runpod[~=]{1,2}\K[^"]+' ./builder/requirements.txt)
+          # Get current version, handling >=, ~=, ==, and other operators
+          current_version=$(grep -oP 'runpod[><=~!]+\K[\d.,<>=~!]+' ./builder/requirements.txt | head -1)
           echo "Current version: $current_version"
 
-          # Extract major and minor from current version
-          current_major_minor=$(echo $current_version | cut -d. -f1,2)
-          echo "Current major.minor: $current_major_minor"
+          # Extract major version from constraint (e.g., "1.8,<2.0" -> "1")
+          current_major=$(echo $current_version | cut -d. -f1)
+          echo "Current major: $current_major"
 
           echo "Fetching the latest runpod version from PyPI..."
           
@@ -36,26 +36,27 @@ jobs:
           echo "NEW_VERSION_ENV=$new_version" >> $GITHUB_ENV
           echo "New version: $new_version"
 
-          # Extract major and minor from new version
-          new_major_minor=$(echo $new_version | cut -d. -f1,2)
-          echo "New major.minor: $new_major_minor"
+          # Extract major version from new version
+          new_major=$(echo $new_version | cut -d. -f1)
+          echo "New major: $new_major"
 
           if [ -z "$new_version" ]; then
               echo "ERROR: Failed to fetch the new version from PyPI."
               exit 1
           fi
 
-          # Check if the major or minor version is different
-          if [ "$current_major_minor" = "$new_major_minor" ]; then
-              echo "No update needed. The new version ($new_major_minor) is within the allowed range (~= $current_major_minor)."
+          # Check if major version is different
+          if [ "$current_major" = "$new_major" ]; then
+              echo "No update needed. Major version ($new_major) hasn't changed."
               exit 0
           fi
 
-          echo "New major/minor detected ($new_major_minor). Updating requirements.txt..."
+          echo "New major version detected ($new_major). Updating requirements.txt..."
 
-          # Update requirements.txt, preserving the existing constraint type (~= or ==)
-          sed -i "s/runpod[~=][^ ]*/runpod~=$new_version/" ./builder/requirements.txt
-          echo "requirements.txt has been updated."
+          # Update requirements.txt with new constraint: >=new_version,<next_major
+          next_major=$((new_major + 1))
+          sed -i "s/runpod[><=~!,\.0-9]*/runpod>=$new_version,<$next_major/" ./builder/requirements.txt
+          echo "requirements.txt has been updated to: runpod>=$new_version,<$next_major"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
