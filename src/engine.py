@@ -277,9 +277,8 @@ class OpenAIvLLMEngine(vLLMEngine):
         )
         await self.serving_models.init_static_loras()
 
-        # Get chat template from vLLM tokenizer if available
-        chat_template = None
-        if self.tokenizer and hasattr(self.tokenizer, 'tokenizer'):
+        chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
+        if not chat_template and self.tokenizer and hasattr(self.tokenizer, 'tokenizer'):
             chat_template = self.tokenizer.tokenizer.chat_template
 
         self.openai_serving_render = OpenAIServingRender(
