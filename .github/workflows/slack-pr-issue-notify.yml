@@ -1,4 +1,4 @@
-name: Slack PR and Issue Notifications
+name: Slack PR Notifications
 
 on:
   pull_request:
@@ -6,6 +6,9 @@ on:
   issues:
     types: [opened]
 
+permissions:
+    contents: read
+   
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -33,24 +36,6 @@ jobs:
                       "text": "${{ github.event.pull_request.base.ref }} ← ${{ github.event.pull_request.head.ref }}"
                     }
                   ]
-                }
-              ]
-            }'
-
-      - name: Notify Slack - New Issue
-        if: github.event_name == 'issues'
-        run: |
-          curl -sf -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "text": ":bug: New issue in worker-vllm: *${{ github.event.issue.title }}*",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":bug: *New Issue — worker-vllm*\n*<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>*\nOpened by *${{ github.event.issue.user.login }}*"
-                  }
                 }
               ]
             }'

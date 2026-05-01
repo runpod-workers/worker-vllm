@@ -5,6 +5,10 @@ on:
     - cron: '0 0 * * *' # Every day at midnight
   workflow_dispatch:
 
+
+permissions:
+    contents: read
+   
 jobs:
   check-vllm-release:
     runs-on: ubuntu-latest
