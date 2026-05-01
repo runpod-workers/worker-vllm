@@ -19,6 +19,7 @@ from vllm.entrypoints.openai.models.protocol import BaseModelPath, LoRAModulePat
 from vllm.entrypoints.openai.models.serving import OpenAIServingModels
 from vllm.entrypoints.openai.responses.protocol import ResponsesRequest, ResponsesResponse
 from vllm.entrypoints.openai.responses.serving import OpenAIServingResponses
+from vllm.entrypoints.serve.render.serving import OpenAIServingRender
 
 from constants import DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE_GROWTH_FACTOR, DEFAULT_MAX_CONCURRENCY, DEFAULT_MIN_BATCH_SIZE
 from engine_args import get_engine_args
@@ -205,19 +206,48 @@ class OpenAIvLLMEngine(vLLMEngine):
             self.raw_openai_output = bool(int(raw_output_env))
 
     def _load_lora_adapters(self):
-        adapters = []
-        try:
-            adapters = json.loads(os.getenv("LORA_MODULES", '[]'))
-        except Exception as e:
-            logging.info(f"---Initialized adapter json load error: {e}")
+        lora_modules_env = os.getenv("LORA_MODULES", "")
+        if not lora_modules_env:
+            return []
 
-        for i, adapter in enumerate(adapters):
+        try:
+            parsed = json.loads(lora_modules_env)
+        except json.JSONDecodeError as e:
+            logging.error(
+                "LORA_MODULES could not be parsed as JSON: %s — no LoRA adapters loaded. Value: %r",
+                e, lora_modules_env,
+            )
+            return []
+
+        # Accept a single adapter dict as well as an array
+        if isinstance(parsed, dict):
+            parsed = [parsed]
+
+        if not isinstance(parsed, list):
+            logging.error(
+                "LORA_MODULES must be a JSON array of adapter objects, got %s — no LoRA adapters loaded.",
+                type(parsed).__name__,
+            )
+            return []
+
+        adapters = []
+        for i, adapter in enumerate(parsed):
             try:
-                adapters[i] = LoRAModulePath(**adapter)
-                logging.info(f"---Initialized adapter: {adapter}")
+                adapters.append(LoRAModulePath(**adapter))
+                logging.info("Loaded LoRA adapter config [%d]: %s", i, adapter)
             except Exception as e:
-                logging.info(f"---Initialized adapter not worked: {e}")
-                continue
+                logging.error(
+                    "Failed to parse LoRA adapter at index %d: %s. Config: %r",
+                    i, e, adapter,
+                )
+
+        if parsed and not adapters:
+            logging.error(
+                "LORA_MODULES specified %d adapter(s) but none could be loaded — "
+                "OpenAI model name lookups for LoRA adapters will fail.",
+                len(parsed),
+            )
+
         return adapters
 
     async def _ensure_engines_initialized(self):
@@ -246,16 +276,33 @@ class OpenAIvLLMEngine(vLLMEngine):
             lora_modules=self.lora_adapters,
         )
         await self.serving_models.init_static_loras()
-        
+
         # Get chat template from vLLM tokenizer if available
         chat_template = None
         if self.tokenizer and hasattr(self.tokenizer, 'tokenizer'):
             chat_template = self.tokenizer.tokenizer.chat_template
-        
+
+        self.openai_serving_render = OpenAIServingRender(
+            model_config=self.llm.model_config,
+            renderer=self.llm.renderer,
+            io_processor=self.llm.io_processor,
+            model_registry=self.serving_models.registry,
+            request_logger=None,
+            chat_template=chat_template,
+            chat_template_content_format="auto",
+            trust_request_chat_template=os.getenv('TRUST_REQUEST_CHAT_TEMPLATE', 'false').lower() == 'true',
+            enable_auto_tools=os.getenv('ENABLE_AUTO_TOOL_CHOICE', 'false').lower() == 'true',
+            exclude_tools_when_tool_choice_none=os.getenv('EXCLUDE_TOOLS_WHEN_TOOL_CHOICE_NONE', 'false').lower() == 'true',
+            tool_parser=os.getenv('TOOL_CALL_PARSER', "") or None,
+            reasoning_parser=os.getenv('REASONING_PARSER', "") or None,
+            log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
+        )
+
         self.chat_engine = OpenAIServingChat(
-            engine_client=self.llm, 
+            engine_client=self.llm,
             models=self.serving_models,
             response_role=self.response_role,
+            openai_serving_render=self.openai_serving_render,
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",
@@ -268,20 +315,20 @@ class OpenAIvLLMEngine(vLLMEngine):
             enable_prompt_tokens_details=os.getenv('ENABLE_PROMPT_TOKENS_DETAILS', 'false').lower() == 'true',
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
             enable_log_outputs=os.getenv('ENABLE_LOG_OUTPUTS', 'false').lower() == 'true',
-            log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
         )
         self.completion_engine = OpenAIServingCompletion(
             engine_client=self.llm,
             models=self.serving_models,
+            openai_serving_render=self.openai_serving_render,
             request_logger=None,
             return_tokens_as_token_ids=os.getenv('RETURN_TOKENS_AS_TOKEN_IDS', 'false').lower() == 'true',
             enable_prompt_tokens_details=os.getenv('ENABLE_PROMPT_TOKENS_DETAILS', 'false').lower() == 'true',
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
-            log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
         )
         self.responses_engine = OpenAIServingResponses(
             engine_client=self.llm,
             models=self.serving_models,
+            openai_serving_render=self.openai_serving_render,
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",
@@ -293,12 +340,12 @@ class OpenAIvLLMEngine(vLLMEngine):
             enable_prompt_tokens_details=os.getenv('ENABLE_PROMPT_TOKENS_DETAILS', 'false').lower() == 'true',
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
             enable_log_outputs=os.getenv('ENABLE_LOG_OUTPUTS', 'false').lower() == 'true',
-            log_error_stack=os.getenv('LOG_ERROR_STACK', 'false').lower() == 'true',
         )
         self.messages_engine = AnthropicServingMessages(
             engine_client=self.llm,
             models=self.serving_models,
             response_role=self.response_role,
+            openai_serving_render=self.openai_serving_render,
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",

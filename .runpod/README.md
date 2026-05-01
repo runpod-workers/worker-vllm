@@ -6,7 +6,7 @@ Run LLMs using [vLLM](https://docs.vllm.ai) with an OpenAI-compatible API
 
 [![RunPod](https://api.runpod.io/badge/runpod-workers/worker-vllm)](https://www.runpod.io/console/hub/runpod-workers/worker-vllm)
 
-Current vLLM version: [0.18.1](https://github.com/vllm-project/vllm/releases/tag/v0.16.0)
+Current vLLM version: [0.19.1](https://github.com/vllm-project/vllm/releases/tag/v0.19.1)
 
 ---
 
@@ -29,6 +29,7 @@ All behaviour is controlled through environment variables:
 | `REASONING_PARSER`                  | Parser for reasoning-capable models               |                     | "deepseek_r1", "qwen3", "granite", "hunyuan_a13b"                  |
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
 | `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 300                 | Integer                                                            |
+| `ENFORCE_EAGER`                     |  If True, we will disable CUDA graph and always execute the model in eager mode. If False, we will use CUDA graph and eager execution in hybrid for maximal performance and flexibility. | true | boolean (true or false) | 
 
 **Pass any vLLM engine arg** not listed above by setting an env var with the **UPPERCASED** field name (e.g. `MAX_MODEL_LEN=4096`, `ENABLE_CHUNKED_PREFILL=true`). The worker auto-discovers all `AsyncEngineArgs` fields from env. See the [vLLM engine args docs](https://docs.vllm.ai/en/latest/configuration/engine_args) for all available options.
 

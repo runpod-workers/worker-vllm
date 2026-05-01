@@ -621,7 +621,7 @@
           "name": "Enforce Eager",
           "type": "boolean",
           "description": "Always use eager-mode PyTorch. If False (0), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility",
-          "default": false,
+          "default": true,
           "advanced": true
         }
       },
@@ -793,6 +793,16 @@
             { "label": "Hunyuan A13B", "value": "hunyuan_a13b" }
           ],
           "default": "",
+          "advanced": true
+        }
+      },
+      {
+        "key": "PYTORCH_ALLOC_CONF",
+        "input": {
+          "name": "PyTorch Alloc Config",
+          "type": "string",
+          "description": "PyTorch allocation configuration, remove this if you want to use the default configuration",
+          "default": "expandable_segments:True",
           "advanced": true
         }
       }
