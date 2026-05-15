@@ -6,11 +6,11 @@ RUN apt-get update -y \
 
 ENV PATH="/root/.local/bin:$PATH"
 
-RUN ldconfig /usr/local/cuda-12.9/compat/
+RUN ldconfig /usr/local/cuda-13.0/compat/
 
-# Install vLLM with FlashInfer - use CUDA 12.9 PyTorch wheels
+# Install vLLM with FlashInfer - use CUDA 130 PyTorch wheels
 RUN uv pip install --system "packaging>=24.2" && \
-    uv pip install --system "vllm[flashinfer]==0.20.1" --extra-index-url https://download.pytorch.org/whl/cu130
+    uv pip install --system "vllm[flashinfer]==0.20.1"
 
 # Install additional Python dependencies (after vLLM to avoid PyTorch version conflicts)
 COPY builder/requirements.txt /requirements.txt
