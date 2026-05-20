@@ -97,9 +97,12 @@ If `SPECULATIVE_CONFIG` is set, it takes priority over individual env vars. When
 | `MAX_SEQ_LEN_TO_CAPTURE`       | `8192`  | `int`           | Maximum context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode.     |
 | `DISABLE_CUSTOM_ALL_REDUCE`    | `0`     | `int`           | Enables or disables custom all reduce.                                                                                              |
 | `ENABLE_EXPERT_PARALLEL`       | `False` | `bool`          | Enable Expert Parallel for MoE models.                                                                                              |
+| `VLLM_USE_DEEP_GEMM`           | `0`     | `bool`          | Enable DeepGEMM FP8 kernels for MoE and MQA logits computation. Disabled by default. See note below.                               |
 | `ATTENTION_BACKEND`            | `None`  | `str`           | Attention backend to use (e.g., `FLASH_ATTN`, `FLASHINFER`, `TRITON_FLASH_ATTN`). Replaces deprecated `VLLM_ATTENTION_BACKEND`.     |
 | `ASYNC_SCHEDULING`             | `None`  | `bool`          | Enable async scheduling (overlaps engine scheduling with GPU execution). Default: enabled in vLLM 0.14.0+. Set to `false` to disable. |
 | `STREAM_INTERVAL`              | `1`     | `int`           | Controls how often to yield streaming results. Lower = more frequent updates.                                                        |
+
+> **Note (`VLLM_USE_DEEP_GEMM`):** DeepGEMM is used in two places: MoE weight computation and MQA logits computation. It is necessary for MQA logits computation on supported hardware. Set `VLLM_USE_DEEP_GEMM=0` to disable the MoE part and fall back to flashinfer/cutlass FP8 kernels. Some users report better performance with `VLLM_USE_DEEP_GEMM=0`, particularly on H20 GPUs. Disabling it also skips the DeepGEMM warmup phase, reducing cold-start time. Requires CUDA 13.0+ and SM90+ (H100/H200) to use; the library is installed but inactive by default.
 
 ## Tokenizer Settings
 

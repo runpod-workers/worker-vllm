@@ -1,7 +1,7 @@
-FROM nvidia/cuda:13.0.2-base-ubuntu22.04 
+FROM nvidia/cuda:13.0.2-devel-ubuntu22.04
 
 RUN apt-get update -y \
-    && apt-get install -y python3-pip curl \
+    && apt-get install -y python3-pip curl git \
     && curl -LsSf https://astral.sh/uv/install.sh  | sh
 
 ENV PATH="/root/.local/bin:$PATH"
@@ -10,7 +10,8 @@ RUN ldconfig /usr/local/cuda-13.0/compat/
 
 # Install vLLM with FlashInfer - use CUDA 130 PyTorch wheels
 RUN uv pip install --system "packaging>=24.2" && \
-    uv pip install --system "vllm[flashinfer]==0.20.1"
+    uv pip install --system "vllm[flashinfer]==0.20.2" && \
+    uv pip install --system git+https://github.com/deepseek-ai/DeepGEMM.git@v2.1.1.post3 --no-build-isolation
 
 # Install additional Python dependencies (after vLLM to avoid PyTorch version conflicts)
 COPY builder/requirements.txt /requirements.txt
@@ -42,7 +43,9 @@ ENV MODEL_NAME=$MODEL_NAME \
     # Prevent rayon thread pool panic in containers where ulimit -u < nproc
     # (tokenizers uses Rust's rayon which tries to spawn threads = CPU cores)
     TOKENIZERS_PARALLELISM=false \
-    RAYON_NUM_THREADS=4
+    RAYON_NUM_THREADS=4 \
+    # Disable DeepGEMM MoE kernels by default; override with VLLM_USE_DEEP_GEMM=1 to enable
+    VLLM_USE_DEEP_GEMM=0
 
 ENV PYTHONPATH="/:/vllm-workspace"
 

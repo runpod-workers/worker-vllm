@@ -9,7 +9,7 @@
     "containerDiskInGb": 150,
     "gpuIds": "ADA_80_PRO,AMPERE_80",
     "gpuCount": 1,
-    "allowedCudaVersions": ["12.9", "12.8"],
+    "allowedCudaVersions": ["13.0"],
     "presets": [
       {
         "name": "deepseek-ai/deepseek-r1-distill-llama-8b",
@@ -803,6 +803,16 @@
           "type": "string",
           "description": "PyTorch allocation configuration, remove this if you want to use the default configuration",
           "default": "expandable_segments:True",
+          "advanced": true
+        }
+      },
+      {
+        "key": "VLLM_USE_DEEP_GEMM",
+        "input": {
+          "name": "Use DeepGEMM",
+          "type": "boolean",
+          "description": "Enable DeepGEMM FP8 kernels (MoE and MQA logits). Disabled by default — enable on H100/H200 for potential throughput gains. Some GPUs (e.g. H20) may perform better with this off. Enabling also adds a warmup period on startup.",
+          "default": false,
           "advanced": true
         }
       }
