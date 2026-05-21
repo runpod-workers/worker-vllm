@@ -47,7 +47,7 @@ Current vLLM version: [0.20.2](https://github.com/vllm-project/vllm/releases/tag
 **📦 Docker Image**: `runpod/worker-v1-vllm:<version>`
 
 - **Available Versions**: See [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases)
-- **CUDA Compatibility**: Requires CUDA >= 12.1
+- **CUDA Compatibility**: Requires CUDA >= 13.0
 
 ### Configuration
 
