@@ -82,6 +82,16 @@ def _convert_env_value_to_field_type(value: str, field_name: str, field_type: ty
         if type(None) in (args or ()):
             return None
         raise ValueError("empty value not allowed for non-optional field")
+
+    # Union[bool, str, ...]: only coerce to bool for unambiguous literals;
+    # otherwise preserve the string (e.g. hf_token="hf_abc..." must stay a str).
+    if get_origin(field_type) is not None:
+        union_types = [a for a in (get_args(field_type) or ()) if a is not type(None)]
+        if bool in union_types and str in union_types:
+            if str(val).lower() in ("true", "false", "1", "0", "yes", "no", "on", "off"):
+                return str(val).lower() in ("true", "1", "yes", "on")
+            return str(val)
+
     effective_type = _resolve_field_type(field_type)
     # bool
     if effective_type is bool:
