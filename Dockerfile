@@ -11,7 +11,7 @@ RUN ldconfig /usr/local/cuda-13.0/compat/
 # Install vLLM with FlashInfer - use CUDA 130 PyTorch wheels
 RUN uv pip install --system "packaging>=24.2" && \
     uv pip install --system "vllm[flashinfer]==0.20.2" && \
-    uv pip install --system git+https://github.com/deepseek-ai/DeepGEMM.git@v2.1.1.post3 --no-build-isolation
+    uv pip install --system git+https://github.com/deepseek-ai/DeepGEMM.git@714dd1a4a980f7937a74343d19a8eba4fe321480 --no-build-isolation
 
 # Install additional Python dependencies (after vLLM to avoid PyTorch version conflicts)
 COPY builder/requirements.txt /requirements.txt
