@@ -8,7 +8,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ![vLLM worker banner](https://image.runpod.ai/preview/vllm/vllm-banner.png)
 
-Current vLLM version: [0.19.1](https://github.com/vllm-project/vllm/releases/tag/v0.19.1)
+Current vLLM version: [0.20.2](https://github.com/vllm-project/vllm/releases/tag/v0.20.2)
 
 
 > Check out our Load Balancer implementation here: [vLLM Load Balancer](https://github.com/runpod-workers/vllm-loadbalancer-ep)
@@ -47,7 +47,7 @@ Current vLLM version: [0.19.1](https://github.com/vllm-project/vllm/releases/tag
 **📦 Docker Image**: `runpod/worker-v1-vllm:<version>`
 
 - **Available Versions**: See [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases)
-- **CUDA Compatibility**: Requires CUDA >= 12.1
+- **CUDA Compatibility**: Requires CUDA >= 13.0
 
 ### Configuration
 

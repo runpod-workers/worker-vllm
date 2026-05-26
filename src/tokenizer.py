@@ -1,10 +1,12 @@
-from transformers import AutoTokenizer
+import logging
 import os
 from typing import Union
 
+from transformers import AutoTokenizer
+
 class TokenizerWrapper:
     def __init__(self, tokenizer_name_or_path, tokenizer_revision, trust_remote_code):
-        print(f"tokenizer_name_or_path: {tokenizer_name_or_path}, tokenizer_revision: {tokenizer_revision}, trust_remote_code: {trust_remote_code}")
+        logging.debug("tokenizer_name_or_path: %s, tokenizer_revision: %s, trust_remote_code: %s", tokenizer_name_or_path, tokenizer_revision, trust_remote_code)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, revision=tokenizer_revision or "main", trust_remote_code=trust_remote_code)
         self.custom_chat_template = os.getenv("CUSTOM_CHAT_TEMPLATE")
         self.has_chat_template = bool(self.tokenizer.chat_template) or bool(self.custom_chat_template)

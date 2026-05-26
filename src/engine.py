@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -7,6 +8,7 @@ from typing import AsyncGenerator, Optional
 
 from dotenv import load_dotenv
 from vllm import AsyncLLMEngine
+from vllm.inputs import TextPrompt
 from vllm.entrypoints.logger import RequestLogger
 from vllm.entrypoints.anthropic.protocol import AnthropicMessagesRequest, AnthropicMessagesResponse, AnthropicError, AnthropicErrorResponse
 from vllm.entrypoints.anthropic.serving import AnthropicServingMessages
@@ -30,20 +32,33 @@ class vLLMEngine:
     def __init__(self, engine = None):
         load_dotenv() # For local development
         self.engine_args = get_engine_args()
-        logging.info(f"Engine args: {self.engine_args}")
-        
-        # Initialize vLLM engine first
-        self.llm = self._initialize_llm() if engine is None else engine.llm
-        
-        # Only create custom tokenizer wrapper if not using mistral tokenizer mode
-        # For mistral models, let vLLM handle tokenizer initialization
-        if self.engine_args.tokenizer_mode != 'mistral':
-            self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model, 
-                                              self.engine_args.tokenizer_revision, 
-                                              self.engine_args.trust_remote_code)
+
+        if engine is None:
+            ea = self.engine_args
+            summary = {
+                "model": ea.model,
+                "dtype": ea.dtype,
+                "quantization": ea.quantization,
+                "max_model_len": ea.max_model_len,
+                "tensor_parallel_size": ea.tensor_parallel_size,
+                "gpu_memory_utilization": ea.gpu_memory_utilization,
+            }
+            if ea.tokenizer and ea.tokenizer != ea.model:
+                summary["tokenizer"] = ea.tokenizer
+            logging.info("Engine config: %s", summary)
+            logging.debug("Full engine args: %s", ea)
+
+            self.llm = self._initialize_llm()
+
+            if self.engine_args.tokenizer_mode != 'mistral':
+                self.tokenizer = TokenizerWrapper(self.engine_args.tokenizer or self.engine_args.model,
+                                                  self.engine_args.tokenizer_revision,
+                                                  self.engine_args.trust_remote_code)
+            else:
+                self.tokenizer = None
         else:
-            # For mistral models, we'll get the tokenizer from vLLM later
-            self.tokenizer = None
+            self.llm = engine.llm
+            self.tokenizer = engine.tokenizer
             
         self.max_concurrency = int(os.getenv("MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY))
         self.default_batch_size = int(os.getenv("DEFAULT_BATCH_SIZE", DEFAULT_BATCH_SIZE))
@@ -116,7 +131,7 @@ class vLLMEngine:
         if apply_chat_template or isinstance(llm_input, list):
             tokenizer_wrapper = self._get_tokenizer_for_chat_template()
             llm_input = tokenizer_wrapper.apply_chat_template(llm_input)
-        results_generator = self.llm.generate(llm_input, validated_sampling_params, request_id)
+        results_generator = self.llm.generate(TextPrompt(prompt=llm_input), validated_sampling_params, request_id)
         n_responses, n_input_tokens, is_first_output = validated_sampling_params.n, 0, True
         last_output_texts, token_counters = ["" for _ in range(n_responses)], {"batch": 0, "total": 0}
 
@@ -285,7 +300,6 @@ class OpenAIvLLMEngine(vLLMEngine):
         self.openai_serving_render = OpenAIServingRender(
             model_config=self.llm.model_config,
             renderer=self.llm.renderer,
-            io_processor=self.llm.io_processor,
             model_registry=self.serving_models.registry,
             request_logger=None,
             chat_template=chat_template,
@@ -357,10 +371,10 @@ class OpenAIvLLMEngine(vLLMEngine):
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
         )
 
-        if hasattr(self.chat_engine, 'warmup'):
-            import asyncio
-            result = self.chat_engine.warmup()
-            if asyncio.iscoroutine(result):
+        warmup = getattr(self.chat_engine, 'warmup', None)
+        if callable(warmup):
+            result = warmup()
+            if inspect.isawaitable(result):
                 await result
 
     async def generate(self, openai_request: JobInput):
