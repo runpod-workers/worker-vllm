@@ -810,9 +810,9 @@
         "key": "VLLM_USE_DEEP_GEMM",
         "input": {
           "name": "Use DeepGEMM",
-          "type": "boolean",
-          "description": "Enable DeepGEMM FP8 kernels (MoE and MQA logits). Disabled by default — enable on H100/H200 for potential throughput gains. Some GPUs (e.g. H20) may perform better with this off. Enabling also adds a warmup period on startup.",
-          "default": false,
+          "type": "string",
+          "description": "Enable DeepGEMM FP8 kernels (MoE and MQA logits). Set to 1 to enable, 0 to disable. Required for DeepSeek V4 models. Disabled by default — enable on H100/H200 for potential throughput gains. Some GPUs (e.g. H20) may perform better with this off.",
+          "default": "0",
           "advanced": true
         }
       }
