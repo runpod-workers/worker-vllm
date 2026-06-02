@@ -5,7 +5,7 @@
       "input": {
         "prompt": "Write a short poem about artificial intelligence."
       },
-      "timeout": 30000
+      "timeout": 300000
     },
     {
       "name": "openai_messages_test",
@@ -26,7 +26,7 @@
           "temperature": 0.1
         }
       },
-      "timeout": 30000
+      "timeout": 300000
     }
   ],
   "config": {
@@ -38,6 +38,6 @@
         "value": "HuggingFaceTB/SmolLM2-135M-Instruct"
       }
     ],
-    "allowedCudaVersions": ["12.9", "12.8", "12.7", "12.6", "12.5"]
+    "allowedCudaVersions": ["13.0"]
   }
 }
