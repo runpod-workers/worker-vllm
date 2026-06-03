@@ -404,6 +404,23 @@ def _resolve_cached_model_path(model_name: str) -> str:
     return resolved
 
 
+def _get_args_from_config_file() -> dict:
+    """Load engine args from a vLLM-style config.yaml.
+
+    Checks VLLM_CONFIG_FILE env var, then falls back to /vllm_config.yaml.
+    Keys use the same long-form names as vllm serve (hyphens converted to underscores).
+    """
+    import yaml
+    path = os.getenv("VLLM_CONFIG_FILE", "/vllm_config.yaml")
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        raw = yaml.safe_load(f) or {}
+    normalized = {k.replace("-", "_"): v for k, v in raw.items()}
+    logging.info("Loaded engine args from config file %s: %s", path, list(normalized.keys()))
+    return normalized
+
+
 def get_local_args():
     """
     Retrieve local arguments from a JSON file.
@@ -428,6 +445,9 @@ def get_local_args():
 def get_engine_args():
     # Start with worker custom defaults (only where we differ from vLLM)
     args = dict(DEFAULT_ARGS)
+
+    # Config file values sit above defaults but below env vars
+    args.update(_get_args_from_config_file())
 
     # Auto-discover: every AsyncEngineArgs field from env UPPERCASED (e.g. MAX_MODEL_LEN)
     args.update(_get_args_from_env_auto_discover())

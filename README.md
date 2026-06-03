@@ -78,6 +78,20 @@ Configure worker-vllm using environment variables:
 
 Any env var whose name matches a valid `AsyncEngineArgs` field (uppercased) is applied automatically. Backward-compat aliases: `MODEL_NAME`, `TOKENIZER_NAME`, `MAX_CONTEXT_LEN_TO_CAPTURE`. This lets you configure any vLLM option without waiting for explicit worker support.
 
+### Configuration File (config.yaml)
+
+As an alternative to environment variables, you can supply a `config.yaml` file using the same key names as `vllm serve` (hyphens or underscores both work):
+
+```yaml
+model: meta-llama/Llama-3.1-8B-Instruct
+max-model-len: 8192
+gpu-memory-utilization: 0.90
+quantization: awq
+tensor-parallel-size: 2
+```
+
+Mount the file into the container at `/vllm_config.yaml`, or point to a custom path with the `VLLM_CONFIG_FILE` env var. Environment variables always take precedence over config file values.
+
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
 
 ### Specify Transformers Version

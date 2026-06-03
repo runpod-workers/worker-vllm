@@ -33,6 +33,17 @@ All behaviour is controlled through environment variables:
 
 **Pass any vLLM engine arg** not listed above by setting an env var with the **UPPERCASED** field name (e.g. `MAX_MODEL_LEN=4096`, `ENABLE_CHUNKED_PREFILL=true`). The worker auto-discovers all `AsyncEngineArgs` fields from env. See the [vLLM engine args docs](https://docs.vllm.ai/en/latest/configuration/engine_args) for all available options.
 
+**Configuration file:** You can also supply a `config.yaml` instead of (or alongside) env vars. Mount it at `/vllm_config.yaml` in the container, or set `VLLM_CONFIG_FILE` to a custom path. Use the same key names as `vllm serve` — hyphens and underscores both work:
+
+```yaml
+model: meta-llama/Llama-3.1-8B-Instruct
+max-model-len: 8192
+gpu-memory-utilization: 0.90
+quantization: awq
+```
+
+Environment variables always override config file values.
+
 For complete configuration options, see the [full configuration documentation](https://github.com/runpod-workers/worker-vllm/blob/main/docs/configuration.md).
 
 ### Specify Transformers Version
