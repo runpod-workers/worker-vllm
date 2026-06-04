@@ -11,5 +11,4 @@ pydantic-settings
 hf-transfer
 transformers>=5
 bitsandbytes>=0.45.0
-kernels
 torch-c-dlpack-ext
