@@ -10,8 +10,9 @@ RUN ldconfig /usr/local/cuda-13.0/compat/
 
 # nixl_ep PyPI wheels are compiled against CUDA 12.x and require libcudart.so.12.
 # CUDA 13 runtime is ABI-compatible with CUDA 12, so symlinking is safe.
-# Symlink into /usr/local/lib so it is in the default linker search path.
-RUN ln -sf /usr/local/cuda/lib64/libcudart.so.13 /usr/local/lib/libcudart.so.12 && ldconfig
+# Symlink into /usr/local/cuda/lib64 (already in LD_LIBRARY_PATH) so the linker
+# finds it by filename scan rather than relying on ldcache SONAME lookup.
+RUN ln -sf /usr/local/cuda/lib64/libcudart.so.13 /usr/local/cuda/lib64/libcudart.so.12 && ldconfig
 
 # CUDA 13.0 containers return libs to /usr/local/nvidia/lib64 so container
 # providers (RunPod, Lambda, etc.) can mount host drivers there consistently.
