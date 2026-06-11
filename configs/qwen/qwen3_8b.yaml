@@ -1,0 +1,10 @@
+model: Qwen/Qwen3-8B
+gpu-memory-utilization: 0.95
+max-model-len: 8192
+dtype: auto
+trust-remote-code: true
+quantization: fp8
+kv-cache-dtype: fp8
+enforce-eager: false
+enable-prefix-caching: true
+speculative-config: '{"model":"RedHatAI/Qwen3-8B-speculator.eagle3","method":"eagle3","num_speculative_tokens":3}'
