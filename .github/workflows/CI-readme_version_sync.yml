@@ -1,0 +1,71 @@
+name: CI | Sync vLLM version in READMEs
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Dockerfile"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync_version:
+    runs-on: ubuntu-latest
+    name: Check README version matches Dockerfile and update if needed
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract vLLM version from Dockerfile and sync READMEs
+        run: |
+          echo "Extracting vLLM version from Dockerfile..."
+          dockerfile_version=$(grep -oP 'vllm(?:\[[\w,]+\])?==\K[\d.]+' Dockerfile | head -1)
+
+          if [ -z "$dockerfile_version" ]; then
+            echo "ERROR: Could not extract vLLM version from Dockerfile."
+            exit 1
+          fi
+          echo "Dockerfile vLLM version: $dockerfile_version"
+          echo "VLLM_VERSION=$dockerfile_version" >> $GITHUB_ENV
+
+          updated=0
+          for readme in README.md .runpod/README.md; do
+            if [ ! -f "$readme" ]; then
+              echo "Skipping $readme (not found)"
+              continue
+            fi
+
+            readme_version=$(grep -oP 'Current vLLM version: \[\K[\d.]+' "$readme" || echo "")
+            echo "$readme current version: ${readme_version:-not found}"
+
+            if [ "$readme_version" = "$dockerfile_version" ]; then
+              echo "$readme is already up to date."
+              continue
+            fi
+
+            echo "Updating $readme from $readme_version to $dockerfile_version..."
+            sed -i "s|Current vLLM version: \[${readme_version}\](https://github.com/vllm-project/vllm/releases/tag/v${readme_version})|Current vLLM version: [${dockerfile_version}](https://github.com/vllm-project/vllm/releases/tag/v${dockerfile_version})|g" "$readme"
+            updated=1
+          done
+
+          echo "UPDATED=$updated" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        if: env.UPDATED == '1'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: sync vLLM version to ${{ env.VLLM_VERSION }} in READMEs"
+          title: "docs: sync vLLM version to ${{ env.VLLM_VERSION }} in READMEs"
+          body: |
+            The vLLM version in the Dockerfile has been updated to `${{ env.VLLM_VERSION }}`.
+
+            This PR syncs the version badge/link in:
+            - `README.md`
+            - `.runpod/README.md`
+          branch: docs/sync-vllm-version-${{ env.VLLM_VERSION }}
+          labels: documentation
