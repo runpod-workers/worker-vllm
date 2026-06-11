@@ -8,9 +8,20 @@ ENV PATH="/root/.local/bin:$PATH"
 
 RUN ldconfig /usr/local/cuda-13.0/compat/
 
+# nixl_ep PyPI wheels are compiled against CUDA 12.x and require libcudart.so.12.
+# CUDA 13 runtime is ABI-compatible with CUDA 12, so symlinking is safe.
+# Symlink into /usr/local/cuda/lib64 (already in LD_LIBRARY_PATH) so the linker
+# finds it by filename scan rather than relying on ldcache SONAME lookup.
+RUN ln -sf /usr/local/cuda/lib64/libcudart.so.13 /usr/local/cuda/lib64/libcudart.so.12 && ldconfig
+
+# CUDA 13.0 containers return libs to /usr/local/nvidia/lib64 so container
+# providers (RunPod, Lambda, etc.) can mount host drivers there consistently.
+# See: https://github.com/vllm-project/vllm/issues/18859
+ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
 # Install vLLM with FlashInfer - use CUDA 130 PyTorch wheels
 RUN uv pip install --system "packaging>=24.2" && \
-    uv pip install --system "vllm[flashinfer]==0.20.2" && \
+    uv pip install --system "vllm[flashinfer]==0.21.0" && \
     uv pip install --system git+https://github.com/deepseek-ai/DeepGEMM.git@714dd1a4a980f7937a74343d19a8eba4fe321480 --no-build-isolation
 
 # Install additional Python dependencies (after vLLM to avoid PyTorch version conflicts)
