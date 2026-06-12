@@ -1,0 +1,10 @@
+model: meta-llama/Llama-3.1-8B-Instruct
+gpu-memory-utilization: 0.95
+max-model-len: 8192
+dtype: auto
+trust-remote-code: true
+quantization: fp8
+kv-cache-dtype: fp8
+enforce-eager: false
+enable-prefix-caching: true
+speculative-config: '{"model":"RedHatAI/Llama-3.1-8B-Instruct-speculator.eagle3","method":"eagle3","num_speculative_tokens":3}'
