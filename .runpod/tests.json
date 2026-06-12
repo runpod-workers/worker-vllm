@@ -30,7 +30,7 @@
     }
   ],
   "config": {
-    "gpuTypeId": "NVIDIA GeForce RTX 4090",
+    "gpuTypeId": "NNVIDIA L40",
     "gpuCount": 1,
     "env": [
       {
