@@ -1,0 +1,11 @@
+model: google/gemma-4-31b-it
+gpu-memory-utilization: 0.95
+max-model-len: 8192
+dtype: auto
+trust-remote-code: true
+quantization: fp8
+kv-cache-dtype: fp8
+enforce-eager: false
+enable-prefix-caching: true
+enable-chunked-prefill: true
+speculative-config: '{"model":"RedHatAI/gemma-4-31B-it-speculator.eagle3","method":"eagle3","num_speculative_tokens":3}'
