@@ -94,6 +94,8 @@ class TestGetEngineArgsServedName:
         # Avoid the network branch in _resolve_max_model_len.
         monkeypatch.setenv("MAX_NUM_BATCHED_TOKENS", "2048")
         monkeypatch.delenv("SERVED_MODEL_NAME", raising=False)
+        # Don't pick up a stray vLLM config file from the environment.
+        monkeypatch.setenv("VLLM_CONFIG_FILE", "/nonexistent-vllm-config.yaml")
 
     @requires_case_sensitive_fs
     def test_served_name_is_repo_id_when_path_rewritten(self, hf_cache, monkeypatch):

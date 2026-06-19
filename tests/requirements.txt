@@ -1,3 +1,6 @@
 # Test-only dependencies. vllm/torch are stubbed in conftest.py when absent,
 # so the unit tests run on a plain CPU runner without the GPU image.
 pytest>=8,<10
+# get_engine_args() reads a vLLM-style config via PyYAML (a transitive vllm dep
+# at runtime); install it explicitly here since vllm itself is stubbed.
+pyyaml
