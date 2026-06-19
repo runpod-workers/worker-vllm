@@ -56,8 +56,32 @@ def _install_vllm_stub():
         max_parallel_loading_workers: Optional[int] = None
         kv_cache_dtype: Optional[str] = None
 
+    class _Stub:  # pragma: no cover - placeholder for vllm symbols
+        def __init__(self, *args, **kwargs):
+            pass
+
     vllm.AsyncEngineArgs = AsyncEngineArgs
+    vllm.SamplingParams = _Stub
     sys.modules["vllm"] = vllm
+
+    # src.utils imports these at module load and uses ErrorResponse as a return
+    # annotation, which Python evaluates eagerly on <3.14 -> must be defined.
+    vllm_utils = types.ModuleType("vllm.utils")
+    vllm_utils.random_uuid = lambda: "stub-uuid"
+    vllm.utils = vllm_utils
+    sys.modules["vllm.utils"] = vllm_utils
+
+    protocol = types.ModuleType("vllm.entrypoints.openai.engine.protocol")
+    protocol.ErrorResponse = _Stub
+    protocol.ErrorInfo = _Stub
+    protocol.RequestResponseMetadata = _Stub
+    for name in (
+        "vllm.entrypoints",
+        "vllm.entrypoints.openai",
+        "vllm.entrypoints.openai.engine",
+    ):
+        sys.modules.setdefault(name, types.ModuleType(name))
+    sys.modules["vllm.entrypoints.openai.engine.protocol"] = protocol
 
     # vllm.model_executor.model_loader.tensorizer.TensorizerConfig
     model_executor = types.ModuleType("vllm.model_executor")
