@@ -19,6 +19,8 @@ from vllm.entrypoints.openai.completion.serving import OpenAIServingCompletion
 from vllm.entrypoints.openai.engine.protocol import ErrorResponse
 from vllm.entrypoints.openai.models.protocol import BaseModelPath, LoRAModulePath
 from vllm.entrypoints.openai.models.serving import OpenAIServingModels
+from vllm.entrypoints.pooling.embed.protocol import EmbeddingCompletionRequest, EmbeddingChatRequest
+from vllm.entrypoints.pooling.embed.serving import ServingEmbedding
 from vllm.entrypoints.openai.responses.protocol import ResponsesRequest, ResponsesResponse
 from vllm.entrypoints.openai.responses.serving import OpenAIServingResponses
 from vllm.entrypoints.serve.render.serving import OpenAIServingRender
@@ -355,6 +357,11 @@ class OpenAIvLLMEngine(vLLMEngine):
             enable_force_include_usage=os.getenv('ENABLE_FORCE_INCLUDE_USAGE', 'false').lower() == 'true',
             enable_log_outputs=os.getenv('ENABLE_LOG_OUTPUTS', 'false').lower() == 'true',
         )
+        self.embedding_engine = ServingEmbedding(
+            engine_client=self.llm,
+            models=self.serving_models,
+            request_logger=None,
+        )
         self.messages_engine = AnthropicServingMessages(
             engine_client=self.llm,
             models=self.serving_models,
@@ -391,6 +398,9 @@ class OpenAIvLLMEngine(vLLMEngine):
                 yield response
         elif openai_request.openai_route == "/v1/messages":
             async for response in self._handle_messages_request(openai_request):
+                yield response
+        elif openai_request.openai_route == "/v1/embeddings":
+            async for response in self._handle_embeddings_request(openai_request):
                 yield response
         else:
             yield create_error_response("Invalid route").model_dump()
@@ -570,3 +580,45 @@ class OpenAIvLLMEngine(vLLMEngine):
                 )
             ).model_dump_json()
             yield f"event: error\ndata: {error_payload}\n\n"
+
+    async def _handle_embeddings_request(self, openai_request: JobInput):
+        request_id = getattr(openai_request, "request_id", "unknown")
+
+        # EmbeddingRequest is a TypeAlias (EmbeddingCompletionRequest | EmbeddingChatRequest).
+        # Try the standard OpenAI format (input field) first, then chat format (messages field).
+        request = None
+        for cls in (EmbeddingCompletionRequest, EmbeddingChatRequest):
+            try:
+                request = cls(**openai_request.openai_input)
+                break
+            except Exception:
+                continue
+
+        if request is None:
+            logging.error(
+                "Invalid EmbeddingRequest: could not parse as EmbeddingCompletionRequest or EmbeddingChatRequest",
+                extra={"request_id": request_id}
+            )
+            yield create_error_response(
+                "Invalid request format",
+                err_type="BadRequestError"
+            ).model_dump()
+            return
+
+        try:
+            # ServingEmbedding is callable and returns a FastAPI Response object.
+            response = await self.embedding_engine(request, raw_request=None)
+        except Exception as e:
+            logging.error(
+                "Failed to create embeddings: %s",
+                e,
+                extra={"request_id": request_id},
+                exc_info=True
+            )
+            yield create_error_response(
+                "Internal server error during embedding generation",
+                err_type="InternalServerError"
+            ).model_dump()
+            return
+
+        yield json.loads(response.body)
