@@ -1,0 +1,9 @@
+model: openai/gpt-oss-120b
+gpu-memory-utilization: 0.95
+max-model-len: 8192
+dtype: auto
+trust-remote-code: true
+enforce-eager: false
+enable-prefix-caching: true
+enable-chunked-prefill: true
+speculative-config: '{"model":"RedHatAI/gpt-oss-120b-speculator.eagle3","method":"eagle3","num_speculative_tokens":3}'
