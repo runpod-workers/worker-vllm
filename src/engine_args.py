@@ -601,6 +601,13 @@ def get_engine_args():
 
     # Resolve lowercase HF cache paths (FDE-174)
     if args.get("model"):
-        args["model"] = _resolve_cached_model_path(args["model"])
+        original_model = args["model"]
+        args["model"] = _resolve_cached_model_path(original_model)
+        # When the model was rewritten to an on-disk snapshot path, keep serving
+        # under the original repo id so the OpenAI API model name does not become
+        # a filesystem path (issue #310). An explicit served_model_name (or the
+        # OPENAI_SERVED_MODEL_NAME_OVERRIDE handled downstream) still wins.
+        if args["model"] != original_model and not args.get("served_model_name"):
+            args["served_model_name"] = original_model
 
     return AsyncEngineArgs(**args)
