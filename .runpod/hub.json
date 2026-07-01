@@ -247,6 +247,7 @@
           "name": "Max Parallel Loading Workers",
           "type": "number",
           "description": "Load model sequentially in multiple batches.",
+          "default": 1,
           "advanced": true
         }
       },

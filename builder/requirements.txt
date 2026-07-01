@@ -3,7 +3,7 @@ pandas
 pyarrow
 runpod~=1.10.0
 huggingface-hub
-lmcache==0.4.5
+lmcache==0.5.0
 packaging>=24.2
 typing-extensions>=4.8.0
 pydantic
