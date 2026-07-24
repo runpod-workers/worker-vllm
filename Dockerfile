@@ -18,7 +18,7 @@ RUN ldconfig /usr/local/cuda-13.0/compat/
 # Install vLLM with FlashInfer - use CUDA 130 PyTorch wheels
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --system "packaging>=24.2" && \
-    uv pip install --system "vllm[flashinfer]==0.23.0" && \
+    uv pip install --system "vllm[flashinfer]==0.24.0" && \
     uv pip install --system git+https://github.com/deepseek-ai/DeepGEMM.git@714dd1a4a980f7937a74343d19a8eba4fe321480 --no-build-isolation && \
     uv pip install --system --force-reinstall --no-deps nixl-cu13
 
