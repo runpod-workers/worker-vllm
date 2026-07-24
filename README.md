@@ -8,7 +8,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ![vLLM worker banner](https://image.runpod.ai/preview/vllm/vllm-banner.png)
 
-Current vLLM version: [0.23.0](https://github.com/vllm-project/vllm/releases/tag/v0.23.0)
+Current vLLM version: [0.24.0](https://github.com/vllm-project/vllm/releases/tag/v0.24.0)
 
 
 > Check out our Load Balancer implementation here: [vLLM Load Balancer](https://github.com/runpod-workers/vllm-loadbalancer-ep)
