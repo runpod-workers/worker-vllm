@@ -23,7 +23,8 @@ jobs:
       - name: Extract vLLM version from Dockerfile and sync READMEs
         run: |
           echo "Extracting vLLM version from Dockerfile..."
-          dockerfile_version=$(grep -oP 'vllm(?:\[[\w,]+\])?==\K[\d.]+' Dockerfile | head -1)
+          # The Dockerfile pins vLLM via `ARG VLLM_VERSION=vX.Y.Z` (the vllm/vllm-openai base image tag).
+          dockerfile_version=$(grep -oP 'ARG VLLM_VERSION=v\K[\d.]+' Dockerfile | head -1)
 
           if [ -z "$dockerfile_version" ]; then
             echo "ERROR: Could not extract vLLM version from Dockerfile."

@@ -282,16 +282,6 @@
         }
       },
       {
-        "key": "MAX_NUM_BATCHED_TOKENS",
-        "input": {
-          "name": "Max Num Batched Tokens",
-          "type": "number",
-          "description": "Maximum number of batched tokens per iteration.",
-          "default": null,
-          "advanced": true
-        }
-      },
-      {
         "key": "MAX_NUM_SEQS",
         "input": {
           "name": "Max Num Seqs",
@@ -481,7 +471,7 @@
           "name": "Enable Chunked Prefill",
           "type": "boolean",
           "description": "Enable chunked prefill requests.",
-          "default": false,
+          "default": true,
           "advanced": true
         }
       },
@@ -607,22 +597,12 @@
         }
       },
       {
-        "key": "SWAP_SPACE",
-        "input": {
-          "name": "Swap Space",
-          "type": "number",
-          "description": "CPU swap space size (GiB) per GPU",
-          "default": 4,
-          "advanced": true
-        }
-      },
-      {
         "key": "ENFORCE_EAGER",
         "input": {
           "name": "Enforce Eager",
           "type": "boolean",
           "description": "Always use eager-mode PyTorch. If False (0), will use eager mode and CUDA graph in hybrid for maximal performance and flexibility",
-          "default": true,
+          "default": false,
           "advanced": true
         }
       },
