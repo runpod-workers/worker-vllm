@@ -8,7 +8,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ![vLLM worker banner](https://image.runpod.ai/preview/vllm/vllm-banner.png)
 
-Current vLLM version: [0.23.0](https://github.com/vllm-project/vllm/releases/tag/v0.23.0)
+Current vLLM version: [0.26.0](https://github.com/vllm-project/vllm/releases/tag/v0.26.0)
 
 
 > Check out our Load Balancer implementation here: [vLLM Load Balancer](https://github.com/runpod-workers/vllm-loadbalancer-ep)
@@ -47,7 +47,7 @@ Current vLLM version: [0.23.0](https://github.com/vllm-project/vllm/releases/tag
 **📦 Docker Image**: `runpod/worker-v1-vllm:<version>`
 
 - **Available Versions**: See [GitHub Releases](https://github.com/runpod-workers/worker-vllm/releases)
-- **CUDA Compatibility**: Requires CUDA >= 13.0
+- **CUDA Compatibility**: Inherits the CUDA runtime of the [`vllm/vllm-openai`](https://hub.docker.com/r/vllm/vllm-openai) base image used at build time.
 
 ### Configuration
 
@@ -55,12 +55,12 @@ Configure worker-vllm using environment variables:
 
 | Environment Variable                | Description                                       | Default             | Options                                                            |
 | ----------------------------------- | ------------------------------------------------- | ------------------- | ------------------------------------------------------------------ |
-| `MODEL_NAME`                        | Path of the model weights                         | "facebook/opt-125m" | Local folder or Hugging Face repo ID                               |
+| `MODEL_NAME`                        | Path of the model weights                         |                     | Local folder or Hugging Face repo ID                               |
 | `HF_TOKEN`                          | HuggingFace access token for gated/private models |                     | Your HuggingFace access token                                      |
 | `MAX_MODEL_LEN`                     | Model's maximum context length                    |                     | Integer (e.g., 4096)                                               |
 | `QUANTIZATION`                      | Quantization method                               |                     | "awq", "gptq", "squeezellm", "bitsandbytes"                        |
 | `TENSOR_PARALLEL_SIZE`              | Number of GPUs                                    | 1                   | Integer                                                            |
-| `GPU_MEMORY_UTILIZATION`            | Fraction of GPU memory to use                     | 0.95                | Float between 0.0 and 1.0                                          |
+| `GPU_MEMORY_UTILIZATION`            | Fraction of GPU memory to use                     | 0.9                 | Float between 0.0 and 1.0                                          |
 | `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 256                 | Integer                                                            |
 | `CUSTOM_CHAT_TEMPLATE`              | Custom chat template override                     |                     | Jinja2 template string                                             |
 | `ENABLE_AUTO_TOOL_CHOICE`           | Enable automatic tool selection                   | false               | boolean (true or false)                                            |
@@ -68,19 +68,26 @@ Configure worker-vllm using environment variables:
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
 | `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 30                  | Integer                                                            |
 
-**Pass any vLLM engine arg** not listed above by setting an environment variable with the **UPPERCASED** field name (same names vLLM uses). The worker auto-discovers all `AsyncEngineArgs` fields from env. For example:
+**Pass any vLLM engine arg** as an environment variable: the worker translates env vars into `vllm serve` CLI flags. Any env var whose name is the UPPERCASED form of a `vllm serve` flag is applied automatically:
 
-| Environment Variable      | vLLM Engine Arg          | Example Value |
+| Environment Variable      | vLLM CLI Flag            | Example Value |
 | ------------------------- | ------------------------ | ------------- |
-| `MAX_MODEL_LEN`           | `max_model_len`          | `4096`        |
-| `ENFORCE_EAGER`           | `enforce_eager`          | `true`        |
-| `ENABLE_CHUNKED_PREFILL`  | `enable_chunked_prefill` | `true`        |
+| `MAX_MODEL_LEN`           | `--max-model-len`        | `4096`        |
+| `ENFORCE_EAGER`           | `--enforce-eager`        | `true`        |
+| `ENABLE_CHUNKED_PREFILL`  | `--enable-chunked-prefill` | `true`      |
+| `SPECULATIVE_CONFIG`      | `--speculative-config`   | `'{"model": "org/draft", "num_speculative_tokens": 3}'` |
 
-Any env var whose name matches a valid `AsyncEngineArgs` field (uppercased) is applied automatically. Backward-compat aliases: `MODEL_NAME`, `TOKENIZER_NAME`, `MAX_CONTEXT_LEN_TO_CAPTURE`. This lets you configure any vLLM option without waiting for explicit worker support.
+Backward-compat aliases are also honored: `MODEL_NAME` (`--model`), `MODEL_REVISION` (`--revision`), `TOKENIZER_NAME` (`--tokenizer`), `OPENAI_SERVED_MODEL_NAME_OVERRIDE` (`--served-model-name`), `CUSTOM_CHAT_TEMPLATE` (`--chat-template`).
+
+Values are passed straight through to vLLM (ints, floats, JSON blobs all work). For anything not recognized — e.g. a flag newer than the worker's list — use the ultimate escape hatch, whose contents are appended verbatim to the `vllm serve` command (and override earlier settings):
+
+```bash
+VLLM_EXTRA_ARGS="--override-generation-config '{\"max_new_tokens\": 512}' --uvicorn-log-level warning"
+```
 
 ### Configuration File (config.yaml)
 
-As an alternative to environment variables, you can supply a `config.yaml` file using the same key names as `vllm serve` (hyphens or underscores both work):
+As an alternative to environment variables, you can supply a complete `vllm serve` `--config` file using the CLI key names (hyphens or underscores both work):
 
 ```yaml
 model: meta-llama/Llama-3.1-8B-Instruct
@@ -90,13 +97,9 @@ quantization: awq
 tensor-parallel-size: 2
 ```
 
-Mount the file into the container at `/vllm_config.yaml`, or point to a custom path with the `VLLM_CONFIG_FILE` env var. Environment variables always take precedence over config file values.
+Mount the file anywhere into the container and point the `VLLM_CONFIG_FILE` env var at it. CLI flags built from environment variables take precedence over config file values (standard `vllm serve` behavior).
 
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
-
-### Specify Transformers Version
-To change the version of the [Transformers library](https://github.com/huggingface/transformers) use the `TRANSFORMERS_VERSION` environment variable to specify the version you want to use. Note this might break the handler, so use for development purposes. 
-
 
 ## Option 2: Build Docker Image with Model Inside
 
@@ -112,12 +115,11 @@ To build an image with the model baked in, you must specify the following docker
   - `MODEL_NAME`
 - **Optional**
   - `MODEL_REVISION`: Model revision to load (default: `main`).
+  - `VLLM_VERSION`: Tag of the official [`vllm/vllm-openai`](https://hub.docker.com/r/vllm/vllm-openai) base image to use (default: `v0.23.0`).
   - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
   - `QUANTIZATION`
-  - `WORKER_CUDA_VERSION`: `12.1.0` (`12.1.0` is recommended for optimal performance).
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
   - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `main`).
-  - `VLLM_NIGHTLY`: Set to `true` to replace the pinned vLLM release with the latest nightly build and the latest `transformers` from source. Useful for testing unreleased vLLM features. (default: `false`)
 
 For the remaining settings, you may apply them as environment variables when running the container. Supported environment variables are listed in the [Environment Variables](#environment-variables) section.
 
@@ -127,19 +129,15 @@ For the remaining settings, you may apply them as environment variables when run
 docker build -t username/image:tag --build-arg MODEL_NAME="openchat/openchat_3.5" --build-arg BASE_PATH="/models" .
 ```
 
-### Example: Building with vLLM Nightly
+### Example: Choosing the vLLM Version
 
-To use the latest unreleased vLLM build (installs from the nightly wheel index and `transformers` from source):
-
-```bash
-docker build -t username/image:tag --build-arg VLLM_NIGHTLY=true .
-```
-
-You can combine it with other arguments:
+The image is based on the official `vllm/vllm-openai` image; switching vLLM versions is a single build arg:
 
 ```bash
-docker build -t username/image:tag --build-arg VLLM_NIGHTLY=true --build-arg MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct" --build-arg BASE_PATH="/models" .
+docker build -t username/image:tag --build-arg VLLM_VERSION=v0.10.0 --build-arg MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct" .
 ```
+
+To run a nightly vLLM build, point `VLLM_VERSION` at a nightly tag or use `latest` at your own risk.
 
 ### (Optional) Including Huggingface Token
 
@@ -415,17 +413,29 @@ curl https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1/messages \
 <details>
   <summary>Click to expand table</summary>
     
-  You may either use a `prompt` or a list of `messages` as input. If you use `messages`, the model's chat template will be applied to the messages automatically, so the model must have one. If you use `prompt`, you may optionally apply the model's chat template to the prompt by setting `apply_chat_template` to `true`.
+  You may either use a `prompt` or a list of `messages` as input. Under the hood, `prompt` is proxied to vLLM's `/v1/completions` and `messages` to `/v1/chat/completions` (with the model's chat template applied, so the model must have one or you must set the `CUSTOM_CHAT_TEMPLATE` env var).
   | Argument              | Type                 | Default            | Description                                                                                            |
   |-----------------------|----------------------|--------------------|--------------------------------------------------------------------------------------------------------|
-  | `prompt`              | str                  |                    | Prompt string to generate text based on.                                                               |
+  | `prompt`              | str                  |                    | Prompt string to generate text based on. Proxied to `/v1/completions`.                                 |
   | `messages`            | list[dict[str, str]] |                    | List of messages, which will automatically have the model's chat template applied. Overrides `prompt`. |
-  | `apply_chat_template` | bool                 | False              | Whether to apply the model's chat template to the `prompt`.                                            |
-  | `sampling_params`     | dict                 | {}                 | Sampling parameters to control the generation, like temperature, top_p, etc. You can find all available parameters in the `Sampling Parameters` section below. |
-  | `stream`              | bool                 | False              | Whether to enable streaming of output. If True, responses are streamed as they are generated.          |
-  | `max_batch_size`          | int                  | env var `DEFAULT_BATCH_SIZE` | The maximum number of tokens to stream every HTTP POST call.                                                   |
-  | `min_batch_size`          | int                  | env var `DEFAULT_MIN_BATCH_SIZE` | The minimum number of tokens to stream every HTTP POST call.                                           |
-  | `batch_size_growth_factor` | int                  | env var `DEFAULT_BATCH_SIZE_GROWTH_FACTOR` | The growth factor by which `min_batch_size` will be multiplied for each call until `max_batch_size` is reached.           |
+  | `sampling_params`     | dict                 | {}                 | Sampling parameters forwarded in the request body (temperature, top_p, max_tokens, ...).               |
+  | `stream`              | bool                 | False              | Whether to enable streaming of output. If True, raw SSE chunks are streamed as they are generated.     |
+
+  You can also call **any vLLM route directly** with the generic proxy form:
+
+  ```json
+  {
+    "input": {
+      "route": "/v1/chat/completions",
+      "method": "POST",
+      "body": {
+        "model": "<YOUR DEPLOYED MODEL>",
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": true
+      }
+    }
+  }
+  ```
 </details>
 
 ### Sampling Parameters

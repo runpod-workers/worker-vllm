@@ -30,3 +30,23 @@ jobs:
 
       - name: Run unit tests
         run: python -m pytest tests -v
+
+  vllm-flag-drift:
+    # Parses the real `vllm serve` CLI inside the pinned base image and fails if
+    # src/args_builder.py would emit a flag that vLLM rejects (script has details).
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dump vllm serve flags from the pinned base image
+        run: |
+          VLLM_VERSION=$(grep -oP 'ARG VLLM_VERSION=\K\S+' Dockerfile | head -1)
+          echo "Checking against vllm/vllm-openai:${VLLM_VERSION}"
+          mkdir -p .cache
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" --entrypoint python3 \
+            "vllm/vllm-openai:${VLLM_VERSION}" \
+            /repo/scripts/check_vllm_flags.py dump -o /repo/.cache/vllm_serve_flags.json
+
+      - name: Diff worker allowlist against the dump
+        run: python3 scripts/check_vllm_flags.py check --snapshot .cache/vllm_serve_flags.json

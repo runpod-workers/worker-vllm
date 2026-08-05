@@ -81,7 +81,7 @@ def load_hub_defaults(hub_json_path: Path) -> dict:
 
 
 # config keys whose naive `KEY.replace("-", "_").upper()` transform doesn't match
-# the env var the worker actually reads (see src/engine_args.py ENV_ALIASES).
+# the env var the worker actually reads (see src/args_builder.py ENV_ALIASES).
 CONFIG_KEY_ALIASES = {
     "MODEL": "MODEL_NAME",
 }

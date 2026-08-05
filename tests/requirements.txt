@@ -1,6 +1,4 @@
-# Test-only dependencies. vllm/torch are stubbed in conftest.py when absent,
-# so the unit tests run on a plain CPU runner without the GPU image.
+# Tests are CPU-only and never import vllm/torch. aiohttp is needed because
+# src/handler.py imports it at module load (the proxy code is not exercised).
 pytest>=8,<10
-# get_engine_args() reads a vLLM-style config via PyYAML (a transitive vllm dep
-# at runtime); install it explicitly here since vllm itself is stubbed.
-pyyaml
+aiohttp
