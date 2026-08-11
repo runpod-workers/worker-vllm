@@ -8,5 +8,5 @@ kv-cache-dtype: fp8
 enforce-eager: false
 enable-prefix-caching: true
 enable-chunked-prefill: true
-vllm-release: v2.22.5 
+vllm-release: v2.24.0 
 speculative-config: '{"model":"RedHatAI/gemma-4-31B-it-speculator.eagle3","method":"eagle3","num_speculative_tokens":3}'
