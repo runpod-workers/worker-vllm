@@ -1,5 +1,5 @@
 # vLLM itself comes from the vllm/vllm-openai base image; this is only what
 # the RunPod wrapper adds on top.
-runpod>=1.11,<2
+runpod~=1.12.0
 aiohttp>=3.9
 huggingface-hub>=0.24
