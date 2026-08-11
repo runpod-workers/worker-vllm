@@ -5,7 +5,6 @@ dtype: auto
 trust-remote-code: true
 quantization: fp8
 kv-cache-dtype: fp8
-enforce-eager: false
-vllm-release: v2.22.5 
+enforce-eager: false 
 enable-prefix-caching: true
 speculative-config: '{"model":"RedHatAI/Llama-3.1-8B-Instruct-speculator.eagle3","method":"eagle3","num_speculative_tokens":3}'
