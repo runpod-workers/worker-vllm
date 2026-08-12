@@ -44,6 +44,8 @@ quantization: awq
 
 Flags built from environment variables override config file values.
 
+**Faster weight loading:** The image includes the [Run:ai Model Streamer](https://github.com/run-ai/runai-model-streamer). Set `LOAD_FORMAT` to `runai_streamer` (also in the Load Format dropdown) to stream safetensors weights with high-concurrency reads from the network volume — or directly from object storage by pointing `MODEL_NAME` at e.g. `s3://bucket/model` with cloud credentials in the env — cutting cold-start time on large models. Tune read parallelism with `MODEL_LOADER_EXTRA_CONFIG='{"concurrency": 32}'`.
+
 For complete configuration options, see the [full configuration documentation](https://github.com/runpod-workers/worker-vllm/blob/main/docs/configuration.md).
 
 ## API Usage

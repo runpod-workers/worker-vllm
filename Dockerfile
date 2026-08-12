@@ -4,10 +4,17 @@
 ARG VLLM_VERSION=v0.27.0
 FROM vllm/vllm-openai:${VLLM_VERSION}
 
+# Re-declare so the streamer install below can pin against the base image's vLLM version.
+ARG VLLM_VERSION
+
 # RunPod serverless SDK + HTTP proxy deps (vLLM itself comes from the base image).
 COPY builder/requirements.txt /requirements.txt
 RUN python3 -m ensurepip --upgrade 2>/dev/null || true \
-    && python3 -m pip install --no-cache-dir -r /requirements.txt
+    && python3 -m pip install --no-cache-dir -r /requirements.txt \
+    # Run:ai Model Streamer, pinned by the vLLM `runai` extra so its version
+    # always matches the base image. Enables --load-format runai_streamer
+    # (LOAD_FORMAT=runai_streamer), incl. streaming from S3/GCS/Azure.
+    && python3 -m pip install --no-cache-dir "vllm[runai]==${VLLM_VERSION#v}"
 
 # Setup for Option 2: building the image with the model baked in.
 ARG MODEL_NAME=""

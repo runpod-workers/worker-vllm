@@ -18,6 +18,7 @@ Current vLLM version: [0.27.0](https://github.com/vllm-project/vllm/releases/tag
 - [Setting up the Serverless Worker](#setting-up-the-serverless-worker)
   - [Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
     - [Configuration](#configuration)
+    - [Faster Weight Loading (Run:ai Model Streamer)](#faster-weight-loading-runai-model-streamer)
   - [Option 2: Build Docker Image with Model Inside](#option-2-build-docker-image-with-model-inside)
     - [Prerequisites](#prerequisites)
     - [Arguments](#arguments)
@@ -100,6 +101,12 @@ tensor-parallel-size: 2
 Mount the file anywhere into the container and point the `VLLM_CONFIG_FILE` env var at it. CLI flags built from environment variables take precedence over config file values (standard `vllm serve` behavior).
 
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
+
+### Faster Weight Loading (Run:ai Model Streamer)
+
+The image ships with the [Run:ai Model Streamer](https://github.com/run-ai/runai-model-streamer) preinstalled. It streams safetensors weights with high-concurrency reads — from the attached network volume, or directly from S3/GCS/Azure object storage — which can cut cold-start time substantially on large models.
+
+To enable it, set `LOAD_FORMAT=runai_streamer` on your endpoint (also selectable in the console's Load Format dropdown). Use `MODEL_LOADER_EXTRA_CONFIG='{"concurrency": 32}'` to tune read parallelism. To stream straight from a bucket, point `MODEL_NAME` at it (e.g. `s3://my-bucket/models/Llama-3.1-8B-Instruct`) with your cloud credentials set as env vars. Requires weights in safetensors format.
 
 ## Option 2: Build Docker Image with Model Inside
 

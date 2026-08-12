@@ -120,6 +120,10 @@
             {
               "label": "bitsandbytes",
               "value": "bitsandbytes"
+            },
+            {
+              "label": "runai_streamer",
+              "value": "runai_streamer"
             }
           ],
           "advanced": true
