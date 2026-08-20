@@ -185,9 +185,9 @@
         "key": "MAX_MODEL_LEN",
         "input": {
           "name": "Max Model Length",
-          "type": "number",
+          "type": "string",
           "description": "Model context length.",
-          "default": null,
+          "default": "auto",
           "advanced": true
         }
       },
