@@ -139,7 +139,6 @@ VALUE_FLAGS = frozenset({
     "--model-loader-extra-config",
     "--num-gpu-blocks-override",
     "--otlp-traces-endpoint",
-    "--override-attention-dtype",
     "--override-generation-config",
     "--pipeline-parallel-size",
     "--pooler-config",
@@ -182,7 +181,6 @@ VALUE_FLAGS = frozenset({
 PAIRED_BOOL_FLAGS = frozenset({
     "--allow-credentials",
     "--async-scheduling",
-    "--calculate-kv-scales",
     "--data-parallel-hybrid-lb",
     "--disable-cascade-attn",
     "--disable-chunked-mm-input",
@@ -241,6 +239,7 @@ ZERO_MEANS_UNSET = frozenset({
 # nothing instead of dying with `unrecognized arguments` at container start.
 # The note names the replacement (if any) and appears in the warning.
 REMOVED_FLAGS = {
+    "--calculate-kv-scales": "removed in v0.28.0 (#49389); no replacement",
     "--cuda-graph-sizes": "moved into COMPILATION_CONFIG as cudagraph_capture_sizes",
     "--disable-frontend-multiprocessing": "no replacement",
     "--disable-log-requests": "inverted upstream; use ENABLE_LOG_REQUESTS=false",
@@ -260,6 +259,7 @@ REMOVED_FLAGS = {
     "--max-num-partial-prefills": "removed in v0.27.0; no replacement",
     "--num-lookahead-slots": "speculative decoding is configured via SPECULATIVE_CONFIG",
     "--num-redundant-experts": "now a field of EPLB_CONFIG (--eplb-config)",
+    "--override-attention-dtype": "removed in v0.28.0 (#48684); no replacement",
     "--override-pooler-config": "use POOLER_CONFIG (--pooler-config)",
     "--rope-scaling": "pass rope_scaling via HF_OVERRIDES (--hf-overrides)",
     "--rope-theta": "pass rope_theta via HF_OVERRIDES (--hf-overrides)",

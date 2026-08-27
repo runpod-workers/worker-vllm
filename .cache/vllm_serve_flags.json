@@ -3,7 +3,6 @@
     "--allow-credentials",
     "--allow-deprecated-quantization",
     "--async-scheduling",
-    "--calculate-kv-scales",
     "--cohere-is-reasoning-model",
     "--cudagraph-metrics",
     "--data-parallel-external-lb",
@@ -62,9 +61,11 @@
     "--kv-sharing-fast-prefill",
     "--language-model-only",
     "--log-error-stack",
+    "--mm-device-do-normalize",
     "--mm-encoder-only",
     "--numa-bind",
     "--ray-workers-use-nsight",
+    "--return-sampling-mask",
     "--return-tokens-as-token-ids",
     "--scheduler-reserve-full-isl",
     "--skip-mm-profiling",
@@ -136,6 +137,7 @@
     "--dp-supervisor-probe-interval-s",
     "--dp-supervisor-probe-timeout-s",
     "--dtype",
+    "--ec-manager-config",
     "--ec-transfer-config",
     "--eplb-config",
     "--expert-placement-strategy",
@@ -207,6 +209,7 @@
     "--mm-ipc-gpu-memory-gb",
     "--mm-processor-cache-gb",
     "--mm-processor-cache-type",
+    "--mm-processor-device",
     "--mm-processor-kwargs",
     "--mm-shm-cache-max-object-size-mb",
     "--mm-tensor-ipc",
@@ -227,7 +230,6 @@
     "--offload-prefetch-step",
     "--optimization-level",
     "--otlp-traces-endpoint",
-    "--override-attention-dtype",
     "--override-generation-config",
     "--performance-mode",
     "--pipeline-parallel-size",
@@ -287,5 +289,5 @@
     "--worker-cls",
     "--worker-extension-cls"
   ],
-  "vllm_version": "0.27.1"
+  "vllm_version": "0.28.0"
 }
