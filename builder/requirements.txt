@@ -3,3 +3,7 @@
 runpod~=1.12.0
 aiohttp>=3.9
 huggingface-hub>=0.24
+# bitsandbytes moved out of vLLM core into an out-of-tree plugin in v0.28.0
+# (vllm-project/vllm#43529); without it LOAD_FORMAT/QUANTIZATION=bitsandbytes
+# configs die at model load. vLLM auto-loads it via entry points on startup.
+vllm-bnb-plugin>=0.0.3
