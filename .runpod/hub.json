@@ -583,6 +583,7 @@
           "type": "number",
           "description": "Sets GPU VRAM utilization",
           "default": 0.95,
+          "step": 0.01,
           "advanced": true
         }
       },
