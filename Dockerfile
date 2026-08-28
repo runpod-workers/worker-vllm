@@ -3,11 +3,26 @@
 #   docker buildx build --build-arg VLLM_VERSION=v0.23.0 ...
 ARG VLLM_VERSION=v0.28.0
 FROM vllm/vllm-openai:${VLLM_VERSION}
+# Re-declare so the stage can reference it in RUN steps below.
+ARG VLLM_VERSION
 
 # RunPod serverless SDK + HTTP proxy deps (vLLM itself comes from the base image).
 COPY builder/requirements.txt /requirements.txt
 RUN python3 -m ensurepip --upgrade 2>/dev/null || true \
     && python3 -m pip install --no-cache-dir -r /requirements.txt
+
+# bitsandbytes moved out of vLLM core into the out-of-tree vllm-bnb-plugin in
+# v0.28.0 (vllm-project/vllm#43529). The --no-deps is load-bearing: the plugin
+# declares an UNPINNED `vllm` dependency, and letting pip resolve it replaces
+# the base image's vLLM — it once backtracked to vllm 0.19.1, producing an
+# image tagged v0.28.0 that actually contained 0.19.1 (broken deep_ep/NCCL
+# mix). Its only real runtime need is the `bitsandbytes` package, pinned in
+# builder/requirements.txt.
+RUN python3 -m pip install --no-cache-dir --no-deps "vllm-bnb-plugin>=0.0.3"
+
+# Guard rail: the base image's vLLM must survive our pip installs — fail the
+# build loudly if the installed version no longer matches the requested tag.
+RUN test "$(python3 -c 'import vllm; print(vllm.__version__)')" = "${VLLM_VERSION#v}"
 
 # Setup for Option 2: building the image with the model baked in.
 ARG MODEL_NAME=""
