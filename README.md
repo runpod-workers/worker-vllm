@@ -11,7 +11,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 Current vLLM version: [0.28.0](https://github.com/vllm-project/vllm/releases/tag/v0.28.0)
 
 
-> Check out our Load Balancer implementation here: [vLLM Load Balancer](https://github.com/runpod-workers/vllm-loadbalancer-ep)
+> Want a **load balancing** endpoint (direct HTTP, no job queue)? You don't need this worker — deploy the official vLLM image as-is. See [Option 3: Load Balancing with the vLLM Image](#option-3-load-balancing-with-the-vllm-image).
 
 ## Table of Contents
 
@@ -23,6 +23,7 @@ Current vLLM version: [0.28.0](https://github.com/vllm-project/vllm/releases/tag
     - [Arguments](#arguments)
     - [Example: Building an image with OpenChat-3.5](#example-building-an-image-with-openchat-35)
       - [(Optional) Including Huggingface Token](#optional-including-huggingface-token)
+  - [Option 3: Load Balancing with the vLLM Image](#option-3-load-balancing-with-the-vllm-image)
   - [Compatible Model Architectures](#compatible-model-architectures)
 - [Usage: OpenAI Compatibility](#usage-openai-compatibility)
   - [Modifying your OpenAI Codebase to use your deployed vLLM Worker](#modifying-your-openai-codebase-to-use-your-deployed-vllm-worker)
@@ -160,6 +161,36 @@ export HF_TOKEN="your_token_here"
 ```bash
 docker build -t username/image:tag --secret id=HF_TOKEN --build-arg MODEL_NAME="openchat/openchat_3.5" .
 ```
+
+## Option 3: Load Balancing with the vLLM Image
+
+If you want a [load balancing endpoint](https://docs.runpod.io/serverless/load-balancing/overview) — requests routed directly to workers over HTTP, with no job queue — you don't need this worker. The official [`vllm/vllm-openai`](https://hub.docker.com/r/vllm/vllm-openai) image already serves every vLLM route (`/v1/chat/completions`, `/v1/completions`, `/v1/models`, embeddings, etc.) plus health checks, so you can deploy it as-is:
+
+1. Create a new Serverless endpoint and set the **Endpoint Type** to **Load Balancer**.
+2. Use `vllm/vllm-openai:<version>` as the container image (pin a version rather than `latest`).
+3. Set the container start args to `vllm serve` arguments — at minimum `--model`, plus any other vLLM flags:
+
+   ```bash
+   --model meta-llama/Llama-3.1-8B-Instruct --max-model-len 8192
+   ```
+
+4. Configure the endpoint:
+   - Set `PORT=8000` as an environment variable and expose `8000/http` under **Expose HTTP Ports** (vLLM serves on 8000 by default).
+   - Set `HF_TOKEN` if your model is gated/private.
+   - vLLM already serves the load balancer's default `/ping` health check (and `/health`); no extra configuration is needed. To use a different path, set `HEALTH_CHECK_PATH`.
+5. Once a worker is healthy, call any vLLM route directly at `https://<ENDPOINT_ID>.api.runpod.ai/<PATH>`. The `model` field is the repo passed to `--model` (unless you also set `--served-model-name`):
+
+   ```bash
+   curl https://<ENDPOINT_ID>.api.runpod.ai/v1/chat/completions \
+     -H "Authorization: Bearer <RUNPOD_API_KEY>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "meta-llama/Llama-3.1-8B-Instruct",
+       "messages": [{"role": "user", "content": "Hello!"}]
+     }'
+   ```
+
+Note that load balancing endpoints have no queue: a request that arrives before any worker is ready returns an error instead of waiting, so clients should retry through cold starts. See the [load balancing docs](https://docs.runpod.io/serverless/load-balancing/overview) for health check semantics, cold-start handling, and scaling behavior.
 
 # Compatible Model Architectures
 
