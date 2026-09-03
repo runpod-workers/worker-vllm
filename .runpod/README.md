@@ -10,6 +10,35 @@ Current vLLM version: [0.28.0](https://github.com/vllm-project/vllm/releases/tag
 
 ---
 
+## Prefer a Load Balancing Endpoint?
+
+This worker is for **queue-based** endpoints. If you want requests routed directly to workers over HTTP with no job queue, you don't need this worker — the official [`vllm/vllm-openai`](https://hub.docker.com/r/vllm/vllm-openai) image already serves every vLLM route (`/v1/chat/completions`, `/v1/completions`, `/v1/models`, embeddings, etc.) plus health checks, so you can deploy it as-is:
+
+1. Create a new Serverless endpoint and set the **Endpoint Type** to **Load Balancer**.
+2. Use `vllm/vllm-openai:<version>` as the container image (pin a version rather than `latest`).
+3. Set the container start args to `vllm serve` arguments — at minimum `--model`, plus any other vLLM flags:
+
+   ```bash
+   --model meta-llama/Llama-3.1-8B-Instruct --max-model-len 8192
+   ```
+
+4. Set `PORT=8000` as an environment variable and expose `8000/http` under **Expose HTTP Ports** (vLLM serves on 8000 by default). Set `HF_TOKEN` too if your model is gated/private. vLLM already serves the load balancer's default `/ping` health check (and `/health`); to use a different path, set `HEALTH_CHECK_PATH`.
+5. Once a worker is healthy, call any vLLM route directly at `https://<ENDPOINT_ID>.api.runpod.ai/<PATH>` with your RunPod API key. The `model` field is the repo passed to `--model` (unless you also set `--served-model-name`):
+
+   ```bash
+   curl https://<ENDPOINT_ID>.api.runpod.ai/v1/chat/completions \
+     -H "Authorization: Bearer <RUNPOD_API_KEY>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "meta-llama/Llama-3.1-8B-Instruct",
+       "messages": [{"role": "user", "content": "Hello!"}]
+     }'
+   ```
+
+Note that load balancing endpoints have no queue: a request that arrives before any worker is ready returns an error instead of waiting, so clients should retry through cold starts. See the [load balancing docs](https://docs.runpod.io/serverless/load-balancing/overview) for health check semantics, cold-start handling, and scaling behavior.
+
+---
+
 ## Endpoint Configuration
 
 All behaviour is controlled through environment variables:
