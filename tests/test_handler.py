@@ -54,3 +54,50 @@ class TestLegacyShorthand:
     def test_empty_input_raises(self):
         with pytest.raises(ValueError):
             _normalize_job_input({})
+
+
+def _collect(job: dict) -> list:
+    """Drain the async-generator handler synchronously."""
+    import asyncio
+
+    import handler as handler_module
+
+    async def run():
+        return [item async for item in handler_module.handler(job)]
+
+    return asyncio.run(run())
+
+
+class TestStartupError:
+    """main.py sets handler.startup_error when vLLM died for a reason a restart cannot fix."""
+
+    def test_answers_every_job_with_the_cause(self, monkeypatch):
+        import handler as handler_module
+
+        monkeypatch.setattr(handler_module, "startup_error", "Ran out of GPU memory.")
+
+        outputs = _collect({"input": {"prompt": "x"}})
+
+        assert outputs == [{"error": {"message": "Ran out of GPU memory.", "type": "startup_error", "code": None}}]
+
+    def test_wins_over_a_dead_process_and_bad_input(self, monkeypatch):
+        import handler as handler_module
+
+        monkeypatch.setattr(handler_module, "startup_error", "Ran out of GPU memory.")
+        # Either of these would otherwise be reported instead, and both say less.
+        monkeypatch.setattr(handler_module, "_is_vllm_alive", lambda: False)
+
+        outputs = _collect({"input": {}})
+
+        assert "GPU memory" in outputs[0]["error"]["message"]
+
+    def test_a_healthy_start_leaves_jobs_alone(self, monkeypatch):
+        import handler as handler_module
+
+        monkeypatch.setattr(handler_module, "startup_error", None)
+        monkeypatch.setattr(handler_module, "_is_vllm_alive", lambda: False)
+
+        outputs = _collect({"input": {"prompt": "x"}})
+
+        # Falls through to the normal liveness check rather than short-circuiting.
+        assert "not running" in outputs[0]["error"]["message"]

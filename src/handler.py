@@ -2,7 +2,9 @@
 
 `main.py` starts `vllm serve` on 127.0.0.1:VLLM_PORT and only then starts the
 RunPod serverless loop, so by the time a job arrives the vLLM HTTP server is up
-and fully backwards/forwards compatible — we never import vLLM.
+and fully backwards/forwards compatible — we never import vLLM. The one
+exception: when vLLM could not start for a reason a restart cannot fix,
+`main.py` sets `startup_error` and every job is answered with that message.
 
 Accepted job input shapes (all under job["input"]):
 
@@ -37,6 +39,11 @@ DEFAULT_COMPLETION_ROUTE = "/v1/completions"
 # Set by main.py once the vLLM subprocess is running, so we can fail fast
 # instead of hanging on a dead server.
 vllm_process = None
+
+# Set by main.py when vLLM failed to start for a reason a restart cannot fix
+# (see startup_errors.py). Every job then answers with the cause instead of
+# dialling a server that is not there.
+startup_error: Optional[str] = None
 
 _default_model_cache: Optional[str] = None
 
@@ -103,11 +110,15 @@ def _normalize_job_input(job_input: dict) -> Tuple[str, str, Optional[dict]]:
     return DEFAULT_COMPLETION_ROUTE, "POST", body
 
 
-def _error(message: str) -> dict:
-    return {"error": {"message": message, "type": "worker_error", "code": None}}
+def _error(message: str, error_type: str = "worker_error") -> dict:
+    return {"error": {"message": message, "type": error_type, "code": None}}
 
 
 async def handler(job: dict) -> AsyncGenerator[Any, None]:
+    if startup_error:
+        yield _error(startup_error, error_type="startup_error")
+        return
+
     job_input = job.get("input") or {}
 
     try:
