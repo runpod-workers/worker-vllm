@@ -18,6 +18,7 @@ Current vLLM version: [0.29.0](https://github.com/vllm-project/vllm/releases/tag
 - [Setting up the Serverless Worker](#setting-up-the-serverless-worker)
   - [Option 1: Deploy Any Model Using Pre-Built Docker Image [Recommended]](#option-1-deploy-any-model-using-pre-built-docker-image-recommended)
     - [Configuration](#configuration)
+    - [When vLLM will not start](#when-vllm-will-not-start)
   - [Option 2: Build Docker Image with Model Inside](#option-2-build-docker-image-with-model-inside)
     - [Prerequisites](#prerequisites)
     - [Arguments](#arguments)
@@ -101,6 +102,24 @@ tensor-parallel-size: 2
 Mount the file anywhere into the container and point the `VLLM_CONFIG_FILE` env var at it. CLI flags built from environment variables take precedence over config file values (standard `vllm serve` behavior).
 
 For the complete list of all available environment variables, examples, and detailed descriptions: **[Configuration](docs/configuration.md)**
+
+### When vLLM will not start
+
+Some startup failures a restart cannot fix: the model does not fit the GPU, `MAX_MODEL_LEN` is larger than the KV cache the GPU can hold, a flag or value vLLM rejects, a gated model without `HF_TOKEN`. Exiting on those crash-loops the worker: every attempt pays for the download and the model load, and the console shows only silent restarts with no error anywhere.
+
+The worker recognises these and stays up instead, answering every job with the cause and the fix:
+
+```json
+{
+  "error": {
+    "message": "Qwen/Qwen3-30B-A3B ran out of GPU memory during startup. This GPU has 19.57 GiB. Lower MAX_MODEL_LEN or MAX_NUM_SEQS, set ENFORCE_EAGER=true to skip CUDA graph capture, use a quantized checkpoint, or redeploy on a larger GPU (or more GPUs with TENSOR_PARALLEL_SIZE). ...",
+    "type": "startup_error",
+    "code": null
+  }
+}
+```
+
+The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt.
 
 ## Option 2: Build Docker Image with Model Inside
 

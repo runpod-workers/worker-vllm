@@ -27,7 +27,9 @@ Container start:
     ├─ (optional) reads /local_model_args.json for baked-in models
     ├─ args_builder.build_vllm_args()  → env vars → CLI flags
     ├─ spawns `vllm serve --host 127.0.0.1 --port $VLLM_PORT ...`
-    ├─ polls GET /health until ready (fail fast if vLLM exits or times out)
+    ├─ polls GET /health until ready (exit non-zero if vLLM dies or times out,
+    │   unless startup_errors.classify() recognises the failure as one a restart
+    │   cannot fix — then stay up and answer every job with the cause)
     └─ starts runpod.serverless loop with handler.handler
 
 Per job:
@@ -45,6 +47,9 @@ boundary or the CLI; that is what makes vLLM upgrades a one-line `VLLM_VERSION` 
 - `src/args_builder.py`: pure-Python env var → CLI flag translation (allowlist of
   `vllm serve` flags + legacy aliases + `VLLM_EXTRA_ARGS` passthrough). No third-party
   imports, so it is fully unit-testable on CPU runners.
+- `src/startup_errors.py`: regexes over the tail of vLLM's output that turn a known
+  fatal startup failure (CUDA OOM, KV cache too small for `MAX_MODEL_LEN`, rejected
+  flag, gated/missing model, out of disk) into one actionable sentence. Pure Python.
 - `src/handler.py`: the RunPod serverless handler; an aiohttp proxy that accepts three
   input shapes:
   1. `{"openai_route": ..., "openai_input": ...}` — RunPod's `/openai/*` passthrough
@@ -93,6 +98,7 @@ VLLM_EXTRA_ARGS  >  env aliases (MODEL_NAME, ...)  >  env flag scan
 src/
 ├── main.py            # Entrypoint: vLLM subprocess + RunPod loop lifecycle
 ├── args_builder.py    # env vars → `vllm serve` CLI flags (pure Python)
+├── startup_errors.py  # fatal startup failure → actionable message (pure Python)
 ├── handler.py         # RunPod handler: aiohttp proxy to the vLLM server
 └── download_model.py  # Build-time model download (Option 2)
 ```
@@ -132,8 +138,17 @@ workers at container start.
 
 ### 3. **Error Handling**
 
-- Startup failures (bad flag, missing model, OOM during load) → vLLM exits before
-  `/health` → `main.py` fails the worker fast instead of accepting jobs.
+- Startup failures → vLLM exits before `/health`. `main.py` keeps the last ~400 lines
+  of vLLM output and runs `startup_errors.classify()` over them:
+  - Recognised as unfixable by a restart (CUDA OOM, KV cache too small for
+    `MAX_MODEL_LEN`, `MAX_MODEL_LEN` above the model's limit, argparse rejection,
+    gated/missing HF repo, unsupported architecture, out of disk) → the worker stays
+    up and every job returns `{"error": {"type": "startup_error", "message": ...}}`
+    naming the cause and the fix. Crash-looping would pay for the download and load
+    on every attempt and surface nothing but silent restarts in the console.
+  - Anything else (flaky download, bad host) → exit non-zero so the platform retries.
+  Add a pattern only when a restart provably cannot help; a false positive here turns
+  a transient failure into a worker that never recovers.
 - Request failures → the proxy yields a RunPod job error containing the vLLM HTTP
   status and body (vLLM's own OpenAI-compatible error payloads flow through unchanged).
 - If the vLLM process dies while serving, the next job gets an immediate
@@ -178,6 +193,9 @@ workers at container start.
 - `tests/test_args_builder.py` covers the env var → CLI translation (mapping, aliases,
   bool handling, JSON passthrough, `VLLM_EXTRA_ARGS` precedence). Pure Python, no GPU,
   no vllm import — runs on any CPU runner with just `pytest`.
+- `tests/test_startup_errors.py` pins which vLLM failure messages are answered and
+  which are left for a restart; `tests/test_handler.py` checks the `startup_error`
+  short-circuit in the handler.
 
 ### 2. **Local Smoke Testing**
 
