@@ -8,7 +8,7 @@ Deploy OpenAI-Compatible Blazing-Fast LLM Endpoints powered by the [vLLM](https:
 
 ![vLLM worker banner](https://image.runpod.ai/preview/vllm/vllm-banner.png)
 
-Current vLLM version: [0.28.0](https://github.com/vllm-project/vllm/releases/tag/v0.28.0)
+Current vLLM version: [0.29.0](https://github.com/vllm-project/vllm/releases/tag/v0.29.0)
 
 
 > Want a **load balancing** endpoint (direct HTTP, no job queue)? You don't need this worker — deploy the official vLLM image as-is. See [Option 3: Load Balancing with the vLLM Image](#option-3-load-balancing-with-the-vllm-image).
