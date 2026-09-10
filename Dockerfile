@@ -1,7 +1,7 @@
 # Worker image = official vLLM OpenAI server image + RunPod serverless wrapper.
 # vLLM upgrades are now a single build ARG:
 #   docker buildx build --build-arg VLLM_VERSION=v0.23.0 ...
-ARG VLLM_VERSION=v0.28.0
+ARG VLLM_VERSION=v0.29.0
 FROM vllm/vllm-openai:${VLLM_VERSION}
 # Re-declare so the stage can reference it in RUN steps below.
 ARG VLLM_VERSION
