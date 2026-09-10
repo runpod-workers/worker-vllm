@@ -32,12 +32,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def build_serve_parser():
     """Construct the real `vllm serve` parser from the installed vLLM."""
-    try:
-        from vllm.entrypoints.openai.cli_args import make_arg_parser
-    except ImportError as e:
-        raise SystemExit(
-            f"cannot import the vLLM serve parser ({e}); vLLM's CLI API changed, update this script"
-        )
+    try:  # vLLM ≥ 0.29 (moved out of the openai package)
+        from vllm.entrypoints.launchers.cli_args import make_arg_parser
+    except ImportError:
+        try:  # vLLM ≤ 0.28
+            from vllm.entrypoints.openai.cli_args import make_arg_parser
+        except ImportError as e:
+            raise SystemExit(
+                f"cannot import the vLLM serve parser ({e}); vLLM's CLI API changed, update this script"
+            )
     try:  # current location (vllm/utils/argparse_utils.py)
         from vllm.utils.argparse_utils import FlexibleArgumentParser
     except ImportError:
