@@ -141,6 +141,14 @@ def api_request(method: str, url: str, api_key: str, body: dict | None = None) -
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {api_key}")
     req.add_header("Content-Type", "application/json")
+    # Cloudflare in front of rest.runpod.io bans the default Python-urllib UA
+    # (HTTP 403, error code 1010, first seen 2026-09-10). A browser UA is not
+    # banned; the value just needs to look like one.
+    req.add_header(
+        "User-Agent",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    )
     try:
         with urllib.request.urlopen(req) as resp:
             raw = resp.read()
