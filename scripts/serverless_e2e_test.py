@@ -285,7 +285,7 @@ def main() -> int:
 
     hub_defaults = load_hub_defaults(args.hub_json)
     model_env = load_model_env(args.config)
-    env = {**hub_defaults["env"], **model_env}
+    env = {**hub_defaults["env"], **model_env, "RUNPOD_INIT_TIMEOUT": "1600"}
     hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
     if hf_token:
         env["HF_TOKEN"] = hf_token
