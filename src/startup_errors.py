@@ -38,6 +38,12 @@ _MAX_LEN_EXCEEDS_MODEL = re.compile(
 _BAD_ARGS = re.compile(r"(?:vllm serve|vllm): error: (.+)")
 
 # --- Model access -----------------------------------------------------------
+# huggingface_hub raises RevisionNotFoundError when a commit/branch/tag does not
+# exist. Since v0.28 vLLM resolves every model ref to an exact commit hash at
+# load time (upstream's fix for "Artifact Pin Decay"), so a repo whose history
+# was force-pushed 404s on a hash that no longer exists. Matched before
+# _NOT_FOUND because the transport error underneath is also a 404.
+_REVISION_NOT_FOUND = re.compile(r"RevisionNotFoundError|Revision Not Found", re.I)
 _GATED = re.compile(r"GatedRepoError|401 Client Error", re.I)
 _NOT_FOUND = re.compile(r"RepositoryNotFoundError|404 Client Error", re.I)
 _UNSUPPORTED_ARCH = re.compile(r"Model architectures \[.*?\] (?:are not supported|failed to be inspected)", re.I)
@@ -73,6 +79,17 @@ def revision_not_found_message(named: str, revision: str) -> str:
     )
 
 
+def revision_not_found(output: str) -> bool:
+    """True when the failure is a Hugging Face revision that no longer exists.
+
+    Split out from classify() because main.py treats this one specially: it is
+    the only startup failure where a fresh attempt against the repo's current
+    state can genuinely succeed (vLLM re-resolves the revision on every launch),
+    so the worker retries once before answering jobs with the error.
+    """
+    return bool(_REVISION_NOT_FOUND.search(output))
+
+
 def classify(output: str, model: Optional[str] = None) -> Optional[str]:
     """One actionable message for a known fatal failure, or None to let it retry."""
     named = model or "The model"
@@ -94,7 +111,12 @@ def classify(output: str, model: Optional[str] = None) -> Optional[str]:
             f"CUDA graph capture, use a quantized checkpoint, or redeploy on a "
             f"larger GPU (or more GPUs with TENSOR_PARALLEL_SIZE). If the model "
             f"loaded but the KV cache did not fit, raising GPU_MEMORY_UTILIZATION "
-            f"a little (default 0.9) can also help."
+            f"a little (default 0.9) can also help. On this vLLM version two more "
+            f"knobs recover memory: MAX_NUM_BATCHED_TOKENS=8192 (the default "
+            f"doubled to 16384 in v0.28, which doubles peak activation memory), "
+            f"and, if KV_CACHE_DTYPE=fp8 is set on an Ampere/Ada GPU, "
+            f"KV_CACHE_DTYPE=auto (fp8 KV forces the FlashInfer backend there, "
+            f"which needs extra workspace memory)."
         )
 
     match = _MAX_LEN_EXCEEDS_MODEL.search(output)
@@ -113,6 +135,19 @@ def classify(output: str, model: Optional[str] = None) -> Optional[str]:
             f"Check the environment variables that map to vLLM flags and "
             f"VLLM_EXTRA_ARGS; run `vllm serve --help` in the image for the "
             f"accepted flags and values."
+        )
+
+    if _REVISION_NOT_FOUND.search(output):
+        # Distinct from revision_not_found_message: by the time classify sees
+        # this, main.py has already relaunched once against the repo's current
+        # state, so the message must say that and point at the deeper causes.
+        return (
+            f"The Hugging Face revision requested for {named} does not exist "
+            f"(the worker already retried once against the repo's current main "
+            f"branch). If MODEL_REVISION or TOKENIZER_REVISION is set, check it "
+            f"against the revisions listed on the model page, or unset it to use "
+            f"the default branch. This also happens when the repository's history "
+            f"was rewritten (force-pushed) between deploys."
         )
 
     if _GATED.search(output):

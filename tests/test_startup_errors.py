@@ -126,3 +126,43 @@ class TestUnknownFailures:
         # Answering these forever would turn a flaky download into a dead
         # endpoint; a restart is the right response.
         assert classify(output) is None
+
+
+REVISION_NOT_FOUND = (
+    "huggingface_hub.errors.RevisionNotFoundError: 404 Client Error. Revision Not Found "
+    "for url https://huggingface.co/org/model/resolve/abc123def/config.json. "
+    "Invalid rev id: abc123def"
+)
+
+
+class TestRevisionNotFound:
+    def test_names_the_fix_and_the_force_push_cause(self):
+        message = classify(REVISION_NOT_FOUND, model="org/model")
+
+        assert message.startswith("The Hugging Face revision requested for org/model")
+        assert "MODEL_REVISION" in message
+        assert "force-pushed" in message
+
+    def test_wins_over_the_generic_404_match(self):
+        # The transport error underneath a missing revision is also a
+        # "404 Client Error", which the repository-not-found pattern matches.
+        # A vanished revision must not be reported as a missing repository.
+        message = classify(REVISION_NOT_FOUND, model="org/model")
+
+        assert "was not found on Hugging Face" not in message
+
+    def test_predicate_drives_the_relaunch(self):
+        from startup_errors import revision_not_found
+
+        assert revision_not_found(REVISION_NOT_FOUND)
+        assert not revision_not_found(NOT_FOUND)
+        assert not revision_not_found(TORCH_OOM)
+
+
+class TestOomAdviceForV029:
+    def test_mentions_the_batched_tokens_and_fp8_kv_knobs(self):
+        message = classify(TORCH_OOM)
+
+        assert "MAX_NUM_BATCHED_TOKENS=8192" in message
+        assert "KV_CACHE_DTYPE" in message
+        assert "FlashInfer" in message
