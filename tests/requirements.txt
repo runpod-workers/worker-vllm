@@ -1,4 +1,7 @@
 # Tests are CPU-only and never import vllm/torch. aiohttp is needed because
 # src/handler.py imports it at module load (the proxy code is not exercised).
+# huggingface-hub is needed because src/model_preflight.py imports its error
+# types at module load (the Hub is never hit; HfApi is mocked).
 pytest>=8,<10
 aiohttp
+huggingface-hub>=0.26

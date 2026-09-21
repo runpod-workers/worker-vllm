@@ -46,6 +46,33 @@ _UNSUPPORTED_ARCH = re.compile(r"Model architectures \[.*?\] (?:are not supporte
 _NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28", re.I)
 
 
+# The model-access messages are shared with model_preflight.py, which detects
+# the same failures before the cold start; whether the user hits the fast path
+# or the post-crash path, the wording must be identical.
+def gated_message(named: str) -> str:
+    return (
+        f"{named} is gated or private on Hugging Face and the worker was not "
+        f"allowed to download it. Set HF_TOKEN to a token whose account has "
+        f"accepted the model's license, or pick a public model."
+    )
+
+
+def not_found_message(named: str) -> str:
+    return (
+        f"{named} was not found on Hugging Face. Check MODEL_NAME for typos "
+        f"(it must be the full `org/repo` id) and MODEL_REVISION if set. Private "
+        f"repositories also return not-found until HF_TOKEN grants access."
+    )
+
+
+def revision_not_found_message(named: str, revision: str) -> str:
+    return (
+        f"MODEL_REVISION={revision} does not exist for {named} on Hugging Face. "
+        f"Check the model page for the branch, tag, or commit hash, or unset "
+        f"MODEL_REVISION to use the default branch."
+    )
+
+
 def classify(output: str, model: Optional[str] = None) -> Optional[str]:
     """One actionable message for a known fatal failure, or None to let it retry."""
     named = model or "The model"
@@ -89,18 +116,10 @@ def classify(output: str, model: Optional[str] = None) -> Optional[str]:
         )
 
     if _GATED.search(output):
-        return (
-            f"{named} is gated or private on Hugging Face and the worker was not "
-            f"allowed to download it. Set HF_TOKEN to a token whose account has "
-            f"accepted the model's license, or pick a public model."
-        )
+        return gated_message(named)
 
     if _NOT_FOUND.search(output):
-        return (
-            f"{named} was not found on Hugging Face. Check MODEL_NAME for typos "
-            f"(it must be the full `org/repo` id) and MODEL_REVISION if set. Private "
-            f"repositories also return not-found until HF_TOKEN grants access."
-        )
+        return not_found_message(named)
 
     if _UNSUPPORTED_ARCH.search(output):
         return (
