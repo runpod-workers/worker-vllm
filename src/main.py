@@ -13,8 +13,11 @@ of at the end of the download.
 If vLLM dies during startup for a reason a restart cannot fix (CUDA OOM, a
 MAX_MODEL_LEN the GPU cannot hold, a bad flag, a gated model), the worker stays
 up and answers every job with the cause instead of crash-looping; see
-startup_errors.py. Unrecognised failures still exit non-zero so the platform
-retries them.
+startup_errors.py. One exception is retried in-place first: a Hugging Face
+revision that no longer exists (vLLM pins refs to commit hashes since v0.28, so
+a force-pushed repo invalidates the pin) gets a single relaunch against the
+repo's current state before the error is declared fatal. Unrecognised failures
+still exit non-zero so the platform retries them.
 """
 
 import collections
@@ -149,6 +152,26 @@ def _forward_signal(signum, _frame):
     sys.exit(128 + signum)
 
 
+def drop_pinned_revisions() -> None:
+    """Clear revision pins so the next launch resolves the repo's current state.
+
+    Since v0.28 vLLM resolves every Hugging Face ref to an exact commit hash at
+    launch, so a repo whose history was rewritten 404s on a hash that no longer
+    exists. Relaunching is enough for implicit pins (a fresh launch resolves a
+    fresh hash); explicit *_REVISION values are dropped too, loudly, because
+    serving the current branch beats crash-looping on a commit that is gone.
+    """
+    for name in ("MODEL_REVISION", "TOKENIZER_REVISION", "CODE_REVISION"):
+        value = os.environ.pop(name, None)
+        if value:
+            logging.warning(
+                "Dropping %s=%s — that revision no longer exists on Hugging Face; "
+                "retrying against the repository's current default branch.",
+                name,
+                value,
+            )
+
+
 def main() -> None:
     global vllm_process
 
@@ -170,14 +193,34 @@ def main() -> None:
             "Model pre-flight failed; answering jobs with the cause instead of starting vLLM: %s",
             startup_error,
         )
-    else:
+    # At most two launch attempts: the second only for a vanished Hugging Face
+    # revision, the one startup failure where retrying can genuinely succeed
+    # because vLLM re-resolves the revision on every launch. (The pre-flight
+    # catches a *configured* revision that never existed; this catches one that
+    # existed at pre-flight time and was gone by load time, or a pin vLLM
+    # resolved itself.)
+    attempts_left = 2
+    while startup_error is None:
+        attempts_left -= 1
         vllm_process = start_vllm()
         try:
             wait_for_vllm(vllm_process)
+            break
         except RuntimeError as e:
             logging.error("%s", e)
             stop_vllm(vllm_process)
-            startup_error = startup_errors.classify("".join(recent_output), model=os.getenv("MODEL_NAME"))
+            output = "".join(recent_output)
+            if attempts_left and startup_errors.revision_not_found(output):
+                logging.warning(
+                    "vLLM could not fetch the pinned Hugging Face revision "
+                    "(vLLM pins refs to commit hashes; a force-pushed repo "
+                    "invalidates them). Relaunching once against the current "
+                    "revision."
+                )
+                drop_pinned_revisions()
+                recent_output.clear()
+                continue
+            startup_error = startup_errors.classify(output, model=os.getenv("MODEL_NAME"))
             if startup_error is None:
                 # Nothing recognisable, so let the platform restart us: a failed
                 # download or a bad host is worth another attempt.
