@@ -5,6 +5,11 @@ The worker never imports vLLM. We build the CLI from environment variables
 /health until the server (and model) is ready, and only then start the RunPod
 serverless job loop so no job is pulled before the backend can serve it.
 
+Before launching vLLM, a metadata-only pre-flight (model_preflight.py) checks
+that the configured model is actually fetchable from the Hugging Face Hub, so
+a typo'd MODEL_NAME or a gated model without HF_TOKEN fails in seconds instead
+of at the end of the download.
+
 If vLLM dies during startup for a reason a restart cannot fix (CUDA OOM, a
 MAX_MODEL_LEN the GPU cannot hold, a bad flag, a gated model), the worker stays
 up and answers every job with the cause instead of crash-looping; see
@@ -24,6 +29,7 @@ import time
 import urllib.error
 import urllib.request
 
+import model_preflight
 import startup_errors
 from args_builder import build_vllm_args
 from download_model import LOCAL_MODEL_ARGS_PATH
@@ -154,22 +160,32 @@ def main() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, _forward_signal)
 
-    vllm_process = start_vllm()
-    startup_error = None
-    try:
-        wait_for_vllm(vllm_process)
-    except RuntimeError as e:
-        logging.error("%s", e)
-        stop_vllm(vllm_process)
-        startup_error = startup_errors.classify("".join(recent_output), model=os.getenv("MODEL_NAME"))
-        if startup_error is None:
-            # Nothing recognisable, so let the platform restart us: a failed
-            # download or a bad host is worth another attempt.
-            sys.exit(1)
-        # A restart cannot fix this one. Exiting would crash-loop the worker,
-        # paying for the download and the load on every attempt and showing the
-        # user a traceback instead of a cause, so stay up and answer jobs with it.
-        logging.error("vLLM cannot start on this configuration; answering jobs with the cause: %s", startup_error)
+    # Ask the HF Hub whether the model is fetchable before paying for the
+    # download: a typo'd MODEL_NAME, a gated model without HF_TOKEN, or a bad
+    # MODEL_REVISION fails here in seconds instead of at the end of the cold
+    # start. Only definitive answers fail the boot; see model_preflight.py.
+    startup_error = model_preflight.check_model_access()
+    if startup_error:
+        logging.error(
+            "Model pre-flight failed; answering jobs with the cause instead of starting vLLM: %s",
+            startup_error,
+        )
+    else:
+        vllm_process = start_vllm()
+        try:
+            wait_for_vllm(vllm_process)
+        except RuntimeError as e:
+            logging.error("%s", e)
+            stop_vllm(vllm_process)
+            startup_error = startup_errors.classify("".join(recent_output), model=os.getenv("MODEL_NAME"))
+            if startup_error is None:
+                # Nothing recognisable, so let the platform restart us: a failed
+                # download or a bad host is worth another attempt.
+                sys.exit(1)
+            # A restart cannot fix this one. Exiting would crash-loop the worker,
+            # paying for the download and the load on every attempt and showing the
+            # user a traceback instead of a cause, so stay up and answer jobs with it.
+            logging.error("vLLM cannot start on this configuration; answering jobs with the cause: %s", startup_error)
 
     # Import here (not at module import time) so the RunPod SDK and handler
     # start only after the backend is confirmed healthy (or confirmed dead).
