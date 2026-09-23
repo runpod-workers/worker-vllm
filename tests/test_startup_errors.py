@@ -166,3 +166,37 @@ class TestOomAdviceForV029:
         assert "MAX_NUM_BATCHED_TOKENS=8192" in message
         assert "KV_CACHE_DTYPE" in message
         assert "FlashInfer" in message
+
+
+class TestOomAfterAutoRetry:
+    def test_says_the_reduced_footprint_relaunch_already_ran(self):
+        message = classify(TORCH_OOM, model="org/model", oom_retried=True)
+
+        assert message.startswith("org/model ran out of GPU memory")
+        assert "already retried once" in message
+        assert "ENFORCE_EAGER" in message
+        # The knobs the retry applied are no longer offered as the fix.
+        assert "MAX_NUM_BATCHED_TOKENS=8192 (the default doubled" not in message
+        # The fixes that remain are real capacity changes.
+        assert "TENSOR_PARALLEL_SIZE" in message
+        assert "quantized" in message
+
+    def test_still_carries_the_card_and_the_kV_estimate(self):
+        assert "19.57 GiB" in classify(TORCH_OOM, oom_retried=True)
+        assert "34480 tokens" in classify(KV_TOO_SMALL, oom_retried=True)
+
+
+class TestMemoryShortfallPredicate:
+    def test_all_three_memory_wording_forms_match(self):
+        from startup_errors import memory_shortfall
+
+        assert memory_shortfall(TORCH_OOM)
+        assert memory_shortfall(NO_KV_MEMORY)
+        assert memory_shortfall(KV_TOO_SMALL)
+
+    def test_non_memory_failures_do_not_match(self):
+        from startup_errors import memory_shortfall
+
+        assert not memory_shortfall(REVISION_NOT_FOUND)
+        assert not memory_shortfall(GATED)
+        assert not memory_shortfall("Connection reset by peer while downloading")

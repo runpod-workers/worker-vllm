@@ -1,4 +1,8 @@
-"""main() relaunches once for a vanished HF revision, and only for that."""
+"""main() relaunches once for a vanished HF revision, and not for other failures.
+
+(Startup OOM gets its own single reduced-footprint relaunch; that policy lives
+in test_main_oom_retry.py.)
+"""
 
 import sys
 import types
@@ -15,7 +19,7 @@ REVISION_NOT_FOUND = (
     "huggingface_hub.errors.RevisionNotFoundError: 404 Client Error. Revision Not Found "
     "for url https://huggingface.co/org/model/resolve/abc123def/config.json."
 )
-TORCH_OOM = "torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 108.00 MiB."
+GATED = "huggingface_hub.errors.GatedRepoError: 401 Client Error: Cannot access gated repo"
 
 
 @pytest.fixture
@@ -81,7 +85,7 @@ class TestRevisionRelaunch:
         assert "revision" in handler.startup_error.lower()
 
     def test_other_fatal_failures_do_not_relaunch(self, harness):
-        handler = harness(TORCH_OOM)
+        handler = harness(GATED)
 
         assert handler.launches == 1
-        assert "ran out of GPU memory" in handler.startup_error
+        assert "gated or private" in handler.startup_error

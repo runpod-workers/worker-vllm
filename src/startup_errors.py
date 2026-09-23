@@ -79,6 +79,19 @@ def revision_not_found_message(named: str, revision: str) -> str:
     )
 
 
+def memory_shortfall(output: str) -> bool:
+    """True when startup died for lack of GPU memory in any of its three forms.
+
+    Split out from classify() because main.py treats this like the vanished
+    revision: one relaunch with a smaller memory footprint can genuinely
+    succeed (CUDA graph memory is reserved up front since v0.29 and the
+    batched-tokens default doubled in v0.28, so a boot can OOM where a more
+    conservative setup fits), so the worker retries once before answering
+    jobs with the error.
+    """
+    return bool(_OOM.search(output) or _NO_KV_MEMORY.search(output) or _KV_TOO_SMALL.search(output))
+
+
 def revision_not_found(output: str) -> bool:
     """True when the failure is a Hugging Face revision that no longer exists.
 
@@ -90,8 +103,12 @@ def revision_not_found(output: str) -> bool:
     return bool(_REVISION_NOT_FOUND.search(output))
 
 
-def classify(output: str, model: Optional[str] = None) -> Optional[str]:
-    """One actionable message for a known fatal failure, or None to let it retry."""
+def classify(output: str, model: Optional[str] = None, oom_retried: bool = False) -> Optional[str]:
+    """One actionable message for a known fatal failure, or None to let it retry.
+
+    ``oom_retried`` mirrors the revision case: set it when main.py already ran
+    its one reduced-footprint relaunch, so the wording reflects what was tried.
+    """
     named = model or "The model"
 
     # Memory problems first: an OOM traceback is often surrounded by secondary
@@ -105,6 +122,21 @@ def classify(output: str, model: Optional[str] = None) -> Optional[str]:
             if estimated
             else ""
         )
+        if oom_retried:
+            # By the time classify sees this output, main.py's reduced-footprint
+            # relaunch has already run, so the advice skips knobs that were
+            # already applied and names the fixes that actually remain.
+            return (
+                f"{named} ran out of GPU memory during startup.{card}{hint} "
+                f"The worker already retried once with a smaller footprint "
+                f"(ENFORCE_EAGER=true and MAX_NUM_BATCHED_TOKENS reduced to 8192 "
+                f"where it was higher or unset) and it still does not fit. What "
+                f"remains: a smaller or quantized checkpoint, a larger GPU (or "
+                f"more GPUs with TENSOR_PARALLEL_SIZE), a lower MAX_MODEL_LEN, or, "
+                f"if KV_CACHE_DTYPE=fp8 is set on an Ampere/Ada GPU, "
+                f"KV_CACHE_DTYPE=auto (fp8 KV forces the FlashInfer backend there, "
+                f"which needs extra workspace memory)."
+            )
         return (
             f"{named} ran out of GPU memory during startup.{card}{hint} "
             f"Lower MAX_MODEL_LEN or MAX_NUM_SEQS, set ENFORCE_EAGER=true to skip "
