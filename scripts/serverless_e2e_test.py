@@ -36,6 +36,12 @@ DEFAULT_GPU_TYPE_IDS = [
 
 TERMINAL_STATUSES = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
 
+# How long a worker is allowed to take to initialize (model download + vLLM
+# startup) before the platform gives up. The first test's wait deadline must
+# cover this window on top of the per-test timeout, so the cold-start buffer
+# defaults to the full init timeout.
+RUNPOD_INIT_TIMEOUT_SECONDS = 1600
+
 
 def log(msg: str) -> None:
     print(f"[serverless_e2e_test] {msg}", flush=True)
@@ -266,7 +272,14 @@ def main() -> int:
     parser.add_argument("--dockerhub-repo", default=os.environ.get("DOCKERHUB_REPO", "runpod"))
     parser.add_argument("--dockerhub-img", default=os.environ.get("DOCKERHUB_IMG", "worker-v1-vllm"))
     parser.add_argument("--idle-timeout", type=int, default=60)
-    parser.add_argument("--cold-start-buffer-seconds", type=int, default=600)
+    parser.add_argument(
+        "--cold-start-buffer-seconds",
+        type=int,
+        default=RUNPOD_INIT_TIMEOUT_SECONDS,
+        help="Extra seconds added to each test's timeout to absorb the worker's "
+        "cold-start init. Defaults to the full RUNPOD_INIT_TIMEOUT window so the "
+        "first test cannot give up before the platform does.",
+    )
     args = parser.parse_args()
 
     api_key = os.environ.get("RUNPOD_API_KEY")
@@ -285,7 +298,7 @@ def main() -> int:
 
     hub_defaults = load_hub_defaults(args.hub_json)
     model_env = load_model_env(args.config)
-    env = {**hub_defaults["env"], **model_env, "RUNPOD_INIT_TIMEOUT": "1600"}
+    env = {**hub_defaults["env"], **model_env, "RUNPOD_INIT_TIMEOUT": str(RUNPOD_INIT_TIMEOUT_SECONDS)}
     hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
     if hf_token:
         env["HF_TOKEN"] = hf_token
