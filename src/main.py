@@ -13,11 +13,14 @@ of at the end of the download.
 If vLLM dies during startup for a reason a restart cannot fix (CUDA OOM, a
 MAX_MODEL_LEN the GPU cannot hold, a bad flag, a gated model), the worker stays
 up and answers every job with the cause instead of crash-looping; see
-startup_errors.py. One exception is retried in-place first: a Hugging Face
-revision that no longer exists (vLLM pins refs to commit hashes since v0.28, so
-a force-pushed repo invalidates the pin) gets a single relaunch against the
-repo's current state before the error is declared fatal. Unrecognised failures
-still exit non-zero so the platform retries them.
+startup_errors.py. Two startup failures get a single relaunch first, because
+retrying them can genuinely succeed: a Hugging Face revision that no longer
+exists (vLLM pins refs to commit hashes since v0.28, so a force-pushed repo
+invalidates the pin) is retried against the repo's current state, and a
+startup OOM is retried with a smaller memory footprint (CUDA graphs disabled
+and a reduced MAX_NUM_BATCHED_TOKENS — the two settings whose defaults grew at
+init time in recent vLLM releases). Unrecognised failures still exit non-zero
+so the platform retries them.
 """
 
 import collections
@@ -34,7 +37,7 @@ import urllib.request
 
 import model_preflight
 import startup_errors
-from args_builder import build_vllm_args
+from args_builder import TRUE_VALUES, build_vllm_args
 from download_model import LOCAL_MODEL_ARGS_PATH
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -172,6 +175,49 @@ def drop_pinned_revisions() -> None:
             )
 
 
+OOM_TOKEN_BUDGET = "8192"  # vLLM doubled the max-num-batched-tokens default in v0.28
+
+
+def apply_oom_recovery() -> bool:
+    """Relax memory-hungry settings for a single relaunch after a startup OOM.
+
+    Returns False when there is nothing left to relax (CUDA graphs are already
+    off and the batched-token budget is already small), which main.py reads as
+    "another attempt with the same footprint would OOM the same way".
+    """
+    relaxed = False
+    eager = os.getenv("ENFORCE_EAGER", "").strip().lower()
+    if eager not in TRUE_VALUES:
+        os.environ["ENFORCE_EAGER"] = "true"
+        if eager:
+            logging.warning(
+                "Overriding ENFORCE_EAGER=%s for the retry: graphs are how the "
+                "boot OOM'd, so dropping them.",
+                eager,
+            )
+        else:
+            logging.warning(
+                "Disabling CUDA graphs for the retry (ENFORCE_EAGER=true): their "
+                "memory has been reserved up front since v0.29, and the boot OOM'd."
+            )
+        relaxed = True
+    raw_budget = os.getenv("MAX_NUM_BATCHED_TOKENS", "").strip()
+    shrink = not raw_budget or raw_budget == "0"
+    if not shrink:
+        try:
+            shrink = int(raw_budget) > int(OOM_TOKEN_BUDGET)
+        except ValueError:
+            pass  # unparsable: it is the operator's value, keep it
+    if shrink:
+        os.environ["MAX_NUM_BATCHED_TOKENS"] = OOM_TOKEN_BUDGET
+        logging.warning(
+            "Reducing the peak-activation budget for the retry (MAX_NUM_BATCHED_TOKENS=%s).",
+            OOM_TOKEN_BUDGET,
+        )
+        relaxed = True
+    return relaxed
+
+
 def main() -> None:
     global vllm_process
 
@@ -193,15 +239,15 @@ def main() -> None:
             "Model pre-flight failed; answering jobs with the cause instead of starting vLLM: %s",
             startup_error,
         )
-    # At most two launch attempts: the second only for a vanished Hugging Face
-    # revision, the one startup failure where retrying can genuinely succeed
-    # because vLLM re-resolves the revision on every launch. (The pre-flight
-    # catches a *configured* revision that never existed; this catches one that
-    # existed at pre-flight time and was gone by load time, or a pin vLLM
-    # resolved itself.)
-    attempts_left = 2
+    # At most three launches: each of the two recoverable startup failures gets
+    # one relaunch — a vanished Hugging Face revision (vLLM re-resolves the pin
+    # on every launch; the pre-flight catches a *configured* revision that never
+    # existed, this catches one gone by load time or resolved by vLLM itself)
+    # and a startup OOM (a smaller footprint can fit where the defaults did not).
+    can_retry_revision = True
+    can_retry_oom = True
+    oom_retried = False
     while startup_error is None:
-        attempts_left -= 1
         vllm_process = start_vllm()
         try:
             wait_for_vllm(vllm_process)
@@ -210,7 +256,8 @@ def main() -> None:
             logging.error("%s", e)
             stop_vllm(vllm_process)
             output = "".join(recent_output)
-            if attempts_left and startup_errors.revision_not_found(output):
+            if can_retry_revision and startup_errors.revision_not_found(output):
+                can_retry_revision = False
                 logging.warning(
                     "vLLM could not fetch the pinned Hugging Face revision "
                     "(vLLM pins refs to commit hashes; a force-pushed repo "
@@ -220,7 +267,22 @@ def main() -> None:
                 drop_pinned_revisions()
                 recent_output.clear()
                 continue
-            startup_error = startup_errors.classify(output, model=os.getenv("MODEL_NAME"))
+            if (
+                can_retry_oom
+                and startup_errors.memory_shortfall(output)
+                and apply_oom_recovery()
+            ):
+                can_retry_oom = False
+                oom_retried = True
+                logging.warning(
+                    "vLLM ran out of GPU memory during startup. Relaunching once "
+                    "with a smaller memory footprint."
+                )
+                recent_output.clear()
+                continue
+            startup_error = startup_errors.classify(
+                output, model=os.getenv("MODEL_NAME"), oom_retried=oom_retried
+            )
             if startup_error is None:
                 # Nothing recognisable, so let the platform restart us: a failed
                 # download or a bad host is worth another attempt.
