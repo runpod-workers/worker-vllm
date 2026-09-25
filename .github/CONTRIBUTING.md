@@ -75,5 +75,9 @@ See [README.md](../README.md) for full list of supported environment variables.
 ## 🔧 CI/CD Workflows
 
 - **Dev builds**: All pull requests → `dev-refs-pull-<PR#>-merge` images
+- **Test builds**: Push to main → `test-<sha>`; PR smoke test → `test-<model>-<run_id>`
 - **Release builds**: Git tags → versioned images + GitHub releases
 - **Manual triggers**: Available in GitHub Actions for emergency releases
+- **Tag pruning**: Weekly `Prune Docker Tags` workflow deletes `test-*` / `dev-*`
+  tags older than 14 days (releases and `latest` are never touched). Run it
+  manually with the `dry_run` input to preview.
