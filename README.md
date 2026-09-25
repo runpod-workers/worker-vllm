@@ -404,7 +404,7 @@ print(list_of_models)
 
 **Path:** `/openai/v1/responses` (full URL: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1/responses`)
 
-Supports the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) request shape. Like other `/openai/` routes, this is served directly—use the `/openai/` prefix rather than the RunPod native job queue for these calls.
+Supports the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) request shape. Like other `/openai/` routes, this is served directly—use the `/openai/` prefix rather than the Runpod native job queue for these calls.
 
 ```json
 {
@@ -429,7 +429,7 @@ curl https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1/responses \
 
 **Path:** `/openai/v1/messages` (full URL: `https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1/messages`)
 
-Supports the [Anthropic Messages API](https://docs.anthropic.com/en/api/messages) format. Served directly, bypassing the RunPod queue.
+Supports the [Anthropic Messages API](https://docs.anthropic.com/en/api/messages) format. Served directly, bypassing the Runpod queue.
 
 ```json
 {
