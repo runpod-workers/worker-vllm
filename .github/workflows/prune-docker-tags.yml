@@ -1,0 +1,54 @@
+name: Prune Docker Tags
+
+# CI pushes a unique image tag per run (`test-<sha>` on main, `test-<model>-<run_id>`
+# per PR smoke test) plus a `dev-<branch>` tag per branch. Nothing deletes them, so
+# the Docker Hub tag list grows without bound. This weekly sweep removes the stale
+# ones; releases (`v1.2.3` / `1.2.3`) and `latest` never match a prefix and are
+# protected by construction.
+on:
+  schedule:
+    # Mondays 04:17 UTC — off the :00 mark to avoid the scheduler's top-of-hour rush.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      min_age_days:
+        description: "Delete ephemeral tags not updated in this many days"
+        required: false
+        default: "14"
+        type: string
+      dry_run:
+        description: "List what would be deleted without deleting anything"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Prune stale ephemeral tags
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'runpod' }}
+          DOCKERHUB_IMG: ${{ vars.DOCKERHUB_IMG || 'worker-v1-vllm' }}
+          MIN_AGE_DAYS: ${{ inputs.min_age_days || '14' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          args=(--repo "${DOCKERHUB_REPO}/${DOCKERHUB_IMG}" --min-age-days "${MIN_AGE_DAYS}")
+          if [[ "${DRY_RUN}" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+          python scripts/prune_docker_tags.py "${args[@]}"

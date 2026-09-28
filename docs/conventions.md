@@ -165,6 +165,12 @@ workers at container start.
 - **CI/CD**: non-main branches → `runpod/worker-v1-vllm:dev-<branch-name>`;
   version tags → `runpod/worker-v1-vllm:<version>`. vLLM version bumps are
   `VLLM_VERSION` changes; CI syncs the README version line from the Dockerfile.
+- **Ephemeral CI tags**: `test-<sha>` (push to main) and
+  `test-<model_slug>-<run_id>` (PR smoke test) are unique per run, so they pile
+  up in Docker Hub. `scripts/prune_docker_tags.py` deletes `test-*` / `dev-*`
+  tags older than `--min-age-days` (default 14); releases and `latest` match no
+  prefix and are never candidates. The weekly `prune-docker-tags.yml`
+  workflow runs it (also manually, with a `dry_run` input).
 
 ## Release & Versioning Strategy
 
