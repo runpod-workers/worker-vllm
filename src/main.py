@@ -37,7 +37,7 @@ import urllib.request
 
 import model_preflight
 import startup_errors
-from args_builder import TRUE_VALUES, build_vllm_args
+from args_builder import TRUE_VALUES, build_vllm_args, redact_argv
 from download_model import LOCAL_MODEL_ARGS_PATH
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -94,7 +94,7 @@ def start_vllm() -> subprocess.Popen:
     argv = ["vllm", "serve", "--host", VLLM_HOST, "--port", VLLM_PORT]
     argv += build_vllm_args()
 
-    logging.info("Starting vLLM: %s", " ".join(argv))
+    logging.info("Starting vLLM: %s", " ".join(redact_argv(argv)))
     # vLLM's stdout+stderr flow through a pipe so we can both forward them to the
     # worker logs and keep the tail to classify a startup failure. Unbuffered so
     # the child's log lines arrive as they are written, not when its buffer fills.

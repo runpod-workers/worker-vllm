@@ -68,7 +68,7 @@ These are consumed by the wrapper itself, not passed to vLLM:
 | Variable              | Default | Description                                                            |
 | --------------------- | ------- | ---------------------------------------------------------------------- |
 | `MODEL_NAME`          | —       | Required. HF repo id or local path of the model.                        |
-| `HF_TOKEN`            | —       | Hugging Face token for gated/private models.                            |
+| `HF_TOKEN`            | —       | Hugging Face token for gated/private models. Passed to vLLM via the environment, never as `--hf-token`. |
 | `BASE_PATH`           | `/runpod-volume` | Root for the HF cache (persists on a network volume).          |
 | `MAX_CONCURRENCY`     | `30`    | Max concurrent jobs per worker (RunPod concurrency modifier). vLLM queues internally beyond this. |
 | `VLLM_PORT`           | `8000`  | Loopback port the internal `vllm serve` binds to.                       |
