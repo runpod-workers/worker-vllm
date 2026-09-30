@@ -55,8 +55,17 @@ ENV_ALIASES = {
 # --host/--port are pinned by main.py, --config comes from the VLLM_CONFIG_FILE
 # alias, --model has the MODEL_NAME alias. --api-key stays reserved because the
 # worker intentionally does not support it: the internal server binds to
-# loopback only and RunPod authenticates callers at the platform.
-RESERVED_ENV_VARS = frozenset({"HOST", "PORT", "API_KEY", "MODEL", "CONFIG", "HELP"})
+# loopback only and RunPod authenticates callers at the platform. HF_TOKEN is
+# reserved so the token never lands on the command line (where `ps` and the
+# launch log would show it): vLLM's --hf-token defaults to huggingface_hub's
+# own lookup, which reads HF_TOKEN from the environment the child inherits.
+RESERVED_ENV_VARS = frozenset({"HOST", "PORT", "API_KEY", "MODEL", "CONFIG", "HELP", "HF_TOKEN"})
+
+# A flag whose last dash-separated word is one of these carries a credential
+# (--hf-token, --api-key). Matching the last word, not a substring, keeps
+# --tokenizer, --max-num-batched-tokens and --ssl-keyfile (a path) readable.
+SECRET_FLAG_WORDS = frozenset({"token", "key", "secret", "password"})
+REDACTED = "***"
 
 # Flags that take a value. vLLM parses int/float/JSON values itself.
 VALUE_FLAGS = frozenset({
@@ -341,3 +350,32 @@ def build_vllm_args(env: Optional[Mapping[str, str]] = None) -> list[str]:
     extra = env.get("VLLM_EXTRA_ARGS", "")
     argv.extend(shlex.split(extra))
     return argv
+
+
+def is_secret_flag(flag: str) -> bool:
+    return flag.startswith("--") and flag.lstrip("-").rsplit("-", 1)[-1].lower() in SECRET_FLAG_WORDS
+
+
+def redact_argv(argv: list[str]) -> list[str]:
+    """Copy of argv with credential values masked, for logging only.
+
+    Handles both `--hf-token VALUE` and `--hf-token=VALUE`; the second form can
+    still arrive through VLLM_EXTRA_ARGS.
+    """
+    redacted: list[str] = []
+    mask_next = False
+    for arg in argv:
+        if mask_next:
+            redacted.append(REDACTED)
+            mask_next = False
+            continue
+        flag, sep, _ = arg.partition("=")
+        if is_secret_flag(flag):
+            if sep:
+                redacted.append(f"{flag}={REDACTED}")
+            else:
+                redacted.append(arg)
+                mask_next = True
+            continue
+        redacted.append(arg)
+    return redacted

@@ -221,6 +221,9 @@ workers at container start.
 ## Security & Best Practices
 
 - **Build secrets**: `HF_TOKEN` via Docker secrets; never baked into image layers.
+- **Runtime secrets**: `HF_TOKEN` reaches `vllm serve` through the inherited environment, not
+  argv, so it stays out of `ps` output. The `Starting vLLM:` log line masks the value of any
+  flag whose last word is `token`/`key`/`secret`/`password` (`args_builder.redact_argv`).
 - **Authentication**: handled by RunPod at the platform level (endpoint API key).
   The worker intentionally does not wire `VLLM_API_KEY`/`--api-key`; setting it has
   no effect. The internal vLLM server binds to loopback only and is never
