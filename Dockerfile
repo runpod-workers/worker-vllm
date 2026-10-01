@@ -43,6 +43,13 @@ ENV MODEL_NAME=$MODEL_NAME \
     HF_HOME="${BASE_PATH}/huggingface-cache/hub" \
     HUGGINGFACE_HUB_CACHE="${BASE_PATH}/huggingface-cache/hub" \
     HF_DATASETS_CACHE="${BASE_PATH}/huggingface-cache/datasets" \
+    # Same for vLLM's torch.compile cache: otherwise every cold start recompiles
+    # (~30 s for Qwen3-8B on an RTX 4090). With this image's torch (AOT + mega
+    # artifact on by default) the cache key includes the GPU name and the
+    # torch/Triton/CUDA builds, so GPU types sharing a volume get separate
+    # entries. Without a volume BASE_PATH is a plain container directory, as
+    # before.
+    VLLM_CACHE_ROOT="${BASE_PATH}/vllm-cache" \
     HF_HUB_ENABLE_HF_TRANSFER=0 \
     TOKENIZERS_PARALLELISM=false
 

@@ -80,6 +80,9 @@ VLLM_EXTRA_ARGS  >  env aliases (MODEL_NAME, ...)  >  env flag scan
 - **Configuration**: Entirely via environment variables
 - **Model Loading**: Downloaded at container start by `vllm serve` into the HF cache on
   the network volume (`BASE_PATH`, default `/runpod-volume`)
+- **Compile cache**: vLLM's torch.compile cache (`VLLM_CACHE_ROOT`) sits on the same
+  volume at `$BASE_PATH/vllm-cache`, so only the first start for each model config, GPU
+  type and image version compiles
 
 ### Option 2: Baked Model Images
 
@@ -202,6 +205,8 @@ workers at container start.
 - `tests/test_startup_errors.py` pins which vLLM failure messages are answered and
   which are left for a restart; `tests/test_handler.py` checks the `startup_error`
   short-circuit in the handler.
+- `tests/test_dockerfile_env.py` keeps the HF cache and vLLM's compile cache under
+  `BASE_PATH` in the image env, so both persist on a network volume.
 
 ### 2. **Local Smoke Testing**
 

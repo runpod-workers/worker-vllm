@@ -136,7 +136,7 @@ To build an image with the model baked in, you must specify the following docker
 - **Optional**
   - `MODEL_REVISION`: Model revision to load (default: `main`).
   - `VLLM_VERSION`: Tag of the official [`vllm/vllm-openai`](https://hub.docker.com/r/vllm/vllm-openai) base image to use (default: `v0.23.0`).
-  - `BASE_PATH`: Storage directory where huggingface cache and model will be located. (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
+  - `BASE_PATH`: Storage directory where huggingface cache and model will be located, along with vLLM's torch.compile cache (`$BASE_PATH/vllm-cache`). (default: `/runpod-volume`, which will utilize network storage if you attach it or create a local directory within the image if you don't. If your intention is to bake the model into the image, you should set this to something like `/models` to make sure there are no issues if you were to accidentally attach network storage.)
   - `QUANTIZATION`
   - `TOKENIZER_NAME`: Tokenizer repository if you would like to use a different tokenizer than the one that comes with the model. (default: `None`, which uses the model's tokenizer)
   - `TOKENIZER_REVISION`: Tokenizer revision to load (default: `main`).
