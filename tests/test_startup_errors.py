@@ -7,6 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+import startup_errors  # noqa: E402
 from startup_errors import classify  # noqa: E402
 
 TORCH_OOM = """
@@ -104,6 +105,17 @@ class TestModelAccess:
 
 def test_out_of_disk_points_at_container_disk():
     assert "container disk" in classify(NO_SPACE)
+
+
+def test_out_of_disk_names_the_volume_caches():
+    # With a network volume, the HF cache and vLLM's compile cache live on it.
+    assert "vllm-cache" in classify(NO_SPACE)
+    assert "network volume" in classify(NO_SPACE)
+
+
+@pytest.mark.parametrize("output", [NO_SPACE, "OSError: [Errno 122] Disk quota exceeded"])
+def test_out_of_disk_predicate_covers_quota(output):
+    assert startup_errors.out_of_disk(output)
 
 
 def test_falls_back_to_a_generic_subject():

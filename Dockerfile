@@ -48,7 +48,8 @@ ENV MODEL_NAME=$MODEL_NAME \
     # artifact on by default) the cache key includes the GPU name and the
     # torch/Triton/CUDA builds, so GPU types sharing a volume get separate
     # entries. Without a volume BASE_PATH is a plain container directory, as
-    # before.
+    # before. src/compile_cache.py falls back to vLLM's default root if the
+    # volume is full or read-only.
     VLLM_CACHE_ROOT="${BASE_PATH}/vllm-cache" \
     HF_HUB_ENABLE_HF_TRANSFER=0 \
     TOKENIZERS_PARALLELISM=false

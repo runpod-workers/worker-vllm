@@ -81,10 +81,14 @@ vLLM-native env vars (e.g. `VLLM_USE_DEEP_GEMM`, `PYTORCH_ALLOC_CONF`) are **not
 converted to flags — they reach the `vllm serve` subprocess directly through the
 environment, exactly as upstream supports them. This worker's Dockerfile sets one
 of them: `VLLM_CACHE_ROOT=$BASE_PATH/vllm-cache`, so the torch.compile cache survives
-cold starts on a network volume. vLLM never prunes the cache: each vLLM version, model
-config and GPU type adds an entry. `$BASE_PATH/vllm-cache` is safe to delete whenever
-no worker is starting (e.g. with the endpoint scaled to zero); vLLM rebuilds it. Set
-`VLLM_CACHE_ROOT=/root/.cache/vllm` to keep the cache in the container.
+cold starts on a network volume. If that folder isn't writable or the volume has less
+than 1 GiB free, the worker compiles into vLLM's default root (in the container) for
+that start instead, and if the volume still runs out during the start, it relaunches
+once that way (see `src/compile_cache.py` and `src/main.py`). vLLM never prunes the
+cache: each vLLM version, model config and GPU type adds an entry.
+`$BASE_PATH/vllm-cache` is safe to delete whenever no worker is starting (e.g. with the
+endpoint scaled to zero); vLLM rebuilds it. Set `VLLM_CACHE_ROOT=/root/.cache/vllm` to
+keep the cache in the container.
 
 ## Speculative decoding
 
