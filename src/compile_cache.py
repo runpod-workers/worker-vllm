@@ -65,6 +65,13 @@ def fall_back(reason: str, env=os.environ, out_of_space: bool = False) -> bool:
     if out_of_space:
         try:
             if _device(root) == _device(fallback):
+                logging.warning(
+                    "VLLM_CACHE_ROOT=%s is %s, but the fallback %s is on the same "
+                    "disk; not moving the compile cache.",
+                    root,
+                    reason,
+                    fallback,
+                )
                 return False
         except OSError:
             pass

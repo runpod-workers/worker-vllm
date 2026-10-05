@@ -7,6 +7,7 @@ it, or with one relaunch when the volume fills during the start.
 """
 
 import errno
+import logging
 import shutil
 import sys
 import types
@@ -122,13 +123,16 @@ def test_nearly_full_volume_falls_back(paths, monkeypatch):
     assert env["VLLM_CACHE_ROOT"] == paths.fallback
 
 
-def test_nearly_full_without_a_volume_changes_nothing(tmp_path, monkeypatch):
+def test_nearly_full_without_a_volume_changes_nothing_but_warns(tmp_path, monkeypatch, caplog):
     # Root and fallback on the same disk: moving the cache can't free space.
     monkeypatch.setattr(shutil, "disk_usage", lambda p: DiskUsage(20 << 30, 0, 300 << 20))
     env = {"VLLM_CACHE_ROOT": str(tmp_path / "vllm-cache"), "XDG_CACHE_HOME": str(tmp_path / "xdg")}
 
-    assert compile_cache.ensure_usable(env) is None
+    with caplog.at_level(logging.WARNING):
+        assert compile_cache.ensure_usable(env) is None
     assert env["VLLM_CACHE_ROOT"] == str(tmp_path / "vllm-cache")
+    assert "nearly full (300 MiB free), but the fallback" in caplog.text
+    assert "same disk" in caplog.text
 
 
 def test_opt_out_is_not_probed(tmp_path):
