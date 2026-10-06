@@ -710,7 +710,7 @@
         "input": {
           "name": "Base Path",
           "type": "string",
-          "description": "Storage directory for Huggingface cache and model",
+          "description": "Set when the image is built; changing it here moves neither the Hugging Face cache nor the vLLM compile cache (set HF_HUB_CACHE / VLLM_CACHE_ROOT instead)",
           "default": "/runpod-volume",
           "advanced": true
         }

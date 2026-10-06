@@ -69,7 +69,7 @@ These are consumed by the wrapper itself, not passed to vLLM:
 | --------------------- | ------- | ---------------------------------------------------------------------- |
 | `MODEL_NAME`          | —       | Required. HF repo id or local path of the model.                        |
 | `HF_TOKEN`            | —       | Hugging Face token for gated/private models. Passed to vLLM via the environment, never as `--hf-token`. |
-| `BASE_PATH`           | `/runpod-volume` | Root for the HF cache (persists on a network volume).          |
+| `BASE_PATH`           | `/runpod-volume` | Build arg, not read at runtime: the image derives `HF_HOME` and `VLLM_CACHE_ROOT` (`$BASE_PATH/vllm-cache`) from it at build time, so both caches persist on a network volume. Setting it on an endpoint moves neither; set `HF_HUB_CACHE` (model downloads) and `VLLM_CACHE_ROOT` (compile cache) directly. |
 | `MAX_CONCURRENCY`     | `30`    | Max concurrent jobs per worker (RunPod concurrency modifier). vLLM queues internally beyond this. |
 | `VLLM_PORT`           | `8000`  | Loopback port the internal `vllm serve` binds to.                       |
 | `VLLM_STARTUP_TIMEOUT`| `1200`  | Seconds to wait for vLLM `/health` before failing the worker.           |
@@ -79,7 +79,16 @@ These are consumed by the wrapper itself, not passed to vLLM:
 
 vLLM-native env vars (e.g. `VLLM_USE_DEEP_GEMM`, `PYTORCH_ALLOC_CONF`) are **not**
 converted to flags — they reach the `vllm serve` subprocess directly through the
-environment, exactly as upstream supports them.
+environment, exactly as upstream supports them. This worker's Dockerfile sets one
+of them: `VLLM_CACHE_ROOT=$BASE_PATH/vllm-cache`, so the torch.compile cache survives
+cold starts on a network volume. If that folder isn't writable or the volume has less
+than 1 GiB free, the worker compiles into vLLM's default root (in the container) for
+that start instead, and if the volume still runs out during the start, it relaunches
+once that way (see `src/compile_cache.py` and `src/main.py`). vLLM never prunes the
+cache: each vLLM version, model config and GPU type adds an entry.
+`$BASE_PATH/vllm-cache` is safe to delete whenever no worker is starting (e.g. with the
+endpoint scaled to zero); vLLM rebuilds it. Set `VLLM_CACHE_ROOT=/root/.cache/vllm` to
+keep the cache in the container.
 
 ## Speculative decoding
 
@@ -113,7 +122,7 @@ LORA_MODULES='[{"name":"my-adapter","path":"org/adapter-repo"}]'
 | `TOKENIZER_NAME`    | same as model    | Optional separate tokenizer repo.                               |
 | `TOKENIZER_REVISION`| model revision   | Tokenizer revision.                                             |
 | `QUANTIZATION`      | —                | Recorded for baked models.                                      |
-| `BASE_PATH`         | `/runpod-volume` | HF cache location baked into the image env.                     |
+| `BASE_PATH`         | `/runpod-volume` | HF cache and vLLM compile cache (`VLLM_CACHE_ROOT`) location baked into the image env. |
 
 The build secret `HF_TOKEN` (`--secret id=HF_TOKEN`) is used during the bake step for
 gated models and never lands in the image.

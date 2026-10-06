@@ -49,7 +49,7 @@ _NOT_FOUND = re.compile(r"RepositoryNotFoundError|404 Client Error", re.I)
 _UNSUPPORTED_ARCH = re.compile(r"Model architectures \[.*?\] (?:are not supported|failed to be inspected)", re.I)
 
 # --- Disk -------------------------------------------------------------------
-_NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28", re.I)
+_NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28|Disk quota exceeded|EDQUOT|errno 122", re.I)
 
 
 # The model-access messages are shared with model_preflight.py, which detects
@@ -90,6 +90,17 @@ def memory_shortfall(output: str) -> bool:
     jobs with the error.
     """
     return bool(_OOM.search(output) or _NO_KV_MEMORY.search(output) or _KV_TOO_SMALL.search(output))
+
+
+def out_of_disk(output: str) -> bool:
+    """True when startup died for lack of disk space (or a full disk quota).
+
+    Split out from classify() because main.py relaunches once with vLLM's
+    compile cache moved off the network volume: the pre-launch check in
+    compile_cache.py runs before the weights download onto the same volume, so
+    the volume can still fill during the start.
+    """
+    return bool(_NO_SPACE.search(output))
 
 
 def revision_not_found(output: str) -> bool:
@@ -196,9 +207,13 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
 
     if _NO_SPACE.search(output):
         return (
-            f"{named} ran out of disk while downloading. Increase the endpoint's "
-            f"container disk to comfortably exceed the size of the repository, or "
-            f"attach a network volume so the weights are cached there instead."
+            f"{named} ran out of disk during startup. With a network volume "
+            f"attached, the model download (huggingface-cache) and vLLM's compile "
+            f"cache (vllm-cache) are stored on it: free space there (vllm-cache is "
+            f"safe to delete while no worker is starting) or use a larger volume. "
+            f"Without one, increase the endpoint's container disk to comfortably "
+            f"exceed the size of the repository, or attach a network volume so the "
+            f"weights are cached there instead."
         )
 
     return None

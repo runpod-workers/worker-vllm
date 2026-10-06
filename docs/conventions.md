@@ -25,6 +25,8 @@ loopback HTTP.
 Container start:
   ENTRYPOINT python3 /src/main.py
     ├─ (optional) reads /local_model_args.json for baked-in models
+    ├─ compile_cache.ensure_usable()  → keep VLLM_CACHE_ROOT on the volume only
+    │   if it is writable with room (else vLLM's default root)
     ├─ args_builder.build_vllm_args()  → env vars → CLI flags
     ├─ spawns `vllm serve --host 127.0.0.1 --port $VLLM_PORT ...`
     ├─ polls GET /health until ready (exit non-zero if vLLM dies or times out,
@@ -47,6 +49,10 @@ boundary or the CLI; that is what makes vLLM upgrades a one-line `VLLM_VERSION` 
 - `src/args_builder.py`: pure-Python env var → CLI flag translation (allowlist of
   `vllm serve` flags + legacy aliases + `VLLM_EXTRA_ARGS` passthrough). No third-party
   imports, so it is fully unit-testable on CPU runners.
+- `src/compile_cache.py`: checks before launch that `VLLM_CACHE_ROOT` (on the network
+  volume) is writable with room to spare, else falls back to vLLM's default root (in
+  the container) for that start; `main.py` also relaunches once that way if the
+  volume runs out of disk mid-start. Pure Python.
 - `src/startup_errors.py`: regexes over the tail of vLLM's output that turn a known
   fatal startup failure (CUDA OOM, KV cache too small for `MAX_MODEL_LEN`, rejected
   flag, gated/missing model, out of disk) into one actionable sentence. Pure Python.
@@ -80,6 +86,10 @@ VLLM_EXTRA_ARGS  >  env aliases (MODEL_NAME, ...)  >  env flag scan
 - **Configuration**: Entirely via environment variables
 - **Model Loading**: Downloaded at container start by `vllm serve` into the HF cache on
   the network volume (`BASE_PATH`, default `/runpod-volume`)
+- **Compile cache**: vLLM's torch.compile cache (`VLLM_CACHE_ROOT`) sits on the same
+  volume at `$BASE_PATH/vllm-cache`, so only the first start for each model config, GPU
+  type and image version compiles; `src/compile_cache.py` falls back to the container
+  when the volume is full or read-only
 
 ### Option 2: Baked Model Images
 
@@ -99,6 +109,7 @@ src/
 ├── main.py            # Entrypoint: vLLM subprocess + RunPod loop lifecycle
 ├── args_builder.py    # env vars → `vllm serve` CLI flags (pure Python)
 ├── startup_errors.py  # fatal startup failure → actionable message (pure Python)
+├── compile_cache.py   # full/read-only volume → compile cache in the container
 ├── handler.py         # RunPod handler: aiohttp proxy to the vLLM server
 └── download_model.py  # Build-time model download (Option 2)
 ```
@@ -202,6 +213,9 @@ workers at container start.
 - `tests/test_startup_errors.py` pins which vLLM failure messages are answered and
   which are left for a restart; `tests/test_handler.py` checks the `startup_error`
   short-circuit in the handler.
+- `tests/test_dockerfile_env.py` keeps the HF cache and vLLM's compile cache under
+  `BASE_PATH` in the image env, so both persist on a network volume;
+  `tests/test_compile_cache.py` checks the full/read-only volume fallback.
 
 ### 2. **Local Smoke Testing**
 

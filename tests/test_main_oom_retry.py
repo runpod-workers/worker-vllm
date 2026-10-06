@@ -38,6 +38,8 @@ def harness(monkeypatch):
     stub, whose startup_error records what jobs would be answered with.
     """
     monkeypatch.setenv("MODEL_NAME", "org/model")
+    # main() probes VLLM_CACHE_ROOT (compile_cache.py); keep a developer's own out of it.
+    monkeypatch.delenv("VLLM_CACHE_ROOT", raising=False)
     monkeypatch.delenv("ENFORCE_EAGER", raising=False)
     monkeypatch.delenv("MAX_NUM_BATCHED_TOKENS", raising=False)
     # The merged pre-flight (model_preflight.py) would otherwise ask the real

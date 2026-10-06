@@ -13,12 +13,14 @@ of at the end of the download.
 If vLLM dies during startup for a reason a restart cannot fix (CUDA OOM, a
 MAX_MODEL_LEN the GPU cannot hold, a bad flag, a gated model), the worker stays
 up and answers every job with the cause instead of crash-looping; see
-startup_errors.py. Two startup failures get a single relaunch first, because
+startup_errors.py. Three startup failures get a single relaunch first, because
 retrying them can genuinely succeed: a Hugging Face revision that no longer
 exists (vLLM pins refs to commit hashes since v0.28, so a force-pushed repo
-invalidates the pin) is retried against the repo's current state, and a
-startup OOM is retried with a smaller memory footprint (CUDA graphs disabled
-and a reduced MAX_NUM_BATCHED_TOKENS — the two settings whose defaults grew at
+invalidates the pin) is retried against the repo's current state, running out
+of disk with vLLM's compile cache on the network volume is retried with the
+cache in the container (see compile_cache.py), and a startup OOM is retried
+with a smaller memory footprint (CUDA graphs disabled and a reduced
+MAX_NUM_BATCHED_TOKENS — the two settings whose defaults grew at
 init time in recent vLLM releases). Unrecognised failures still exit non-zero
 so the platform retries them.
 """
@@ -35,6 +37,7 @@ import time
 import urllib.error
 import urllib.request
 
+import compile_cache
 import model_preflight
 import startup_errors
 from args_builder import TRUE_VALUES, build_vllm_args, redact_argv
@@ -222,6 +225,9 @@ def main() -> None:
     global vllm_process
 
     apply_local_model_args()
+    # The compile cache lives on the network volume (Dockerfile); a full or
+    # read-only volume would fail the start, so compile in the container instead.
+    compile_cache.ensure_usable()
 
     if not (os.getenv("MODEL_NAME") or os.getenv("VLLM_CONFIG_FILE") or os.getenv("MODEL")):
         logging.warning("MODEL_NAME is not set; `vllm serve` will fail without a --model argument")
@@ -239,12 +245,16 @@ def main() -> None:
             "Model pre-flight failed; answering jobs with the cause instead of starting vLLM: %s",
             startup_error,
         )
-    # At most three launches: each of the two recoverable startup failures gets
+    # At most four launches: each of the three recoverable startup failures gets
     # one relaunch — a vanished Hugging Face revision (vLLM re-resolves the pin
     # on every launch; the pre-flight catches a *configured* revision that never
-    # existed, this catches one gone by load time or resolved by vLLM itself)
-    # and a startup OOM (a smaller footprint can fit where the defaults did not).
+    # existed, this catches one gone by load time or resolved by vLLM itself),
+    # running out of disk with the compile cache on the network volume (the
+    # volume can fill after the pre-launch check, during the weight download; a
+    # relaunch compiles into the container instead), and a startup OOM (a
+    # smaller footprint can fit where the defaults did not).
     can_retry_revision = True
+    can_retry_disk = True
     can_retry_oom = True
     oom_retried = False
     while startup_error is None:
@@ -265,6 +275,18 @@ def main() -> None:
                     "revision."
                 )
                 drop_pinned_revisions()
+                recent_output.clear()
+                continue
+            if (
+                can_retry_disk
+                and startup_errors.out_of_disk(output)
+                and compile_cache.fall_back("out of space during startup", out_of_space=True)
+            ):
+                can_retry_disk = False
+                logging.warning(
+                    "vLLM ran out of disk during startup with its compile cache on "
+                    "the network volume. Relaunching once with it in the container."
+                )
                 recent_output.clear()
                 continue
             if (
