@@ -687,6 +687,16 @@
         }
       },
       {
+        "key": "VLLM_STARTUP_TIMEOUT",
+        "input": {
+          "name": "vLLM Startup Timeout",
+          "type": "number",
+          "description": "Seconds to wait for the internal vLLM /health endpoint before failing the worker. Raise this for very large models (400GB+) where weight loading can exceed the default on contended hosts.",
+          "default": 1800,
+          "advanced": true
+        }
+      },
+      {
         "key": "ENABLE_EXPERT_PARALLEL",
         "input": {
           "name": "Enable Expert Parallel",
