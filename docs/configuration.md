@@ -72,7 +72,7 @@ These are consumed by the wrapper itself, not passed to vLLM:
 | `BASE_PATH`           | `/runpod-volume` | Build arg, not read at runtime: the image derives `HF_HOME` and `VLLM_CACHE_ROOT` (`$BASE_PATH/vllm-cache`) from it at build time, so both caches persist on a network volume. Setting it on an endpoint moves neither; set `HF_HUB_CACHE` (model downloads) and `VLLM_CACHE_ROOT` (compile cache) directly. |
 | `MAX_CONCURRENCY`     | `30`    | Max concurrent jobs per worker (RunPod concurrency modifier). vLLM queues internally beyond this. |
 | `VLLM_PORT`           | `8000`  | Loopback port the internal `vllm serve` binds to.                       |
-| `VLLM_STARTUP_TIMEOUT`| `1200`  | Seconds to wait for vLLM `/health` before failing the worker.           |
+| `VLLM_STARTUP_TIMEOUT`| `1800`  | Seconds to wait for vLLM `/health` before failing the worker.           |
 | `REQUEST_TIMEOUT`     | `3600`  | Per-request timeout to the vLLM server, in seconds.                     |
 | `VLLM_EXTRA_ARGS`     | —       | Raw extra CLI args (see above).                                         |
 | `VLLM_CONFIG_FILE`    | —       | Path to a `vllm serve` YAML config file (`--config`).                   |
