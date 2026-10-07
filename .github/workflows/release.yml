@@ -26,7 +26,7 @@ jobs:
           rm -rf /usr/share/dotnet
           rm -rf /opt/ghc
           rm -rf "/usr/local/share/boost"
-          rm -rf "$AGENT_TOOLSDIRECTORY"
+          rm -rf "$AGENT_TOOLSDIRECTORY" || true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
