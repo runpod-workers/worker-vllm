@@ -47,7 +47,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 VLLM_HOST = "127.0.0.1"
 VLLM_PORT = os.getenv("VLLM_PORT", "8000")
-STARTUP_TIMEOUT = int(os.getenv("VLLM_STARTUP_TIMEOUT", "1200"))  # seconds
+STARTUP_TIMEOUT = int(os.getenv("VLLM_STARTUP_TIMEOUT", "1800"))  # seconds
 HEALTH_POLL_INTERVAL = 2  # seconds
 # How long to wait for vLLM to exit after SIGTERM before SIGKILL.
 SHUTDOWN_GRACE = 30  # seconds
