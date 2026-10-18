@@ -29,6 +29,7 @@
     "--enable-flash-late-interaction",
     "--enable-flashinfer-autotune",
     "--enable-force-include-usage",
+    "--enable-hc-sp",
     "--enable-layerwise-nvtx-tracing",
     "--enable-log-deltas",
     "--enable-log-outputs",
@@ -51,6 +52,7 @@
     "--enable-return-routed-experts",
     "--enable-scale-out",
     "--enable-server-load-tracking",
+    "--enable-shm-tensor-arena",
     "--enable-sleep-mode",
     "--enable-ssl-refresh",
     "--enable-tokenizer-info-endpoint",
@@ -76,6 +78,7 @@
     "--scheduler-reserve-full-isl",
     "--skip-mm-profiling",
     "--skip-tokenizer-init",
+    "--sleep-mode-offload-cudagraph",
     "--specialize-active-lora",
     "--swa-bounded-replay",
     "--tokens-only",
@@ -122,6 +125,7 @@
     "--cpu-offload-gb",
     "--cpu-offload-params",
     "--cudagraph-capture-sizes",
+    "--custom-histogram-buckets",
     "--data-parallel-address",
     "--data-parallel-backend",
     "--data-parallel-rank",
@@ -161,6 +165,7 @@
     "--gdn-prefill-backend",
     "--generation-config",
     "--gpu-memory-utilization",
+    "--grpc-port",
     "--h11-max-header-count",
     "--h11-max-incomplete-event-size",
     "--hf-config-path",
@@ -317,5 +322,5 @@
     "--worker-cls",
     "--worker-extension-cls"
   ],
-  "vllm_version": "0.31.0"
+  "vllm_version": "0.32.0"
 }
