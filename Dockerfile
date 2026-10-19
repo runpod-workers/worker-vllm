@@ -67,7 +67,5 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
         python3 /src/download_model.py; \
     fi
 
-# main.py spawns `vllm serve` with args built from the environment, waits for
-# /health, then starts the RunPod serverless loop. Explicit ENTRYPOINT so the
-# base image's own entrypoint can never swallow our command.
+# Explicit ENTRYPOINT so the base image cannot swallow our command.
 ENTRYPOINT ["python3", "/src/main.py"]

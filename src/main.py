@@ -1,9 +1,9 @@
-"""Container entrypoint: spawn `vllm serve`, wait for it, start RunPod serverless.
+"""Container entrypoint: start RunPod serverless with vLLM startup as a prestart hook.
 
-The worker never imports vLLM. We build the CLI from environment variables
-(see args_builder.py), launch `vllm serve` on the loopback interface, poll
-/health until the server (and model) is ready, and only then start the RunPod
-serverless job loop so no job is pulled before the backend can serve it.
+The worker never imports vLLM. The prestart hook builds the CLI from environment
+variables (see args_builder.py), launches `vllm serve` on the loopback interface,
+and polls /health until the server (and model) is ready. Jobs stay queued until
+startup settles.
 
 Before launching vLLM, a metadata-only pre-flight (model_preflight.py) checks
 that the configured model is actually fetchable from the Hugging Face Hub, so
@@ -21,11 +21,12 @@ of disk with vLLM's compile cache on the network volume is retried with the
 cache in the container (see compile_cache.py), and a startup OOM is retried
 with a smaller memory footprint (CUDA graphs disabled and a reduced
 MAX_NUM_BATCHED_TOKENS — the two settings whose defaults grew at
-init time in recent vLLM releases). Unrecognised failures still exit non-zero
-so the platform retries them.
+init time in recent vLLM releases). Unrecognised failures are reported by the SDK
+before the worker exits non-zero, so the platform retries them.
 """
 
 import collections
+import contextvars
 import json
 import logging
 import os
@@ -53,6 +54,8 @@ HEALTH_POLL_INTERVAL = 2  # seconds
 SHUTDOWN_GRACE = 30  # seconds
 
 vllm_process: subprocess.Popen | None = None
+
+backend_settled = threading.Event()
 
 # Enough of vLLM's output to recognise why it died. The traceback that matters
 # is always the last thing it prints.
@@ -110,7 +113,10 @@ def start_vllm() -> subprocess.Popen:
         errors="replace",
         env=env,
     )
-    output_pump = threading.Thread(target=pump_output, args=(proc,), daemon=True)
+    # Carry the hook's log capture into the output thread.
+    output_pump = threading.Thread(
+        target=contextvars.copy_context().run, args=(pump_output, proc), daemon=True
+    )
     output_pump.start()
     return proc
 
@@ -221,19 +227,10 @@ def apply_oom_recovery() -> bool:
     return relaxed
 
 
-def main() -> None:
+def start_backend() -> None:
     global vllm_process
 
-    apply_local_model_args()
-    # The compile cache lives on the network volume (Dockerfile); a full or
-    # read-only volume would fail the start, so compile in the container instead.
-    compile_cache.ensure_usable()
-
-    if not (os.getenv("MODEL_NAME") or os.getenv("VLLM_CONFIG_FILE") or os.getenv("MODEL")):
-        logging.warning("MODEL_NAME is not set; `vllm serve` will fail without a --model argument")
-
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        signal.signal(sig, _forward_signal)
+    import handler as proxy_handler
 
     # Ask the HF Hub whether the model is fetchable before paying for the
     # download: a typo'd MODEL_NAME, a gated model without HF_TOKEN, or a bad
@@ -308,25 +305,45 @@ def main() -> None:
             if startup_error is None:
                 # Nothing recognisable, so let the platform restart us: a failed
                 # download or a bad host is worth another attempt.
-                sys.exit(1)
+                raise
             # A restart cannot fix this one. Exiting would crash-loop the worker,
             # paying for the download and the load on every attempt and showing the
             # user a traceback instead of a cause, so stay up and answer jobs with it.
             logging.error("vLLM cannot start on this configuration; answering jobs with the cause: %s", startup_error)
 
-    # Import here (not at module import time) so the RunPod SDK and handler
-    # start only after the backend is confirmed healthy (or confirmed dead).
+    proxy_handler.vllm_process = vllm_process
+    proxy_handler.startup_error = startup_error
+    backend_settled.set()
+
+
+def main() -> None:
+    apply_local_model_args()
+    # The compile cache lives on the network volume (Dockerfile); a full or
+    # read-only volume would fail the start, so compile in the container instead.
+    compile_cache.ensure_usable()
+
+    if not (os.getenv("MODEL_NAME") or os.getenv("VLLM_CONFIG_FILE") or os.getenv("MODEL")):
+        logging.warning("MODEL_NAME is not set; `vllm serve` will fail without a --model argument")
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, _forward_signal)
+
+    # SDK startup checks read the model environment at import time.
     import handler as proxy_handler
     import runpod
 
-    proxy_handler.vllm_process = vllm_process
-    proxy_handler.startup_error = startup_error
+    if int(os.getenv("RUNPOD_REALTIME_PORT", "0")):
+        # The SDK rejects prestart hooks in realtime mode.
+        start_backend()
+    else:
+        runpod.serverless.register_prestart_hook(start_backend)
 
     max_concurrency = int(os.getenv("MAX_CONCURRENCY", "30"))
     runpod.serverless.start(
         {
             "handler": proxy_handler.handler,
-            "concurrency_modifier": lambda _current: max_concurrency,
+            # Don't start job execution timeouts during model loading.
+            "concurrency_modifier": lambda _current: max_concurrency if backend_settled.is_set() else 0,
             "return_aggregate_stream": True,
         }
     )
