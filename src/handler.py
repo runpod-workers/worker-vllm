@@ -1,10 +1,8 @@
 """RunPod Serverless handler that proxies jobs to the local vLLM OpenAI server.
 
-`main.py` starts `vllm serve` on 127.0.0.1:VLLM_PORT and only then starts the
-RunPod serverless loop, so by the time a job arrives the vLLM HTTP server is up
-and fully backwards/forwards compatible — we never import vLLM. The one
-exception: when vLLM could not start for a reason a restart cannot fix,
-`main.py` sets `startup_error` and every job is answered with that message.
+`main.py` starts vLLM in a prestart hook before this handler runs. Permanent
+startup failures set `startup_error`, which is returned for every job. The
+worker never imports vLLM.
 
 Accepted job input shapes (all under job["input"]):
 

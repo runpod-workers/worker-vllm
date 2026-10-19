@@ -119,7 +119,10 @@ The worker recognises these and stays up instead, answering every job with the c
 }
 ```
 
-The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt.
+The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt; before exiting, the worker answers one queued job with a `prestart_failed` error that carries the end of vLLM's output, so the failure is visible without opening the logs.
+
+Startup runs in a RunPod prestart hook. Jobs stay queued while the model loads,
+so their execution timeout does not start during the cold start.
 
 ## Option 2: Build Docker Image with Model Inside
 
