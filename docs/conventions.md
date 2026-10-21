@@ -27,12 +27,16 @@ Container start:
     ├─ (optional) reads /local_model_args.json for baked-in models
     ├─ compile_cache.ensure_usable()  → keep VLLM_CACHE_ROOT on the volume only
     │   if it is writable with room (else vLLM's default root)
-    ├─ args_builder.build_vllm_args()  → env vars → CLI flags
-    ├─ spawns `vllm serve --host 127.0.0.1 --port $VLLM_PORT ...`
-    ├─ polls GET /health until ready (exit non-zero if vLLM dies or times out,
-    │   unless startup_errors.classify() recognises the failure as one a restart
-    │   cannot fix — then stay up and answer every job with the cause)
-    └─ starts runpod.serverless loop with handler.handler
+    └─ starts runpod.serverless loop with handler.handler and the prestart hook
+       start_backend() (job intake stays closed until the hook settles):
+       ├─ args_builder.build_vllm_args()  → env vars → CLI flags
+       ├─ spawns `vllm serve --host 127.0.0.1 --port $VLLM_PORT ...`
+       └─ polls GET /health until ready. If vLLM dies or times out and
+          startup_errors.classify() recognises a failure a restart cannot fix,
+          stay up and answer every job with the cause; otherwise raise, so the
+          SDK answers one job with `prestart_failed` and exits non-zero.
+          (Realtime endpoints reject prestart hooks; there start_backend() runs
+          before the loop starts.)
 
 Per job:
   RunPod job → handler.py normalize input → aiohttp → 127.0.0.1:$VLLM_PORT/<route>
@@ -44,8 +48,9 @@ boundary or the CLI; that is what makes vLLM upgrades a one-line `VLLM_VERSION` 
 
 ### 2. **Components**
 
-- `src/main.py`: container entrypoint — builds the `vllm serve` command, manages the
-  subprocess (health polling, signal forwarding), then starts the RunPod loop.
+- `src/main.py`: container entrypoint — registers vLLM startup as a RunPod prestart
+  hook (builds the `vllm serve` command, manages the subprocess: health polling,
+  signal forwarding), then starts the RunPod loop.
 - `src/args_builder.py`: pure-Python env var → CLI flag translation (allowlist of
   `vllm serve` flags + legacy aliases + `VLLM_EXTRA_ARGS` passthrough). No third-party
   imports, so it is fully unit-testable on CPU runners.

@@ -5,7 +5,6 @@ in test_main_oom_retry.py.)
 """
 
 import sys
-import types
 from pathlib import Path
 from unittest import mock
 
@@ -23,7 +22,7 @@ GATED = "huggingface_hub.errors.GatedRepoError: 401 Client Error: Cannot access 
 
 
 @pytest.fixture
-def harness(monkeypatch):
+def harness(monkeypatch, fake_sdk):
     """Run main() without vLLM, the RunPod SDK, or a GPU.
 
     Returns a driver: call it with the outputs each launch attempt should die
@@ -37,13 +36,6 @@ def harness(monkeypatch):
     # HF Hub about "org/model"; these tests are about what happens after it.
     monkeypatch.setattr(main.model_preflight, "check_model_access", lambda: None)
     monkeypatch.setattr(main, "stop_vllm", lambda proc: None)
-
-    handler_stub = types.ModuleType("handler")
-    handler_stub.handler = lambda job: None
-    runpod_stub = types.ModuleType("runpod")
-    runpod_stub.serverless = types.SimpleNamespace(start=mock.MagicMock())
-    monkeypatch.setitem(sys.modules, "handler", handler_stub)
-    monkeypatch.setitem(sys.modules, "runpod", runpod_stub)
 
     start_vllm = mock.MagicMock(return_value=mock.MagicMock())
     monkeypatch.setattr(main, "start_vllm", start_vllm)
@@ -61,8 +53,8 @@ def harness(monkeypatch):
         monkeypatch.setattr(main, "wait_for_vllm", fake_wait)
         main.recent_output.clear()
         main.main()
-        handler_stub.launches = start_vllm.call_count
-        return handler_stub
+        fake_sdk.handler.launches = start_vllm.call_count
+        return fake_sdk.handler
 
     return drive
 
