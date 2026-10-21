@@ -46,6 +46,12 @@ _BAD_ARGS = re.compile(r"(?:vllm serve|vllm): error: (.+)")
 _REVISION_NOT_FOUND = re.compile(r"RevisionNotFoundError|Revision Not Found", re.I)
 _GATED = re.compile(r"GatedRepoError|401 Client Error", re.I)
 _NOT_FOUND = re.compile(r"RepositoryNotFoundError|404 Client Error", re.I)
+# transformers/dynamic_module_utils.py: config.json has an auto_map pointing at
+# the repo's own modeling code, and vLLM won't run it without trust_remote_code.
+# Wrapped in a pydantic ValidationError by vLLM's ModelConfig, so match the text.
+_NEEDS_REMOTE_CODE = re.compile(
+    r"contains custom code which must be executed|pass the argument `trust_remote_code=True`", re.I
+)
 _UNSUPPORTED_ARCH = re.compile(r"Model architectures \[.*?\] (?:are not supported|failed to be inspected)", re.I)
 
 # --- Disk -------------------------------------------------------------------
@@ -198,6 +204,19 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
 
     if _NOT_FOUND.search(output):
         return not_found_message(named)
+
+    if _NEEDS_REMOTE_CODE.search(output):
+        # Checked before the architecture match: with remote code allowed, vLLM
+        # can run an architecture it has no native class for through its
+        # Transformers backend, so "unsupported" would be the wrong advice.
+        return (
+            f"{named} ships its own modeling code on Hugging Face (an auto_map in "
+            f"its config.json), and vLLM only runs that code with "
+            f"TRUST_REMOTE_CODE=true. Review the repository's code, then set "
+            f"TRUST_REMOTE_CODE=true if you trust it. This also lets vLLM serve "
+            f"architectures it has no native implementation for yet, through its "
+            f"Transformers backend."
+        )
 
     if _UNSUPPORTED_ARCH.search(output):
         return (
