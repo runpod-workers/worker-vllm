@@ -105,7 +105,7 @@ For the complete list of all available environment variables, examples, and deta
 
 ### When vLLM will not start
 
-Some startup failures a restart cannot fix: the model does not fit the GPU, `MAX_MODEL_LEN` is larger than the KV cache the GPU can hold, a flag or value vLLM rejects, a gated model without `HF_TOKEN`, a model that ships its own modeling code without `TRUST_REMOTE_CODE=true`. Exiting on those crash-loops the worker: every attempt pays for the download and the model load, and the console shows only silent restarts with no error anywhere.
+Some startup failures a restart cannot fix: the model does not fit the GPU, `MAX_MODEL_LEN` is larger than the KV cache the GPU can hold, a flag or value vLLM rejects, a gated model without `HF_TOKEN`, a model that requires repository-provided code without `TRUST_REMOTE_CODE=true`. Exiting on those crash-loops the worker: each attempt repeats the startup (for most of these, the download and the model load), and submitted jobs receive no result.
 
 The worker recognises these and stays up instead, answering every job with the cause and the fix:
 
