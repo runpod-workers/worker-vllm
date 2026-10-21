@@ -332,9 +332,39 @@ class TestModelCodeErrors:
         assert exception in classify(_traceback("vllm/model_executor/models/foo.py", exception))
 
     def test_multiline_requirement_within_one_record(self):
-        output = _traceback("vllm/models/foo/model.py", "RuntimeError: Foo decode kernel\nrequires sm100 (got sm90)")
+        lines = _traceback("vllm/models/foo/model.py", "RuntimeError: Foo decode kernel\nrequires sm100 (got sm90)").splitlines()
+        output = "".join(_EC + line + "\n" for line in lines)
 
         assert "RuntimeError: Foo decode kernel requires sm100 (got sm90)" in classify(output)
+
+    def test_raw_tracebacks_are_never_joined_with_the_next_line(self):
+        # torch prints this at process exit; raw output has no record boundary.
+        teardown = ("[rank0]:[W1021 20:16:37.1 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() "
+                    "was not called before program exit, which can leak resources.\n")
+        message = classify(FLINT_NEEDS_FLASHINFER.replace(API_SERVER_TAIL, teardown + API_SERVER_TAIL), model="RecursiveSI/flint")
+        assert f"during startup: {FLINT_ATTN}. The model's code" in message
+
+        bare = _traceback("vllm/models/foo/model.py", "AssertionError") + "Note: this kernel requires a warm cache\n"
+        assert classify(bare) is None
+
+    def test_a_parenthesised_message_line_is_not_a_log_prefix(self):
+        exception = "RuntimeError: Foo MoE requires the TRTLLM backend\n(got TRITON) on this GPU"
+        lines = _traceback("vllm/models/foo/model.py", exception).splitlines()
+        output = "".join(_EC + line + "\n" for line in lines)
+
+        assert "requires the TRTLLM backend (got TRITON) on this GPU" in classify(output)
+
+    def test_vllms_nvlink_probe_record_is_not_a_host_fault(self):
+        nvlink = "".join(
+            "(EngineCore pid=1079) ERROR 10-21 20:16:30 [cuda.py:834] " + line + "\n"
+            for line in ["NVLink detection failed. This is normal if your machine has no NVLink equipped.",
+                         "Traceback (most recent call last):",
+                         '  File "/usr/local/lib/python3.12/dist-packages/pynvml.py", line 2380, in _nvmlCheckReturn',
+                         "    raise NVMLError(ret)",
+                         "pynvml.NVMLError_NotSupported: Not Supported"])
+        message = classify(nvlink + FLINT_NEEDS_FLASHINFER, model="RecursiveSI/flint")
+
+        assert message and FLINT_ATTN in message
 
     def test_raw_output_with_vllm_030_short_prefix(self):
         lines = _traceback("vllm/models/foo/model.py", "RuntimeError: FooMoE requires the CUTLASS backend").splitlines()
@@ -397,6 +427,24 @@ class TestModelCodeErrors:
 
     def test_an_engine_killed_by_a_signal_is_not_blamed_on_model_code(self):
         output = FLINT_NEEDS_FLASHINFER.replace("Failed core proc(s): {}", "Failed core proc(s): {'EngineCore': -9}")
+
+        assert classify(output) is None
+
+    def test_a_later_unrelated_failure_is_what_ended_the_launch(self):
+        output = FLINT_NEEDS_FLASHINFER.replace(
+            API_SERVER_TAIL,
+            _traceback("safetensors/torch.py", "safetensors_rust.SafetensorError: Error while deserializing header: "
+                       "MetadataIncompleteBuffer", "load_file") + API_SERVER_TAIL,
+        )
+
+        assert classify(output) is None
+
+    @pytest.mark.parametrize("cause", ["ConnectionResetError: [Errno 104] Connection reset by peer",
+                                       "requests.exceptions.HTTPError: 503 Server Error: Service Unavailable"])
+    def test_a_transport_fault_in_the_chain_still_restarts(self, cause):
+        output = (_traceback("huggingface_hub/file_download.py", cause, "http_get")
+                  + "\nThe above exception was the direct cause of the following exception:\n\n"
+                  + _traceback("vllm/models/foo/model.py", "ValueError: Foo vision requires preprocessor_config.json"))
 
         assert classify(output) is None
 

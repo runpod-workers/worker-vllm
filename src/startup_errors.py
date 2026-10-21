@@ -59,9 +59,15 @@ _NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28|Disk quota exce
 
 # vLLM's log prefixes: "(EngineCore pid=1014) ERROR 10-21 20:41:12 [core.py:1543] "
 # on logged lines, and a bare "(APIServer pid=496) " on raw output (vLLM 0.30).
-_LOG_PREFIX = re.compile(r"^\([^)]*\) (?:[A-Z]+ [\d-]+ [\d:]+ \[[^\]]*\] ?)?")
+_LOG_PREFIX = re.compile(r"^\([\w.-]+ pid=\d+\) (?:[A-Z]+ [\d-]+ [\d:]+ \[[^\]]*\] ?)?")
+# A logged record's prefix has a level and a timestamp; only lines that share one
+# belong to the same record. Raw output has no such boundary.
+_RECORD = re.compile(r"\) [A-Z]+ [\d-]+ [\d:]+ \[")
 _FRAME = re.compile(r'^\s+File "([^"]+)", line \d+')
 _EXCEPTION = re.compile(r"^(?:AssertionError|RuntimeError|NotImplementedError|ValueError)(?:: .*)?$")
+_ANY_EXCEPTION = re.compile(r"^[A-Za-z_][\w.]*(?:Error|Exception|Interrupt|Exit)\b(?::|$)")
+# Wrappers vLLM raises after an engine process fails; they don't replace the cause.
+_WRAPPER = re.compile(r"Engine core initialization failed|WorkerProc initialization failed")
 _TRACEBACK_BREAK = re.compile(
     r"^(?:Traceback \(most recent call last\):|The above exception|During handling of the above)"
 )
@@ -91,7 +97,8 @@ _HOST_FAULT = re.compile(
 # Transport trouble inside the quoted error itself (a retried download that
 # succeeded elsewhere in the log must not count, so this only checks the message).
 _TRANSPORT_FAULT = re.compile(
-    r"Connection (?:reset|refused|aborted)|timed out|Max retries exceeded|Temporary failure in name resolution",
+    r"Connection (?:reset|refused|aborted)|timed out|Max retries exceeded|Temporary failure in name resolution|"
+    r"Too Many Requests|Service Unavailable|Bad Gateway|Gateway Time-?out|Internal Server Error",
     re.I,
 )
 
@@ -100,6 +107,22 @@ _TRANSPORT_FAULT = re.compile(
 _ENGINE_KILLED = re.compile(r"Failed core proc\(s\): \{[^}]*: -\d+")
 # A traceback logged below ERROR was caught and handled; it didn't end the launch.
 _NOT_AN_ERROR_RECORD = re.compile(r"\) (?:DEBUG|INFO|WARNING) ")
+
+
+def _without_nvlink_probe(output: str) -> str:
+    """Drop vLLM's "NVLink detection failed. This is normal ..." record (an NVMLError traceback
+    logged on PCIe hosts with tensor parallelism), so it isn't read as a host fault."""
+    kept, skip_prefix = [], None
+    for raw in output.splitlines():
+        prefix, line = _split_prefix(raw)
+        if "NVLink detection failed" in line and _RECORD.search(prefix):
+            skip_prefix = prefix
+            continue
+        if skip_prefix is not None and prefix == skip_prefix:
+            continue
+        skip_prefix = None
+        kept.append(raw)
+    return "\n".join(kept)
 
 
 def _split_prefix(raw: str):
@@ -115,42 +138,57 @@ def model_code_error(output: str) -> Optional[str]:
     states a requirement the setup does not meet: flint asserts the FlashInfer
     attention backend, and its BF16 MoE needs a Blackwell-only kernel. Those
     fail identically on every start. Returns None when the failed launch shows
-    a host fault, or the message itself a transport fault, so those keep
-    getting a restart. The last match wins: it is the one that ended the launch.
+    a host fault, when the matched exception's chain shows a transport fault,
+    or when a different exception (other than vLLM's wrappers) comes after the
+    match, since then the match isn't what ended the launch.
     """
-    if _HOST_FAULT.search(output) or _ENGINE_KILLED.search(output):
+    if _HOST_FAULT.search(_without_nvlink_probe(output)) or _ENGINE_KILLED.search(output):
         return None
     found = None
     last_file = None
     message, message_prefix = None, None
+    chain, after_separator = [], False
 
     def finish(lines):
         text = " ".join(lines)
-        if _REQUIREMENT.search(text) and not _TRANSPORT_FAULT.search(text):
+        if _REQUIREMENT.search(text) and not _TRANSPORT_FAULT.search(" ".join(chain + [text])):
             return text[:300]
         return None
 
     for raw in output.splitlines():
         prefix, line = _split_prefix(raw)
         if message is not None:
-            # A multi-line message continues only within the same log record (same
-            # prefix): the next record, e.g. multiprocessing's "Process EngineCore:",
-            # is not part of it.
-            if (prefix == message_prefix and line and not line.startswith(" ")
-                    and not _FRAME.match(line) and not _TRACEBACK_BREAK.match(line)):
+            # A multi-line message continues only inside one logged record (same
+            # timestamped prefix). The next record, multiprocessing's "Process
+            # EngineCore:", or a warning printed after a raw traceback are not part of it.
+            if (_RECORD.search(message_prefix) and prefix == message_prefix and line
+                    and not line.startswith(" ") and not _FRAME.match(line) and not _TRACEBACK_BREAK.match(line)):
                 message.append(line)
                 continue
             found = finish(message) or found
+            chain.append(" ".join(message))
             message = None
+        if _TRACEBACK_BREAK.match(line):
+            if line.startswith("Traceback") and not after_separator:
+                chain = []  # a new, unchained traceback
+            after_separator = not line.startswith("Traceback")
+            last_file = None
+            continue
         frame = _FRAME.match(line)
         if frame:
             last_file = frame.group(1)
             continue
-        if line.startswith(" "):
+        if line.startswith(" ") or not line:
             continue  # source and caret lines under a frame
         if (_EXCEPTION.match(line) and last_file and _MODEL_CODE.search(last_file)
                 and not _NOT_AN_ERROR_RECORD.search(prefix)):
             message, message_prefix = [line], prefix
+        elif _ANY_EXCEPTION.match(line):
+            chain.append(line)
+            # A different exception after the match, other than vLLM's wrapper or a
+            # repeat of the same cause (logged copy, then raw copy), ended the launch.
+            if found and not _WRAPPER.search(line) and not found.startswith(line[:80]):
+                found = None
         last_file = None  # any other unindented line ends the frame list
     if message is not None:
         found = finish(message) or found
@@ -340,9 +378,9 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
             f"{named} failed inside vLLM's implementation of the model during "
             f"startup: {raised.rstrip('.')}. The model's code requires something this "
             f"worker's GPU or settings don't provide, so restarting this worker will not "
-            f"change it. If the endpoint lists several GPU types, remove the ones the "
-            f"model can't use; otherwise check the model card and vLLM's recipe for the "
-            f"attention backend (ATTENTION_BACKEND), GPU generation or dtype it needs."
+            f"change it. Check the model card and vLLM's recipe for the attention backend "
+            f"(ATTENTION_BACKEND), GPU generation or dtype it needs. If the endpoint lists "
+            f"several GPU types, also remove the ones the model can't use."
         )
 
     return None
