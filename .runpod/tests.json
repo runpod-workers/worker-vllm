@@ -38,6 +38,6 @@
         "value": "HuggingFaceTB/SmolLM2-135M-Instruct"
       }
     ],
-    "allowedCudaVersions": ["13.0"]
+    "allowedCudaVersions": ["13.1", "13.2", "13.3", "13.4"]
   }
 }
