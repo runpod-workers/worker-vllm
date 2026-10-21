@@ -119,7 +119,7 @@ The worker recognises these and stays up instead, answering every job with the c
 }
 ```
 
-The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt.
+The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt. The one broad rule: when the traceback ends inside a model's own vLLM implementation (`vllm/model_executor/models/` or `vllm/models/`), for example a model that requires the FlashInfer attention backend or a newer GPU generation, the failure is treated as permanent too, unless it is a CUDA or NCCL error.
 
 ## Option 2: Build Docker Image with Model Inside
 

@@ -57,6 +57,41 @@ _UNSUPPORTED_ARCH = re.compile(r"Model architectures \[.*?\] (?:are not supporte
 # --- Disk -------------------------------------------------------------------
 _NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28|Disk quota exceeded|EDQUOT|errno 122", re.I)
 
+# vLLM's log prefix on EngineCore lines, e.g.
+# "(EngineCore pid=1014) ERROR 10-21 20:41:12 [core.py:1543] ".
+_LOG_PREFIX = re.compile(r"^\([^)]*\) [A-Z]+ [\d-]+ [\d:]+ \[[^\]]*\] ?")
+_FRAME = re.compile(r'^\s+File "([^"]+)", line \d+')
+_EXCEPTION = re.compile(r"^(AssertionError|RuntimeError|NotImplementedError|ValueError|TypeError)(?:: (.*))?$")
+# Model implementations: vllm/model_executor/models/<name>.py, and the
+# per-model packages newer day-0 images ship under vllm/models/<name>/.
+_MODEL_CODE = re.compile(r"/vllm/(?:model_executor/)?models/")
+# Raised from model code but about the host, not the model: a different host
+# can succeed, so these stay with the platform restart.
+_HOST_FAULT = re.compile(r"CUDA error|cudaError|NCCL|CUBLAS_STATUS|illegal memory access|uncorrectable ECC", re.I)
+
+
+def model_code_error(output: str) -> Optional[str]:
+    """The exception line of the first traceback whose innermost frame is model code.
+
+    A model's own vLLM implementation can refuse a setup outright: flint's
+    asserts the FlashInfer attention backend and its BF16 MoE needs a
+    Blackwell-only kernel. Those fail identically on every start.
+    """
+    last_file = None
+    for raw in output.splitlines():
+        line = _LOG_PREFIX.sub("", raw.rstrip())
+        frame = _FRAME.match(line)
+        if frame:
+            last_file = frame.group(1)
+            continue
+        exc = _EXCEPTION.match(line)
+        if exc and last_file:
+            if _MODEL_CODE.search(last_file) and not _HOST_FAULT.search(line):
+                return line[:300]
+            last_file = None
+    return None
+
+
 
 # The model-access messages are shared with model_preflight.py, which detects
 # the same failures before the cold start; whether the user hits the fast path
@@ -233,6 +268,16 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
             f"Without one, increase the endpoint's container disk to comfortably "
             f"exceed the size of the repository, or attach a network volume so the "
             f"weights are cached there instead."
+        )
+
+    raised = model_code_error(output)
+    if raised:
+        return (
+            f"{named} failed inside vLLM's implementation of the model during "
+            f"startup: {raised.rstrip('.')}. A restart will not change this. A model's vLLM "
+            f"code can require a specific attention backend (set ATTENTION_BACKEND), "
+            f"GPU generation or dtype: check the model card and vLLM's recipe for "
+            f"the model, then change the endpoint's settings or GPU type."
         )
 
     return None

@@ -230,3 +230,94 @@ class TestMemoryShortfallPredicate:
         assert not memory_shortfall(REVISION_NOT_FOUND)
         assert not memory_shortfall(GATED)
         assert not memory_shortfall("Connection reset by peer while downloading")
+
+
+# Tails of real worker logs (RecursiveSI/flint on an H200, vLLM 0.32.0rc1 day-0
+# image), trimmed to the frames that matter. EngineCore prints the root cause;
+# the API server's own traceback follows it and ends in a generic RuntimeError.
+_EC = "(EngineCore pid=1079) ERROR 10-21 20:16:36 [core.py:1543] "
+API_SERVER_TAIL = """Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1102, in wait_for_engine_startup
+    raise RuntimeError(
+RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+"""
+FLINT_NEEDS_FLASHINFER = "".join(_EC + line + "\n" for line in [
+    "EngineCore failed to start.",
+    "Traceback (most recent call last):",
+    '  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1515, in run_engine_core',
+    "    engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)",
+    '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/model.py", line 479, in __init__',
+    "    self.self_attn = FlintAttention(",
+    "                     ^^^^^^^^^^^^^^^",
+    '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/model.py", line 316, in __init__',
+    '    assert isinstance(impl, FlashInferImpl), "Flint requires FlashInfer attention"',
+    "           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+    "AssertionError: Flint requires FlashInfer attention",
+]) + API_SERVER_TAIL
+FLINT_MOE_NEEDS_BLACKWELL = "".join(_EC + line + "\n" for line in [
+    "EngineCore failed to start.",
+    "Traceback (most recent call last):",
+    '  File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/warmup/kernel_warmup.py", line 294, in kernel_warmup',
+    "    mixed_batch_attention_warmup(worker)",
+    '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/ops/moe.py", line 806, in forward',
+    "    self._check(routed_experts)",
+    '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/ops/moe.py", line 792, in _check',
+    "    raise RuntimeError(",
+    "RuntimeError: Flint BF16 decode MoE requires the FlashInfer TRTLLM BF16 MoE backend "
+    "without padding (got UnquantizedMoeBackend.TRITON)",
+]) + API_SERVER_TAIL
+
+
+def _traceback(innermost: str, exception: str) -> str:
+    return (
+        "Traceback (most recent call last):\n"
+        '  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 157, in __init__\n'
+        "    kv_cache_config = self._initialize_kv_caches(vllm_config)\n"
+        f'  File "/usr/local/lib/python3.12/dist-packages/{innermost}", line 42, in forward\n'
+        "    raise\n"
+        f"{exception}\n"
+    )
+
+
+class TestModelCodeErrors:
+    @pytest.mark.parametrize(
+        "output,cause",
+        [
+            (FLINT_NEEDS_FLASHINFER, "AssertionError: Flint requires FlashInfer attention"),
+            (FLINT_MOE_NEEDS_BLACKWELL, "requires the FlashInfer TRTLLM BF16 MoE backend"),
+        ],
+    )
+    def test_quote_the_root_cause_not_the_api_server_wrapper(self, output, cause):
+        message = classify(output, model="RecursiveSI/flint")
+
+        assert message.startswith("RecursiveSI/flint failed inside vLLM's implementation")
+        assert cause in message
+        assert "Engine core initialization failed" not in message
+        assert "ATTENTION_BACKEND" in message
+
+    def test_classic_model_executor_layout(self):
+        output = _traceback("vllm/model_executor/models/foo.py", "NotImplementedError: FooAttention needs sm90")
+
+        assert "NotImplementedError: FooAttention needs sm90" in classify(output)
+
+    @pytest.mark.parametrize(
+        "innermost,exception",
+        [
+            # Same exception types outside model code: could be anything.
+            ("vllm/v1/engine/core.py", "RuntimeError: something nobody has seen before"),
+            ("safetensors/torch.py", "ValueError: truncated file"),
+            # Raised in model code but about the host: another host can work.
+            ("vllm/models/flint/ops/moe.py", "RuntimeError: CUDA error: an illegal memory access was encountered"),
+            ("vllm/model_executor/models/llama.py", "RuntimeError: NCCL error: unhandled system error"),
+        ],
+    )
+    def test_everything_else_still_restarts(self, innermost, exception):
+        assert classify(_traceback(innermost, exception)) is None
+
+    def test_oom_raised_in_model_code_keeps_the_memory_advice(self):
+        output = _traceback(
+            "vllm/model_executor/models/llama.py",
+            "torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 GiB.",
+        )
+
+        assert "ran out of GPU memory" in classify(output)
