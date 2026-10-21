@@ -6,6 +6,10 @@ FROM vllm/vllm-openai:${VLLM_VERSION}
 # Re-declare so the stage can reference it in RUN steps below.
 ARG VLLM_VERSION
 
+# Record the base image's vLLM before any pip install can touch it (checked below).
+COPY builder/check_vllm_version.py /check_vllm_version.py
+RUN python3 /check_vllm_version.py record
+
 # RunPod serverless SDK + HTTP proxy deps (vLLM itself comes from the base image).
 COPY builder/requirements.txt /requirements.txt
 RUN python3 -m ensurepip --upgrade 2>/dev/null || true \
@@ -21,8 +25,10 @@ RUN python3 -m ensurepip --upgrade 2>/dev/null || true \
 RUN python3 -m pip install --no-cache-dir --no-deps "vllm-bnb-plugin>=0.0.3"
 
 # Guard rail: the base image's vLLM must survive our pip installs — fail the
-# build loudly if the installed version no longer matches the requested tag.
-RUN test "$(python3 -c 'import vllm; print(vllm.__version__)')" = "${VLLM_VERSION#v}"
+# build loudly if it changed, and for release tags (vX.Y.Z) if it isn't that
+# release. Nightly, latest and model-named day-0 tags (e.g. step-5-preview)
+# have no release number, so only the "unchanged" check applies to them.
+RUN python3 /check_vllm_version.py verify "${VLLM_VERSION}"
 
 # Setup for Option 2: building the image with the model baked in.
 ARG MODEL_NAME=""
