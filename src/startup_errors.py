@@ -57,30 +57,55 @@ _UNSUPPORTED_ARCH = re.compile(r"Model architectures \[.*?\] (?:are not supporte
 # --- Disk -------------------------------------------------------------------
 _NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28|Disk quota exceeded|EDQUOT|errno 122", re.I)
 
-# vLLM's log prefix on EngineCore lines, e.g.
-# "(EngineCore pid=1014) ERROR 10-21 20:41:12 [core.py:1543] ".
-_LOG_PREFIX = re.compile(r"^\([^)]*\) [A-Z]+ [\d-]+ [\d:]+ \[[^\]]*\] ?")
+# vLLM's log prefixes: "(EngineCore pid=1014) ERROR 10-21 20:41:12 [core.py:1543] "
+# on logged lines, and a bare "(APIServer pid=496) " on raw output (vLLM 0.30).
+_LOG_PREFIX = re.compile(r"^\([^)]*\) (?:[A-Z]+ [\d-]+ [\d:]+ \[[^\]]*\] ?)?")
 _FRAME = re.compile(r'^\s+File "([^"]+)", line \d+')
 _EXCEPTION = re.compile(r"^(?:AssertionError|RuntimeError|NotImplementedError|ValueError)(?:: .*)?$")
-_TRACEBACK_BREAK = re.compile(r"^(?:Traceback \(most recent call last\):|The above exception|During handling of the above)")
-# Model implementations: vllm/model_executor/models/<name>.py, and the
-# per-model packages newer day-0 images ship under vllm/models/<name>/.
+_TRACEBACK_BREAK = re.compile(
+    r"^(?:Traceback \(most recent call last\):|The above exception|During handling of the above)"
+)
+# Model implementations: vllm/model_executor/models/<name>.py, and the per-model
+# packages under vllm/models/<name>/ (since v0.22; v0.32.0 ships deepseek_v4,
+# kimi_k3, minimax_m3 and others there).
 _MODEL_CODE = re.compile(r"/vllm/(?:model_executor/)?models/")
 # The model's code states what it needs: "Flint requires FlashInfer attention",
 # "... requires the FlashInfer TRTLLM BF16 MoE backend", "only supported on ...".
 # Where an error is raised says nothing about permanence (a driver fault inside
-# load_weights also ends in model code); a stated requirement does.
+# load_weights also ends in model code); a stated requirement does. Autograd's
+# "requires grad" errors are not configuration requirements.
 _REQUIREMENT = re.compile(
-    r"\brequires?\b|\bonly supports?\b|\bonly supported\b|\bnot supported (?:on|with|for|by)\b", re.I
-)
-# Host or transport trouble anywhere in the failed launch, including a CUDA error
-# wrapped by a model-code exception: another host or attempt can succeed.
-_HOST_FAULT = re.compile(
-    r"CUDA (?:driver )?error|cudaError|NCCL error|nccl(?:System|Unhandled|Internal)\w*Error|NVML|CUBLAS_STATUS|"
-    r"CUDNN_STATUS|illegal memory access|uncorrectable ECC|\bXid\b|Connection (?:reset|refused|aborted)|"
-    r"timed out|Max retries exceeded",
+    r"\brequires?\b(?![ _]grad)|\bonly supports?\b|\bonly supported\b|\bnot supported (?:on|with|for|by)\b",
     re.I,
 )
+# Host faults anywhere in the failed launch, including a CUDA error wrapped by a
+# model-code exception: another host can succeed. Fault signatures only, so
+# torch's NVML/pynvml warnings on a healthy host don't count.
+_HOST_FAULT = re.compile(
+    r"CUDA (?:driver |unknown )?error|cudaError|CUDA-capable device|NVIDIA driver on your system is too old|"
+    r"NCCL error|nccl(?:System|Unhandled|Internal)\w*Error|Watchdog caught collective operation timeout|"
+    r"NVML_SUCCESS == r|NVMLError|nvml\w*Error|CUBLAS_STATUS|CUDNN_STATUS|illegal memory access|"
+    r"uncorrectable ECC|\bXid\b",
+    re.I,
+)
+# Transport trouble inside the quoted error itself (a retried download that
+# succeeded elsewhere in the log must not count, so this only checks the message).
+_TRANSPORT_FAULT = re.compile(
+    r"Connection (?:reset|refused|aborted)|timed out|Max retries exceeded|Temporary failure in name resolution",
+    re.I,
+)
+
+# An engine process killed by a signal ("Failed core proc(s): {'EngineCore': -9}")
+# died of something else, whatever model code logged earlier.
+_ENGINE_KILLED = re.compile(r"Failed core proc\(s\): \{[^}]*: -\d+")
+# A traceback logged below ERROR was caught and handled; it didn't end the launch.
+_NOT_AN_ERROR_RECORD = re.compile(r"\) (?:DEBUG|INFO|WARNING) ")
+
+
+def _split_prefix(raw: str):
+    line = raw.rstrip()
+    match = _LOG_PREFIX.match(line)
+    return (match.group(0), line[match.end():]) if match else ("", line)
 
 
 def model_code_error(output: str) -> Optional[str]:
@@ -90,34 +115,46 @@ def model_code_error(output: str) -> Optional[str]:
     states a requirement the setup does not meet: flint asserts the FlashInfer
     attention backend, and its BF16 MoE needs a Blackwell-only kernel. Those
     fail identically on every start. Returns None when the failed launch shows
-    any host or transport fault, so those keep getting a restart.
+    a host fault, or the message itself a transport fault, so those keep
+    getting a restart. The last match wins: it is the one that ended the launch.
     """
-    if _HOST_FAULT.search(output):
+    if _HOST_FAULT.search(output) or _ENGINE_KILLED.search(output):
         return None
-    last_file, message = None, None
+    found = None
+    last_file = None
+    message, message_prefix = None, None
+
+    def finish(lines):
+        text = " ".join(lines)
+        if _REQUIREMENT.search(text) and not _TRANSPORT_FAULT.search(text):
+            return text[:300]
+        return None
+
     for raw in output.splitlines():
-        line = _LOG_PREFIX.sub("", raw.rstrip())
+        prefix, line = _split_prefix(raw)
         if message is not None:
-            # Continuation lines of a multi-line message, up to the next frame or traceback.
-            if line and not line.startswith(" ") and not _FRAME.match(line) and not _TRACEBACK_BREAK.match(line):
+            # A multi-line message continues only within the same log record (same
+            # prefix): the next record, e.g. multiprocessing's "Process EngineCore:",
+            # is not part of it.
+            if (prefix == message_prefix and line and not line.startswith(" ")
+                    and not _FRAME.match(line) and not _TRACEBACK_BREAK.match(line)):
                 message.append(line)
                 continue
-            text = " ".join(message)
-            if _REQUIREMENT.search(text):
-                return text[:300]
+            found = finish(message) or found
             message = None
         frame = _FRAME.match(line)
         if frame:
             last_file = frame.group(1)
             continue
-        if _EXCEPTION.match(line) and last_file:
-            if _MODEL_CODE.search(last_file):
-                message = [line]
-            last_file = None
-    if message and _REQUIREMENT.search(" ".join(message)):
-        return " ".join(message)[:300]
-    return None
-
+        if line.startswith(" "):
+            continue  # source and caret lines under a frame
+        if (_EXCEPTION.match(line) and last_file and _MODEL_CODE.search(last_file)
+                and not _NOT_AN_ERROR_RECORD.search(prefix)):
+            message, message_prefix = [line], prefix
+        last_file = None  # any other unindented line ends the frame list
+    if message is not None:
+        found = finish(message) or found
+    return found
 
 
 # The model-access messages are shared with model_preflight.py, which detects
@@ -301,11 +338,11 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
     if raised:
         return (
             f"{named} failed inside vLLM's implementation of the model during "
-            f"startup: {raised.rstrip('.')}. The model's code requires a setup this "
-            f"endpoint does not have, so a restart will not change it. Check the model "
-            f"card and vLLM's recipe for the model for the attention backend "
-            f"(ATTENTION_BACKEND), GPU generation or dtype it needs, then change the "
-            f"endpoint's settings or GPU type."
+            f"startup: {raised.rstrip('.')}. The model's code requires something this "
+            f"worker's GPU or settings don't provide, so restarting this worker will not "
+            f"change it. If the endpoint lists several GPU types, remove the ones the "
+            f"model can't use; otherwise check the model card and vLLM's recipe for the "
+            f"attention backend (ATTENTION_BACKEND), GPU generation or dtype it needs."
         )
 
     return None

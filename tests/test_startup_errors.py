@@ -233,17 +233,32 @@ class TestMemoryShortfallPredicate:
 
 
 # Tails of real worker logs (RecursiveSI/flint on an H200, vLLM 0.32.0rc1 day-0
-# image), trimmed to the frames that matter. EngineCore prints the root cause;
-# the API server's own traceback follows it and ends in a generic RuntimeError.
+# image) in the order vLLM prints them, trimmed to the frames that matter:
+# EngineCore logs the root cause with a prefix, multiprocessing prints an
+# unprefixed "Process EngineCore:" and the raw traceback, and the API server's
+# own traceback ends in a generic RuntimeError.
 _EC = "(EngineCore pid=1079) ERROR 10-21 20:16:36 [core.py:1543] "
-API_SERVER_TAIL = """Traceback (most recent call last):
-  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1102, in wait_for_engine_startup
+API_SERVER_TAIL = """(APIServer pid=503) INFO 10-21 20:16:36 [utils.py:628] [shutdown] Process manager: send sigterm to process EngineCore
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1468, in wait_for_engine_startup
     raise RuntimeError(
 RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
 """
-FLINT_NEEDS_FLASHINFER = "".join(_EC + line + "\n" for line in [
-    "EngineCore failed to start.",
-    "Traceback (most recent call last):",
+
+
+def _flint_log(frames, exception):
+    traceback = ["Traceback (most recent call last):", *frames, exception]
+    logged = "".join(_EC + line + "\n" for line in ["EngineCore failed to start.", *traceback])
+    raw = "Process EngineCore:\n" + "".join(line + "\n" for line in traceback)
+    return logged + raw + API_SERVER_TAIL
+
+
+FLINT_ATTN = "AssertionError: Flint requires FlashInfer attention"
+FLINT_MOE = (
+    "RuntimeError: Flint BF16 decode MoE requires the FlashInfer TRTLLM BF16 MoE backend "
+    "without padding (got UnquantizedMoeBackend.TRITON)"
+)
+FLINT_NEEDS_FLASHINFER = _flint_log([
     '  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1515, in run_engine_core',
     "    engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)",
     '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/model.py", line 479, in __init__',
@@ -252,20 +267,15 @@ FLINT_NEEDS_FLASHINFER = "".join(_EC + line + "\n" for line in [
     '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/model.py", line 316, in __init__',
     '    assert isinstance(impl, FlashInferImpl), "Flint requires FlashInfer attention"',
     "           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
-    "AssertionError: Flint requires FlashInfer attention",
-]) + API_SERVER_TAIL
-FLINT_MOE_NEEDS_BLACKWELL = "".join(_EC + line + "\n" for line in [
-    "EngineCore failed to start.",
-    "Traceback (most recent call last):",
+], FLINT_ATTN)
+FLINT_MOE_NEEDS_BLACKWELL = _flint_log([
     '  File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/warmup/kernel_warmup.py", line 294, in kernel_warmup',
     "    mixed_batch_attention_warmup(worker)",
     '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/ops/moe.py", line 806, in forward',
     "    self._check(routed_experts)",
     '  File "/usr/local/lib/python3.12/dist-packages/vllm/models/flint/ops/moe.py", line 792, in _check',
     "    raise RuntimeError(",
-    "RuntimeError: Flint BF16 decode MoE requires the FlashInfer TRTLLM BF16 MoE backend "
-    "without padding (got UnquantizedMoeBackend.TRITON)",
-]) + API_SERVER_TAIL
+], FLINT_MOE)
 
 
 def _traceback(innermost: str, exception: str, function: str = "__init__") -> str:
@@ -280,20 +290,35 @@ def _traceback(innermost: str, exception: str, function: str = "__init__") -> st
 
 
 class TestModelCodeErrors:
-    @pytest.mark.parametrize(
-        "output,cause",
-        [
-            (FLINT_NEEDS_FLASHINFER, "AssertionError: Flint requires FlashInfer attention"),
-            (FLINT_MOE_NEEDS_BLACKWELL, "requires the FlashInfer TRTLLM BF16 MoE backend"),
-        ],
-    )
-    def test_quote_the_root_cause_not_the_api_server_wrapper(self, output, cause):
+    @pytest.mark.parametrize("output,cause", [(FLINT_NEEDS_FLASHINFER, FLINT_ATTN), (FLINT_MOE_NEEDS_BLACKWELL, FLINT_MOE)])
+    def test_quote_exactly_the_root_cause(self, output, cause):
         message = classify(output, model="RecursiveSI/flint")
 
-        assert message.startswith("RecursiveSI/flint failed inside vLLM's implementation")
-        assert cause in message
-        assert "Engine core initialization failed" not in message
-        assert "ATTENTION_BACKEND" in message
+        # Exactly the exception, not the next log line ("Process EngineCore:") or the wrapper.
+        assert f"during startup: {cause}. The model's code requires" in message
+        assert "Process EngineCore" not in message and "Engine core initialization failed" not in message
+        assert "ATTENTION_BACKEND" in message and "several GPU types" in message
+
+    @pytest.mark.parametrize(
+        "harmless",
+        [
+            # torch on a Runpod host with partial NVML support (seen in this image's logs)
+            "UserWarning: nvmlDeviceGetComputeRunningProcesses failed; omitting per-process memory info "
+            "from CUDA out-of-memory messages. This is expected on platforms with partial NVML support.",
+            "FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead.",
+            # a download retry that then succeeded
+            "WARNING huggingface_hub: HTTPSConnectionPool(host='cas-bridge.xethub.hf.co', port=443): "
+            "Read timed out. (read timeout=10) Retrying in 1s [Retry 1/5].",
+            # c10d's connect retry with tensor parallelism
+            "[W1021 20:16:30 socket.cpp:767] [c10d] The client socket has failed to connect to [::1]:29500 "
+            "(errno: 111 - Connection refused).",
+            "(EngineCore pid=1079) INFO 10-21 20:16:34 [parallel_state.py:1911] world_size=1 rank=0 backend=nccl",
+        ],
+    )
+    def test_harmless_lines_elsewhere_in_the_launch_do_not_block_it(self, harmless):
+        message = classify(harmless + "\n" + FLINT_NEEDS_FLASHINFER, model="RecursiveSI/flint")
+
+        assert message and FLINT_ATTN in message
 
     @pytest.mark.parametrize(
         "exception",
@@ -306,10 +331,16 @@ class TestModelCodeErrors:
     def test_stated_requirements_in_classic_model_code(self, exception):
         assert exception in classify(_traceback("vllm/model_executor/models/foo.py", exception))
 
-    def test_multiline_requirement_is_quoted_whole(self):
+    def test_multiline_requirement_within_one_record(self):
         output = _traceback("vllm/models/foo/model.py", "RuntimeError: Foo decode kernel\nrequires sm100 (got sm90)")
 
         assert "RuntimeError: Foo decode kernel requires sm100 (got sm90)" in classify(output)
+
+    def test_raw_output_with_vllm_030_short_prefix(self):
+        lines = _traceback("vllm/models/foo/model.py", "RuntimeError: FooMoE requires the CUTLASS backend").splitlines()
+        output = "".join(f"(APIServer pid=496) {line}\n" for line in lines)
+
+        assert "RuntimeError: FooMoE requires the CUTLASS backend" in classify(output)
 
     @pytest.mark.parametrize(
         "innermost,function,exception",
@@ -320,20 +351,26 @@ class TestModelCodeErrors:
             ("vllm/model_executor/models/llama.py", "load_weights",
              "RuntimeError: NVML_SUCCESS == r INTERNAL ASSERT FAILED at \"/pytorch/c10/cuda/CUDACachingAllocator.cpp\":1131"),
             ("vllm/model_executor/models/llama.py", "load_weights", "RuntimeError: Failed to load weights: Connection reset by peer"),
+            ("vllm/model_executor/models/llama.py", "load_weights",
+             "RuntimeError: Download requires the shard, but the request timed out"),
             ("vllm/models/flint/ops/moe.py", "forward", "RuntimeError: CUDA error: an illegal memory access was encountered"),
             # No stated requirement: could be anything.
             ("vllm/model_executor/models/foo.py", "__init__", "AssertionError"),
             ("vllm/model_executor/models/foo.py", "forward", "ValueError: Error during index put operation"),
-            # A requirement, but not raised by model code.
-            ("vllm/v1/engine/core.py", "__init__", "RuntimeError: this step requires a restart"),
             ("safetensors/torch.py", "load_file", "ValueError: truncated file"),
+            # Autograd misuse is a bug, not a configuration requirement.
+            ("vllm/model_executor/models/foo.py", "forward",
+             "RuntimeError: a leaf Variable that requires grad is being used in an in-place operation."),
+            # A stated requirement, but not raised by model code.
+            ("vllm/v1/engine/core.py", "__init__", "RuntimeError: this step requires a restart"),
         ],
     )
     def test_everything_else_still_restarts(self, innermost, function, exception):
         assert classify(_traceback(innermost, exception, function)) is None
 
     def test_a_wrapped_cuda_cause_still_restarts(self):
-        # vLLM's _merge_multimodal_embeddings re-raises a failed index_put as ValueError.
+        # Synthetic wrapper text: vLLM's _merge_multimodal_embeddings re-raises a failed
+        # index_put as ValueError; "requires" is added so only the CUDA cause can veto it.
         cause = _traceback("vllm/model_executor/models/utils.py", "RuntimeError: CUDA error: too many resources requested for launch")
         wrapper = _traceback("vllm/model_executor/models/utils.py", "ValueError: Error during index put operation requires retry")
         output = cause + "\nThe above exception was the direct cause of the following exception:\n\n" + wrapper
@@ -342,6 +379,32 @@ class TestModelCodeErrors:
 
     def test_a_cuda_error_on_a_continuation_line_still_restarts(self):
         output = _traceback("vllm/models/foo/model.py", "RuntimeError: Foo requires a warmup pass\nCUDA error: unspecified launch failure")
+
+        assert classify(output) is None
+
+    def test_the_next_log_record_is_not_part_of_the_message(self):
+        # A bare model-code assertion, then an INFO record that happens to say "requires".
+        logged = "".join(_EC + line + "\n" for line in _traceback("vllm/models/foo/model.py", "AssertionError").splitlines())
+        output = logged + "(EngineCore pid=1079) INFO 10-21 20:16:37 [deepep.py:88] DeepEP v2 requires NCCL >= 2.30.4\n"
+
+        assert classify(output) is None
+
+    def test_a_handled_warning_traceback_does_not_count(self):
+        warned = _traceback("vllm/models/foo/model.py", "RuntimeError: FooMoE requires the CUTLASS backend")
+        output = "".join(f"(EngineCore pid=1079) WARNING 10-21 20:16:36 [moe.py:40] {line}\n" for line in warned.splitlines())
+
+        assert classify(output) is None
+
+    def test_an_engine_killed_by_a_signal_is_not_blamed_on_model_code(self):
+        output = FLINT_NEEDS_FLASHINFER.replace("Failed core proc(s): {}", "Failed core proc(s): {'EngineCore': -9}")
+
+        assert classify(output) is None
+
+    def test_a_stale_model_frame_does_not_attach_to_a_later_error(self):
+        output = (
+            _traceback("vllm/models/foo/model.py", "safetensors_rust.SafetensorError: Error while deserializing header")
+            + "RuntimeError: FooMoE requires the CUTLASS backend\n"
+        )
 
         assert classify(output) is None
 
