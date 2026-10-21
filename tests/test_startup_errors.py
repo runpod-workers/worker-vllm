@@ -44,6 +44,13 @@ NOT_FOUND = (
     "for url https://huggingface.co/org/nope/resolve/main/config.json."
 )
 UNSUPPORTED = "ValueError: Model architectures ['FooForCausalLM'] are not supported for now."
+# vLLM v0.30 worker log for IFM/K2-Horizon-7B without TRUST_REMOTE_CODE (the worker crash-looped on it).
+NEEDS_REMOTE_CODE = (
+    "pydantic_core._pydantic_core.ValidationError: 1 validation error for ModelConfig\n"
+    "  Value error, The repository IFM/K2-Horizon-7B contains custom code which must be executed to "
+    "correctly load the model. You can inspect the repository content at https://hf.co/IFM/K2-Horizon-7B .\n"
+    "Please pass the argument `trust_remote_code=True` to allow custom code to be run. [type=value_error]"
+)
 NO_SPACE = "OSError: [Errno 28] No space left on device"
 
 
@@ -101,6 +108,17 @@ class TestModelAccess:
 
     def test_unsupported_architecture(self):
         assert "architecture" in classify(UNSUPPORTED)
+
+    def test_custom_code_points_at_trust_remote_code(self):
+        message = classify(NEEDS_REMOTE_CODE, model="IFM/K2-Horizon-7B")
+
+        assert message.startswith("IFM/K2-Horizon-7B ships its own modeling code")
+        assert "TRUST_REMOTE_CODE=true" in message
+
+    def test_custom_code_wins_over_unsupported_architecture(self):
+        # With remote code allowed, vLLM's Transformers backend can serve an
+        # architecture it has no native class for, so don't say "unsupported".
+        assert "TRUST_REMOTE_CODE=true" in classify(UNSUPPORTED + "\n" + NEEDS_REMOTE_CODE)
 
 
 def test_out_of_disk_points_at_container_disk():
