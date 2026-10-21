@@ -268,12 +268,12 @@ FLINT_MOE_NEEDS_BLACKWELL = "".join(_EC + line + "\n" for line in [
 ]) + API_SERVER_TAIL
 
 
-def _traceback(innermost: str, exception: str) -> str:
+def _traceback(innermost: str, exception: str, function: str = "__init__") -> str:
     return (
         "Traceback (most recent call last):\n"
         '  File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 157, in __init__\n'
         "    kv_cache_config = self._initialize_kv_caches(vllm_config)\n"
-        f'  File "/usr/local/lib/python3.12/dist-packages/{innermost}", line 42, in forward\n'
+        f'  File "/usr/local/lib/python3.12/dist-packages/{innermost}", line 42, in {function}\n'
         "    raise\n"
         f"{exception}\n"
     )
@@ -295,24 +295,55 @@ class TestModelCodeErrors:
         assert "Engine core initialization failed" not in message
         assert "ATTENTION_BACKEND" in message
 
-    def test_classic_model_executor_layout(self):
-        output = _traceback("vllm/model_executor/models/foo.py", "NotImplementedError: FooAttention needs sm90")
-
-        assert "NotImplementedError: FooAttention needs sm90" in classify(output)
-
     @pytest.mark.parametrize(
-        "innermost,exception",
+        "exception",
         [
-            # Same exception types outside model code: could be anything.
-            ("vllm/v1/engine/core.py", "RuntimeError: something nobody has seen before"),
-            ("safetensors/torch.py", "ValueError: truncated file"),
-            # Raised in model code but about the host: another host can work.
-            ("vllm/models/flint/ops/moe.py", "RuntimeError: CUDA error: an illegal memory access was encountered"),
-            ("vllm/model_executor/models/llama.py", "RuntimeError: NCCL error: unhandled system error"),
+            "NotImplementedError: FooAttention only supports compute capability 9.0 and above",
+            "ValueError: Sliding window attention is not supported on this platform",
+            "RuntimeError: FooMoE requires the CUTLASS backend",
         ],
     )
-    def test_everything_else_still_restarts(self, innermost, exception):
-        assert classify(_traceback(innermost, exception)) is None
+    def test_stated_requirements_in_classic_model_code(self, exception):
+        assert exception in classify(_traceback("vllm/model_executor/models/foo.py", exception))
+
+    def test_multiline_requirement_is_quoted_whole(self):
+        output = _traceback("vllm/models/foo/model.py", "RuntimeError: Foo decode kernel\nrequires sm100 (got sm90)")
+
+        assert "RuntimeError: Foo decode kernel requires sm100 (got sm90)" in classify(output)
+
+    @pytest.mark.parametrize(
+        "innermost,function,exception",
+        [
+            # Where an error is raised says nothing about permanence: model code can be
+            # the innermost Python frame of a native failure during weight loading.
+            ("vllm/model_executor/models/llama.py", "load_weights", "RuntimeError: CUDA driver error: initialization error"),
+            ("vllm/model_executor/models/llama.py", "load_weights",
+             "RuntimeError: NVML_SUCCESS == r INTERNAL ASSERT FAILED at \"/pytorch/c10/cuda/CUDACachingAllocator.cpp\":1131"),
+            ("vllm/model_executor/models/llama.py", "load_weights", "RuntimeError: Failed to load weights: Connection reset by peer"),
+            ("vllm/models/flint/ops/moe.py", "forward", "RuntimeError: CUDA error: an illegal memory access was encountered"),
+            # No stated requirement: could be anything.
+            ("vllm/model_executor/models/foo.py", "__init__", "AssertionError"),
+            ("vllm/model_executor/models/foo.py", "forward", "ValueError: Error during index put operation"),
+            # A requirement, but not raised by model code.
+            ("vllm/v1/engine/core.py", "__init__", "RuntimeError: this step requires a restart"),
+            ("safetensors/torch.py", "load_file", "ValueError: truncated file"),
+        ],
+    )
+    def test_everything_else_still_restarts(self, innermost, function, exception):
+        assert classify(_traceback(innermost, exception, function)) is None
+
+    def test_a_wrapped_cuda_cause_still_restarts(self):
+        # vLLM's _merge_multimodal_embeddings re-raises a failed index_put as ValueError.
+        cause = _traceback("vllm/model_executor/models/utils.py", "RuntimeError: CUDA error: too many resources requested for launch")
+        wrapper = _traceback("vllm/model_executor/models/utils.py", "ValueError: Error during index put operation requires retry")
+        output = cause + "\nThe above exception was the direct cause of the following exception:\n\n" + wrapper
+
+        assert classify(output) is None
+
+    def test_a_cuda_error_on_a_continuation_line_still_restarts(self):
+        output = _traceback("vllm/models/foo/model.py", "RuntimeError: Foo requires a warmup pass\nCUDA error: unspecified launch failure")
+
+        assert classify(output) is None
 
     def test_oom_raised_in_model_code_keeps_the_memory_advice(self):
         output = _traceback(

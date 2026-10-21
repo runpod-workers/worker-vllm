@@ -61,34 +61,61 @@ _NO_SPACE = re.compile(r"No space left on device|ENOSPC|errno 28|Disk quota exce
 # "(EngineCore pid=1014) ERROR 10-21 20:41:12 [core.py:1543] ".
 _LOG_PREFIX = re.compile(r"^\([^)]*\) [A-Z]+ [\d-]+ [\d:]+ \[[^\]]*\] ?")
 _FRAME = re.compile(r'^\s+File "([^"]+)", line \d+')
-_EXCEPTION = re.compile(r"^(AssertionError|RuntimeError|NotImplementedError|ValueError|TypeError)(?:: (.*))?$")
+_EXCEPTION = re.compile(r"^(?:AssertionError|RuntimeError|NotImplementedError|ValueError)(?:: .*)?$")
+_TRACEBACK_BREAK = re.compile(r"^(?:Traceback \(most recent call last\):|The above exception|During handling of the above)")
 # Model implementations: vllm/model_executor/models/<name>.py, and the
 # per-model packages newer day-0 images ship under vllm/models/<name>/.
 _MODEL_CODE = re.compile(r"/vllm/(?:model_executor/)?models/")
-# Raised from model code but about the host, not the model: a different host
-# can succeed, so these stay with the platform restart.
-_HOST_FAULT = re.compile(r"CUDA error|cudaError|NCCL|CUBLAS_STATUS|illegal memory access|uncorrectable ECC", re.I)
+# The model's code states what it needs: "Flint requires FlashInfer attention",
+# "... requires the FlashInfer TRTLLM BF16 MoE backend", "only supported on ...".
+# Where an error is raised says nothing about permanence (a driver fault inside
+# load_weights also ends in model code); a stated requirement does.
+_REQUIREMENT = re.compile(
+    r"\brequires?\b|\bonly supports?\b|\bonly supported\b|\bnot supported (?:on|with|for|by)\b", re.I
+)
+# Host or transport trouble anywhere in the failed launch, including a CUDA error
+# wrapped by a model-code exception: another host or attempt can succeed.
+_HOST_FAULT = re.compile(
+    r"CUDA (?:driver )?error|cudaError|NCCL error|nccl(?:System|Unhandled|Internal)\w*Error|NVML|CUBLAS_STATUS|"
+    r"CUDNN_STATUS|illegal memory access|uncorrectable ECC|\bXid\b|Connection (?:reset|refused|aborted)|"
+    r"timed out|Max retries exceeded",
+    re.I,
+)
 
 
 def model_code_error(output: str) -> Optional[str]:
-    """The exception line of the first traceback whose innermost frame is model code.
+    """The stated requirement a model's own vLLM code failed on, if that is all that went wrong.
 
-    A model's own vLLM implementation can refuse a setup outright: flint's
-    asserts the FlashInfer attention backend and its BF16 MoE needs a
-    Blackwell-only kernel. Those fail identically on every start.
+    Matches an exception whose innermost frame is model code and whose message
+    states a requirement the setup does not meet: flint asserts the FlashInfer
+    attention backend, and its BF16 MoE needs a Blackwell-only kernel. Those
+    fail identically on every start. Returns None when the failed launch shows
+    any host or transport fault, so those keep getting a restart.
     """
-    last_file = None
+    if _HOST_FAULT.search(output):
+        return None
+    last_file, message = None, None
     for raw in output.splitlines():
         line = _LOG_PREFIX.sub("", raw.rstrip())
+        if message is not None:
+            # Continuation lines of a multi-line message, up to the next frame or traceback.
+            if line and not line.startswith(" ") and not _FRAME.match(line) and not _TRACEBACK_BREAK.match(line):
+                message.append(line)
+                continue
+            text = " ".join(message)
+            if _REQUIREMENT.search(text):
+                return text[:300]
+            message = None
         frame = _FRAME.match(line)
         if frame:
             last_file = frame.group(1)
             continue
-        exc = _EXCEPTION.match(line)
-        if exc and last_file:
-            if _MODEL_CODE.search(last_file) and not _HOST_FAULT.search(line):
-                return line[:300]
+        if _EXCEPTION.match(line) and last_file:
+            if _MODEL_CODE.search(last_file):
+                message = [line]
             last_file = None
+    if message and _REQUIREMENT.search(" ".join(message)):
+        return " ".join(message)[:300]
     return None
 
 
@@ -274,10 +301,11 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
     if raised:
         return (
             f"{named} failed inside vLLM's implementation of the model during "
-            f"startup: {raised.rstrip('.')}. A restart will not change this. A model's vLLM "
-            f"code can require a specific attention backend (set ATTENTION_BACKEND), "
-            f"GPU generation or dtype: check the model card and vLLM's recipe for "
-            f"the model, then change the endpoint's settings or GPU type."
+            f"startup: {raised.rstrip('.')}. The model's code requires a setup this "
+            f"endpoint does not have, so a restart will not change it. Check the model "
+            f"card and vLLM's recipe for the model for the attention backend "
+            f"(ATTENTION_BACKEND), GPU generation or dtype it needs, then change the "
+            f"endpoint's settings or GPU type."
         )
 
     return None
