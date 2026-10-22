@@ -193,7 +193,7 @@ def create_endpoint(
         "gpuTypeIds": gpu_type_ids,
         "gpuCount": gpu_count,
         "workersMin": 0,
-        "workersMax": 1,
+        "workersMax": 3,
         "idleTimeout": idle_timeout,
         "scalerType": "QUEUE_DELAY",
         "scalerValue": 4,
