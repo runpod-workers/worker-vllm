@@ -90,6 +90,26 @@ cache: each vLLM version, model config and GPU type adds an entry.
 endpoint scaled to zero); vLLM rebuilds it. Set `VLLM_CACHE_ROOT=/root/.cache/vllm` to
 keep the cache in the container.
 
+### Startup plan (opt-in)
+
+Set `VLLM_ENABLE_STARTUP_PLAN=1` on the endpoint and vLLM (v0.29.0+) saves the KV-cache
+memory budget it measured under `$VLLM_CACHE_ROOT/startup_plan/`, next to the compile
+cache, keyed by a fingerprint of the vLLM version, the model, parallel and compilation
+config, the GPU name, total memory and compute capability, and the torch/CUDA build. A
+later cold start with the same fingerprint and at least as much free GPU memory reuses that
+budget and skips the memory measurement and the CUDA-graph memory estimate (the profile
+forward pass and graph capture still run); any mismatch measures as before. The plan is
+looked up and written under whatever `VLLM_CACHE_ROOT` is in effect, so it follows the
+compile-cache fallback above; an existing plan on the volume is not copied.
+
+Measured on Qwen3-8B bf16, RTX 4090, network volume, vLLM v0.32.0: the profiling phase
+drops from about 6.5 s to about 2.3 s per cold start.
+
+Not on by default yet: vLLM's fingerprint does not include `gpu_memory_utilization`
+(vllm-project/vllm#60143), so after changing `GPU_MEMORY_UTILIZATION` on an endpoint
+delete `$VLLM_CACHE_ROOT/startup_plan/` or unset the variable, or the old budget is reused.
+When that lands upstream this can become the image default.
+
 ## Speculative decoding
 
 Pass a full JSON config, which vLLM parses natively:
