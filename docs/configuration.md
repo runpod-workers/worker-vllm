@@ -92,7 +92,7 @@ keep the cache in the container.
 
 Set `VLLM_ENABLE_STARTUP_PLAN=1` on the endpoint (`1` or `0` only; `true` fails the start)
 and vLLM also saves the KV-cache memory budget it measured under
-`$VLLM_CACHE_ROOT/startup_plan/`, keyed by the vLLM version, the model, parallel and
+`$VLLM_CACHE_ROOT/startup_plan/`, keyed by the vLLM version, the model, cache, parallel and
 compilation config, the GPU name, total memory and compute capability, the torch/CUDA build
 and the rank. A later cold start with the same key and at least as much free GPU memory
 reuses the budget and skips the memory measurement and the CUDA-graph memory estimate;
