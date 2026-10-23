@@ -102,8 +102,9 @@ forward pass and graph capture still run); any mismatch measures as before. The 
 looked up and written under whatever `VLLM_CACHE_ROOT` is in effect, so it follows the
 compile-cache fallback above; an existing plan on the volume is not copied.
 
-Measured on Qwen3-8B bf16, RTX 4090, network volume, vLLM v0.32.0: the profiling phase
-drops from about 6.5 s to about 2.3 s per cold start.
+Measured on Qwen3-8B bf16, RTX 4090, network volume, vLLM v0.32.0, three cold starts each:
+the profiling phase (`determine_available_memory`) takes 6.2-8.2 s without the plan and
+1.9-2.2 s with it, about 4.5 s saved per cold start.
 
 Not on by default yet: vLLM's fingerprint does not include `gpu_memory_utilization`
 (vllm-project/vllm#60143), so after changing `GPU_MEMORY_UTILIZATION` on an endpoint
