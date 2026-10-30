@@ -105,7 +105,7 @@ For the complete list of all available environment variables, examples, and deta
 
 ### When vLLM will not start
 
-Some startup failures a restart cannot fix: the model does not fit the GPU, `MAX_MODEL_LEN` is larger than the KV cache the GPU can hold, a flag or value vLLM rejects, a gated model without `HF_TOKEN`, a model that requires repository-provided code without `TRUST_REMOTE_CODE=true`. Exiting on those crash-loops the worker: each attempt repeats the startup (for most of these, the download and the model load), and submitted jobs receive no result.
+Some startup failures a restart cannot fix: the model does not fit the GPU, `MAX_MODEL_LEN` is larger than the KV cache the GPU can hold, a flag or value vLLM rejects, a gated model without `HF_TOKEN`, a model that requires repository-provided code without `TRUST_REMOTE_CODE=true`, a model whose own vLLM code states a requirement this worker's GPU or settings don't meet (for example the FlashInfer attention backend, or a newer GPU generation). Exiting on those crash-loops the worker: each attempt repeats the startup (for most of these, the download and the model load), and submitted jobs receive no result.
 
 The worker recognises these and stays up instead, answering every job with the cause and the fix:
 
@@ -119,7 +119,7 @@ The worker recognises these and stays up instead, answering every job with the c
 }
 ```
 
-The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt.
+The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt. For model code (`vllm/model_executor/models/`, `vllm/models/`), only an error whose message states a requirement ("requires", "only supports", "not supported on") counts; any other error there, and any failed start that shows a CUDA, NCCL, NVML, cuBLAS/cuDNN, ECC or Xid fault, still restarts. A requirement can depend on the GPU type, so on an endpoint that lists several, a worker on a GPU the model can't use answers jobs with the cause instead of leaving them to a worker that can: remove those GPU types from the endpoint.
 
 ## Option 2: Build Docker Image with Model Inside
 
