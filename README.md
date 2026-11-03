@@ -119,7 +119,10 @@ The worker recognises these and stays up instead, answering every job with the c
 }
 ```
 
-The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt. For model code (`vllm/model_executor/models/`, `vllm/models/`), only an error whose message states a requirement ("requires", "only supports", "not supported on") counts; any other error there, and any failed start that shows a CUDA, NCCL, NVML, cuBLAS/cuDNN, ECC or Xid fault, still restarts. A requirement can depend on the GPU type, so on an endpoint that lists several, a worker on a GPU the model can't use answers jobs with the cause instead of leaving them to a worker that can: remove those GPU types from the endpoint.
+The same message is logged by the worker, and the full vLLM traceback stays in the worker logs above it. Anything unrecognised still exits non-zero, because a failed download or a bad host is worth another attempt; before exiting, the worker answers one queued job with a `prestart_failed` error that carries the end of vLLM's output, so the failure is visible without opening the logs. For model code (`vllm/model_executor/models/`, `vllm/models/`), only an error whose message states a requirement ("requires", "only supports", "not supported on") counts; any other error there, and any failed start that shows a CUDA, NCCL, NVML, cuBLAS/cuDNN, ECC or Xid fault, still restarts. A requirement can depend on the GPU type, so on an endpoint that lists several, a worker on a GPU the model can't use answers jobs with the cause instead of leaving them to a worker that can: remove those GPU types from the endpoint.
+
+Startup runs in a RunPod prestart hook. Jobs stay queued while the model loads,
+so their execution timeout does not start during the cold start.
 
 ## Option 2: Build Docker Image with Model Inside
 

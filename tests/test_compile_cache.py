@@ -161,17 +161,11 @@ def test_fallback_root_matches_vllm_default(monkeypatch):
 
 
 @pytest.fixture
-def run_main(monkeypatch):
+def run_main(monkeypatch, fake_sdk):
     """Run main() without vLLM or the RunPod SDK; returns (cache roots per launch, handler)."""
     monkeypatch.setenv("MODEL_NAME", "org/model")
     monkeypatch.setattr(main.model_preflight, "check_model_access", lambda: None)
     monkeypatch.setattr(main, "stop_vllm", lambda proc: None)
-    handler_stub = types.ModuleType("handler")
-    handler_stub.handler = lambda job: None
-    runpod_stub = types.ModuleType("runpod")
-    runpod_stub.serverless = types.SimpleNamespace(start=mock.MagicMock())
-    monkeypatch.setitem(sys.modules, "handler", handler_stub)
-    monkeypatch.setitem(sys.modules, "runpod", runpod_stub)
 
     def drive(*attempt_outputs):
         roots = []
@@ -192,7 +186,7 @@ def run_main(monkeypatch):
         monkeypatch.setattr(main, "wait_for_vllm", fake_wait)
         main.recent_output.clear()
         main.main()
-        return roots, handler_stub
+        return roots, fake_sdk.handler
 
     return drive
 
