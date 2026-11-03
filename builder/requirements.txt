@@ -1,6 +1,6 @@
 # vLLM itself comes from the vllm/vllm-openai base image; this is only what
 # the RunPod wrapper adds on top.
-runpod~=2.0.0
+runpod~=2.1.0
 aiohttp>=3.9
 huggingface-hub>=0.24
 # Security floor (GHSA-6q48-6c7w-9gw2): the vllm/vllm-openai base image ships
