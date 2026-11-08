@@ -40,6 +40,11 @@ To prevent an accidental partial configuration, the disabled path rejects nonemp
 `TelysKVConnector` or `telys_vllm.connector`. It never provisions Telys in this mode.
 `TELYS_ENABLED` accepts exactly `true` or `false`.
 
+In both modes, the entrypoint rejects `--kv-transfer-config` in `VLLM_EXTRA_ARGS`,
+including both `--kv-transfer-config value` and `--kv-transfer-config=value` forms,
+instead of letting it bypass the connector checks. Set `KV_TRANSFER_CONFIG` instead.
+Other extra arguments pass through unchanged.
+
 ## Enable Telys
 
 Attach a network volume at `/runpod-volume`. A minimal endpoint configuration is:

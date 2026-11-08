@@ -9,6 +9,24 @@ fail() {
     exit 64
 }
 
+python3 - <<'PY'
+import os
+import shlex
+import sys
+
+extra_args = shlex.split(os.environ.get("VLLM_EXTRA_ARGS", ""))
+if any(
+    arg == "--kv-transfer-config" or arg.startswith("--kv-transfer-config=")
+    for arg in extra_args
+):
+    print(
+        "telys-vllm entrypoint: --kv-transfer-config is not allowed in "
+        "VLLM_EXTRA_ARGS; set KV_TRANSFER_CONFIG instead",
+        file=sys.stderr,
+    )
+    raise SystemExit(64)
+PY
+
 case "${TELYS_ENABLED:-false}" in
     false)
         if [[ -n "${TELYS_API_KEY:-}" || -n "${TELYS_OAUTH_TOKEN:-}" ]]; then

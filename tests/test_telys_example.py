@@ -181,6 +181,41 @@ def test_opt_in_rejects_ambiguous_boolean(entrypoint_env):
     assert not (capture / "main-called").exists()
 
 
+@pytest.mark.parametrize("enabled", [None, "false", "true"])
+@pytest.mark.parametrize(
+    "extra_args",
+    [
+        f"--kv-transfer-config '{STOCK_CONFIG}'",
+        f"--kv-transfer-config={STOCK_CONFIG}",
+        f"--kv-transfer-config={shlex.quote(json.dumps(json.loads(DEFAULT_CONFIG)))}",
+        f"--uvicorn-log-level warning --kv-transfer-config {shlex.quote(DEFAULT_CONFIG)}",
+    ],
+)
+def test_rejects_connector_overrides_in_extra_args(entrypoint_env, enabled, extra_args):
+    run, capture, _ = entrypoint_env
+    result = run({"TELYS_ENABLED": enabled, "VLLM_EXTRA_ARGS": extra_args})
+
+    assert result.returncode == 64
+    assert "--kv-transfer-config is not allowed in VLLM_EXTRA_ARGS" in result.stderr
+    assert "KV_TRANSFER_CONFIG" in result.stderr
+    assert not (capture / "main-called").exists()
+    assert not (capture / "api-called").exists()
+    assert not (capture / "oauth-called").exists()
+
+
+@pytest.mark.parametrize("enabled", [None, "false", "true"])
+def test_generic_extra_args_remain_unchanged(entrypoint_env, enabled):
+    run, capture, _ = entrypoint_env
+    extra_args = (
+        "--max-model-len 2048 --override-generation-config "
+        "'{\"max_new_tokens\": 512}' --uvicorn-log-level warning"
+    )
+    result = run({"TELYS_ENABLED": enabled, "VLLM_EXTRA_ARGS": extra_args})
+
+    assert result.returncode == 0, result.stderr
+    assert captured_env(capture)["VLLM_EXTRA_ARGS"] == extra_args
+
+
 def test_enabled_supplies_connector_and_disables_async(entrypoint_env):
     run, capture, _ = entrypoint_env
     result = run({"TELYS_ENABLED": "true"})
