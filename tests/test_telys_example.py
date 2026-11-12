@@ -14,7 +14,13 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "examples" / "telys" / "Dockerfile"
 ENTRYPOINT = ROOT / "examples" / "telys" / "entrypoint.sh"
 README = ROOT / "examples" / "telys" / "README.md"
-CONNECTOR_COMMIT = "49662f299b3c17b0f8c51050c8600cc8706362fd"
+CONNECTOR_COMMIT = "3505b767cc9d6f9cfd7751fa3ad9946b92d54bb8"
+CONNECTOR_VERSION = "0.1.5"
+TELYS_SDK_VERSION = "0.1.15"
+PUBLIC_IMAGE = (
+    "ghcr.io/thyn-ai/telys-worker-vllm@sha256:"
+    "01b9b967a1d36e61ecb4ec3d2b179329762048e020e7dbbf0bc61285e7fbeb4b"
+)
 DEFAULT_CONFIG = (
     '{"kv_connector":"TelysKVConnector",'
     '"kv_connector_module_path":"telys_vllm.connector","kv_role":"kv_both"}'
@@ -346,7 +352,11 @@ def test_dockerfile_pins_final_connector_commit():
     assert "apt-get install -y --no-install-recommends git" in dockerfile
     assert "--no-deps" in dockerfile
     assert 'vllm_version == "0.32.0"' in dockerfile
-    assert 'connector_version == "0.1.2"' in dockerfile
+    assert f'pip install --no-cache-dir "telys=={TELYS_SDK_VERSION}"' in dockerfile
+    assert f'telys_version == "{TELYS_SDK_VERSION}"' in dockerfile
+    assert f"expected telys=={TELYS_SDK_VERSION}" in dockerfile
+    assert f'connector_version == "{CONNECTOR_VERSION}"' in dockerfile
+    assert f"expected telys-vllm=={CONNECTOR_VERSION}" in dockerfile
     assert re.findall(r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])", dockerfile) == [
         CONNECTOR_COMMIT
     ]
@@ -357,7 +367,8 @@ def test_dockerfile_commit_validator_accepts_only_full_lowercase_shas():
     dockerfile = DOCKERFILE.read_text()
     validator = dockerfile.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
 
-    for invalid in ["not-a-commit", "main", "v0.1.2", "a" * 39, "A" * 40]:
+    invalid_revisions = ["not-a-commit", "main", f"v{CONNECTOR_VERSION}", "a" * 39, "A" * 40]
+    for invalid in invalid_revisions:
         result = subprocess.run(
             [sys.executable, "-", invalid],
             capture_output=True,
@@ -382,6 +393,11 @@ def test_readme_documents_pinned_commit_and_remote_acceptance_boundary():
     readme = README.read_text()
 
     assert CONNECTOR_COMMIT in readme
+    assert f"telys-vllm=={CONNECTOR_VERSION}" in readme
+    assert f"telys=={TELYS_SDK_VERSION}" in readme
+    assert "public on PyPI" in readme
+    assert "GHCR release image is also public" in readme
+    assert PUBLIC_IMAGE in readme
     assert "placeholder" not in readme.lower()
     assert "intentionally not buildable" not in readme
     assert "TELYS_ENABLED=true" in readme
