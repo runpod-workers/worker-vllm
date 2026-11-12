@@ -162,3 +162,26 @@ is gone:
   `SWAP_SPACE`, `ROPE_SCALING`/`ROPE_THETA`, `NUM_LOOKAHEAD_SLOTS`, and
   `GUIDED_DECODING_*` are in `REMOVED_FLAGS`: setting them logs a warning and they
   are ignored instead of crashing the worker at startup.
+
+## Optional Telys connector example
+
+[`examples/telys/`](../examples/telys/README.md) is a separate derived image; the
+standard worker image and its default behavior do not include or enable Telys. The
+example's `TELYS_VLLM_COMMIT` build argument defaults to connector `v0.1.6` at
+`2f0c20ccec56afcb613973e296281f51e23cbe26`, installed from the immutable `git+https`
+source at that commit. The derived image installs `telys==0.1.15`. Overrides must use
+a full 40-character lowercase SHA; branches, tags, and short SHAs are rejected.
+
+The derived image adds these wrapper-level settings:
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `TELYS_ENABLED` | `false` | Exactly `true` opts in. Otherwise the original worker entrypoint runs and non-Telys connector configuration is unchanged. Telys credentials or connector configuration are rejected while disabled. |
+| `TELYS_HOME` | SDK default | Persistent SDK runtime and login-state directory; the example uses `/runpod-volume/telys-home`. |
+| `TELYS_PATH` | — | Persistent embedded-engine data path. Remote-engine configuration is described in the example README. |
+| `TELYS_API_KEY` / `TELYS_OAUTH_TOKEN` | — | Optional first-run provisioning secrets. API-key provisioning takes precedence; failures never fall back to the other mechanism. Both are removed from the environment after successful provisioning. |
+| `KV_TRANSFER_CONFIG` | Telys connector when enabled | Automatically supplied for `TELYS_ENABLED=true` unless already set. A custom value must select `TelysKVConnector` from `telys_vllm.connector` with `kv_role=kv_both`. |
+| `TELYS_VLLM_LOAD_ASYNC` | `0` when enabled | Async KV loading is unsupported; attempts to enable it through the environment or connector extra config fail startup. |
+
+See the example README for the build command, persistent paths, provisioning flow, and
+the real GPU/model/endpoint acceptance checks that remain necessary.
