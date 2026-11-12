@@ -14,12 +14,12 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "examples" / "telys" / "Dockerfile"
 ENTRYPOINT = ROOT / "examples" / "telys" / "entrypoint.sh"
 README = ROOT / "examples" / "telys" / "README.md"
-CONNECTOR_COMMIT = "3505b767cc9d6f9cfd7751fa3ad9946b92d54bb8"
-CONNECTOR_VERSION = "0.1.5"
+CONNECTOR_COMMIT = "2f0c20ccec56afcb613973e296281f51e23cbe26"
+CONNECTOR_VERSION = "0.1.6"
 TELYS_SDK_VERSION = "0.1.15"
 PUBLIC_IMAGE = (
     "ghcr.io/thyn-ai/telys-worker-vllm@sha256:"
-    "01b9b967a1d36e61ecb4ec3d2b179329762048e020e7dbbf0bc61285e7fbeb4b"
+    "1b02b3cdac471064e8b9968fe2ab87f99da2d455e04d9cffea6b74b745a4218f"
 )
 DEFAULT_CONFIG = (
     '{"kv_connector":"TelysKVConnector",'

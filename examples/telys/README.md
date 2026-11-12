@@ -8,7 +8,7 @@ to the stock `runpod/worker-v1-vllm:v2.30.3` image (vLLM 0.32.0). The upstream w
 ## Build
 
 `TELYS_VLLM_COMMIT` defaults to
-`3505b767cc9d6f9cfd7751fa3ad9946b92d54bb8`, the source commit for connector `v0.1.5`.
+`2f0c20ccec56afcb613973e296281f51e23cbe26`, the source commit for connector `v0.1.6`.
 The Dockerfile installs from the immutable `git+https` source at that commit. Overrides
 must use a full 40-character lowercase SHA; branches, tags, short SHAs, and uppercase
 SHAs are rejected.
@@ -18,20 +18,20 @@ Build from the worker repository root:
 ```bash
 docker build --platform=linux/amd64 \
   --file examples/telys/Dockerfile \
-  --build-arg TELYS_VLLM_COMMIT=3505b767cc9d6f9cfd7751fa3ad9946b92d54bb8 \
+  --build-arg TELYS_VLLM_COMMIT=2f0c20ccec56afcb613973e296281f51e23cbe26 \
   --tag your-dockerhub-user/telys-worker-vllm:VERSION .
 ```
 
 The build installs `telys==0.1.15`, installs the connector directly from the pinned
 commit with `--no-deps`, and checks that vLLM remains exactly 0.32.0, the connector
-distribution is 0.1.5, and `TelysKVConnector` imports. It does not bake in a model,
+distribution is 0.1.6, and `TelysKVConnector` imports. It does not bake in a model,
 Telys credentials, or a signed Telys runtime. Publishing the resulting image is a
 separate operation.
 
-The stable `telys-vllm==0.1.5` and `telys==0.1.15` packages are public on PyPI. The
+The stable `telys-vllm==0.1.6` and `telys==0.1.15` packages are public on PyPI. The
 connector project's stable GHCR release image is also public and can be pulled without
 registry credentials at
-`ghcr.io/thyn-ai/telys-worker-vllm@sha256:01b9b967a1d36e61ecb4ec3d2b179329762048e020e7dbbf0bc61285e7fbeb4b`.
+`ghcr.io/thyn-ai/telys-worker-vllm@sha256:1b02b3cdac471064e8b9968fe2ab87f99da2d455e04d9cffea6b74b745a4218f`.
 The build above uses the immutable connector source commit rather than that prebuilt
 image.
 

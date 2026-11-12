@@ -1,6 +1,6 @@
 FROM runpod/worker-v1-vllm:v2.30.3
 
-ARG TELYS_VLLM_COMMIT=3505b767cc9d6f9cfd7751fa3ad9946b92d54bb8
+ARG TELYS_VLLM_COMMIT=2f0c20ccec56afcb613973e296281f51e23cbe26
 RUN python3 - "$TELYS_VLLM_COMMIT" <<'PY'
 import re
 import sys
@@ -20,7 +20,7 @@ RUN apt-get update \
 RUN python3 -m pip install --no-cache-dir "telys==0.1.15" \
     && python3 -m pip install --no-cache-dir --no-deps \
         "telys-vllm @ git+https://github.com/thyn-ai/telys-vllm.git@${TELYS_VLLM_COMMIT}" \
-    && python3 -c 'from importlib.metadata import version; vllm_version = version("vllm"); assert vllm_version == "0.32.0", f"expected vllm==0.32.0, found {vllm_version}"; telys_version = version("telys"); assert telys_version == "0.1.15", f"expected telys==0.1.15, found {telys_version}"; connector_version = version("telys-vllm"); assert connector_version == "0.1.5", f"expected telys-vllm==0.1.5, found {connector_version}"; from telys_vllm.connector import TelysKVConnector'
+    && python3 -c 'from importlib.metadata import version; vllm_version = version("vllm"); assert vllm_version == "0.32.0", f"expected vllm==0.32.0, found {vllm_version}"; telys_version = version("telys"); assert telys_version == "0.1.15", f"expected telys==0.1.15, found {telys_version}"; connector_version = version("telys-vllm"); assert connector_version == "0.1.6", f"expected telys-vllm==0.1.6, found {connector_version}"; from telys_vllm.connector import TelysKVConnector'
 
 COPY --chmod=0755 examples/telys/entrypoint.sh /usr/local/bin/telys-vllm-entrypoint
 

@@ -167,8 +167,8 @@ is gone:
 
 [`examples/telys/`](../examples/telys/README.md) is a separate derived image; the
 standard worker image and its default behavior do not include or enable Telys. The
-example's `TELYS_VLLM_COMMIT` build argument defaults to connector `v0.1.5` at
-`3505b767cc9d6f9cfd7751fa3ad9946b92d54bb8`, installed from the immutable `git+https`
+example's `TELYS_VLLM_COMMIT` build argument defaults to connector `v0.1.6` at
+`2f0c20ccec56afcb613973e296281f51e23cbe26`, installed from the immutable `git+https`
 source at that commit. The derived image installs `telys==0.1.15`. Overrides must use
 a full 40-character lowercase SHA; branches, tags, and short SHAs are rejected.
 
