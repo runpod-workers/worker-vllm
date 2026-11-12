@@ -19,6 +19,7 @@ When the request body has "stream": true, raw SSE chunks are yielded as they
 arrive; otherwise the parsed JSON response is yielded once.
 """
 
+import codecs
 import logging
 import os
 from typing import Any, AsyncGenerator, Optional, Tuple
@@ -153,8 +154,16 @@ async def handler(job: dict) -> AsyncGenerator[Any, None]:
 
                 wants_stream = isinstance(body, dict) and body.get("stream") is True
                 if wants_stream:
+                    # iter_any() splits on arbitrary byte boundaries, so a multibyte
+                    # character can straddle two chunks.
+                    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
                     async for chunk in resp.content.iter_any():
-                        yield chunk.decode("utf-8", errors="replace")
+                        text = decoder.decode(chunk)
+                        if text:
+                            yield text
+                    tail = decoder.decode(b"", final=True)
+                    if tail:
+                        yield tail
                 else:
                     yield await resp.json(content_type=None)
     except aiohttp.ClientError as e:

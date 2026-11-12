@@ -101,3 +101,82 @@ class TestStartupError:
 
         # Falls through to the normal liveness check rather than short-circuiting.
         assert "not running" in outputs[0]["error"]["message"]
+
+
+def _stream(chunks: list) -> list:
+    """Run a streaming job against a local server that writes `chunks` as separate TCP writes."""
+    import asyncio
+
+    from aiohttp import web
+
+    import handler as handler_module
+
+    async def sse(request):
+        resp = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
+        await resp.prepare(request)
+        for chunk in chunks:
+            await resp.write(chunk)
+            await asyncio.sleep(0.05)  # let each write arrive as its own chunk
+        await resp.write_eof()
+        return resp
+
+    async def run():
+        app = web.Application()
+        app.router.add_post("/v1/completions", sse)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = runner.addresses[0][1]
+        old_url = handler_module.VLLM_BASE_URL
+        handler_module.VLLM_BASE_URL = f"http://127.0.0.1:{port}"
+        try:
+            job = {"input": {"route": "/v1/completions", "body": {"model": "m", "prompt": "x", "stream": True}}}
+            return [item async for item in handler_module.handler(job)]
+        finally:
+            handler_module.VLLM_BASE_URL = old_url
+            await runner.cleanup()
+
+    return asyncio.run(run())
+
+
+class TestStreamingUtf8:
+    """iter_any() chunk boundaries are arbitrary; decoding must not corrupt split characters."""
+
+    def test_two_byte_char_split_across_chunks(self):
+        data = "data: héllo\n\n".encode()
+        cut = data.index("é".encode()) + 1
+
+        outputs = _stream([data[:cut], data[cut:]])
+
+        assert "�" not in "".join(outputs)
+        assert "".join(outputs) == "data: héllo\n\n"
+
+    @pytest.mark.parametrize("offset", [1, 2, 3])
+    def test_four_byte_emoji_split_at_each_position(self, offset):
+        data = "data: 😀 done\n\n".encode()
+        cut = data.index("😀".encode()) + offset
+
+        outputs = _stream([data[:cut], data[cut:]])
+
+        assert "".join(outputs) == "data: 😀 done\n\n"
+
+    def test_ascii_stream_is_unchanged(self):
+        outputs = _stream([b"data: one\n\n", b"data: two\n\n"])
+
+        assert outputs == ["data: one\n\n", "data: two\n\n"]
+
+    def test_stream_ending_mid_character_flushes_a_replacement(self):
+        data = "data: ok 😀".encode()
+
+        outputs = _stream([data[:-2]])
+
+        assert "".join(outputs) == "data: ok �"
+
+    def test_joined_output_equals_the_original_text(self):
+        text = "data: héllo 😀 こんにちは\n\ndata: [DONE]\n\n"
+        data = text.encode()
+        # One byte per chunk splits every multibyte character at every position.
+        outputs = _stream([bytes([b]) for b in data])
+
+        assert "".join(outputs) == text
