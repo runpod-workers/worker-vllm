@@ -416,56 +416,6 @@
         }
       },
       {
-        "key": "DEVICE",
-        "input": {
-          "name": "Device",
-          "type": "string",
-          "description": "Device type for vLLM execution.",
-          "options": [
-            {
-              "label": "auto",
-              "value": "auto"
-            },
-            {
-              "label": "cuda",
-              "value": "cuda"
-            },
-            {
-              "label": "neuron",
-              "value": "neuron"
-            },
-            {
-              "label": "cpu",
-              "value": "cpu"
-            },
-            {
-              "label": "openvino",
-              "value": "openvino"
-            },
-            {
-              "label": "tpu",
-              "value": "tpu"
-            },
-            {
-              "label": "xpu",
-              "value": "xpu"
-            }
-          ],
-          "default": "auto",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SCHEDULER_DELAY_FACTOR",
-        "input": {
-          "name": "Scheduler Delay Factor",
-          "type": "number",
-          "description": "Apply a delay before scheduling next prompt.",
-          "default": 0,
-          "advanced": true
-        }
-      },
-      {
         "key": "ENABLE_CHUNKED_PREFILL",
         "input": {
           "name": "Enable Chunked Prefill",
@@ -480,53 +430,7 @@
         "input": {
           "name": "Speculative Config (JSON)",
           "type": "string",
-          "description": "Full speculative decoding configuration as a JSON string. Overrides individual speculative env vars.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SPECULATIVE_METHOD",
-        "input": {
-          "name": "Speculative Method",
-          "type": "string",
-          "description": "Speculative decoding method to use.",
-          "options": [
-            { "label": "None", "value": "" },
-            { "label": "Draft Model", "value": "draft_model" },
-            { "label": "N-gram", "value": "ngram" },
-            { "label": "EAGLE", "value": "eagle" },
-            { "label": "EAGLE3", "value": "eagle3" },
-            { "label": "Medusa", "value": "medusa" },
-            { "label": "MLP Speculator", "value": "mlp_speculator" }
-          ],
-          "default": "",
-          "advanced": true
-        }
-      },
-      {
-        "key": "SPECULATIVE_MODEL",
-        "input": {
-          "name": "Speculative Model",
-          "type": "string",
-          "description": "The name of the draft model to be used in speculative decoding.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "NUM_SPECULATIVE_TOKENS",
-        "input": {
-          "name": "Num Speculative Tokens",
-          "type": "number",
-          "description": "The number of speculative tokens to sample from the draft model.",
-          "advanced": true
-        }
-      },
-      {
-        "key": "NGRAM_PROMPT_LOOKUP_MAX",
-        "input": {
-          "name": "Ngram Prompt Lookup Max",
-          "type": "number",
-          "description": "Max size of window for ngram prompt lookup in speculative decoding.",
+          "description": "Full speculative decoding configuration as a JSON string, for example {\"model\":\"org/draft\",\"num_speculative_tokens\":3}.",
           "advanced": true
         }
       },
@@ -618,47 +522,7 @@
         }
       },
       {
-        "key": "DEFAULT_BATCH_SIZE",
-        "input": {
-          "name": "Default Final Batch Size",
-          "type": "number",
-          "description": "Default and Maximum batch size for token streaming to reduce HTTP calls",
-          "default": 50,
-          "advanced": true
-        }
-      },
-      {
-        "key": "DEFAULT_MIN_BATCH_SIZE",
-        "input": {
-          "name": "Default Starting Batch Size",
-          "type": "number",
-          "description": "Batch size for the first request, which will be multiplied by the growth factor every subsequent request",
-          "default": 1,
-          "advanced": true
-        }
-      },
-      {
-        "key": "DEFAULT_BATCH_SIZE_GROWTH_FACTOR",
-        "input": {
-          "name": "Default Batch Size Growth Factor",
-          "type": "number",
-          "description": "Growth factor for dynamic batch size",
-          "default": 3,
-          "advanced": true
-        }
-      },
-      {
-        "key": "RAW_OPENAI_OUTPUT",
-        "input": {
-          "name": "Raw OpenAI Output",
-          "type": "boolean",
-          "description": "Raw OpenAI output instead of just the text",
-          "default": true,
-          "advanced": true
-        }
-      },
-      {
-        "key": "OPENAI_RESPONSE_ROLE",
+        "key": "RESPONSE_ROLE",
         "input": {
           "name": "OpenAI Response Role",
           "type": "string",
