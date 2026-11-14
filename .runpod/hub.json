@@ -522,16 +522,6 @@
         }
       },
       {
-        "key": "RESPONSE_ROLE",
-        "input": {
-          "name": "OpenAI Response Role",
-          "type": "string",
-          "description": "Role of the LLM's Response in OpenAI Chat Completions",
-          "default": "assistant",
-          "advanced": true
-        }
-      },
-      {
         "key": "OPENAI_SERVED_MODEL_NAME_OVERRIDE",
         "input": {
           "name": "OpenAI Served Model Name Override",
