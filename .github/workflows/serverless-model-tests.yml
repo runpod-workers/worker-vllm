@@ -61,11 +61,11 @@ jobs:
         if: always()
         run: |
           if [ -n "${{ steps.e2e_test.outputs.endpoint_id }}" ]; then
-            curl -sf -X DELETE "https://rest.runpod.io/v1/endpoints/${{ steps.e2e_test.outputs.endpoint_id }}" \
+            curl -sf -X DELETE "https://api.runpod.io/v2/serverless/${{ steps.e2e_test.outputs.endpoint_id }}" \
               -H "Authorization: Bearer ${{ secrets.RUNPOD_API_KEY_2 }}" || true
           fi
           if [ -n "${{ steps.e2e_test.outputs.template_id }}" ]; then
-            curl -sf -X DELETE "https://rest.runpod.io/v1/templates/${{ steps.e2e_test.outputs.template_id }}" \
+            curl -sf -X DELETE "https://api.runpod.io/v2/templates/${{ steps.e2e_test.outputs.template_id }}" \
               -H "Authorization: Bearer ${{ secrets.RUNPOD_API_KEY_2 }}" || true
           fi
 
@@ -157,10 +157,10 @@ jobs:
         if: always()
         run: |
           if [ -n "${{ steps.e2e_test.outputs.endpoint_id }}" ]; then
-            curl -sf -X DELETE "https://rest.runpod.io/v1/endpoints/${{ steps.e2e_test.outputs.endpoint_id }}" \
+            curl -sf -X DELETE "https://api.runpod.io/v2/serverless/${{ steps.e2e_test.outputs.endpoint_id }}" \
               -H "Authorization: Bearer ${{ secrets.RUNPOD_API_KEY_2 }}" || true
           fi
           if [ -n "${{ steps.e2e_test.outputs.template_id }}" ]; then
-            curl -sf -X DELETE "https://rest.runpod.io/v1/templates/${{ steps.e2e_test.outputs.template_id }}" \
+            curl -sf -X DELETE "https://api.runpod.io/v2/templates/${{ steps.e2e_test.outputs.template_id }}" \
               -H "Authorization: Bearer ${{ secrets.RUNPOD_API_KEY_2 }}" || true
           fi
