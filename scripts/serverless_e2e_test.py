@@ -25,14 +25,17 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-REST_API_BASE = "https://rest.runpod.io/v1"
+REST_API_BASE = "https://api.runpod.io/v2"
 JOB_API_BASE = "https://api.runpod.ai/v2"
 
-DEFAULT_GPU_TYPE_IDS = [
-    "NVIDIA H100 80GB HBM3",
-    "NVIDIA H100 NVL",
-    "NVIDIA H100 PCIe",
-]
+# v2 serverless endpoints select GPU pools, not individual GPU type IDs.
+# ADA_80_PRO is the H100 pool: H100 80GB HBM3, H100 NVL, and H100 PCIe.
+DEFAULT_GPU_POOLS = ["ADA_80_PRO"]
+
+# Per-request execution timeout, in milliseconds. v2 defaults to 300000 and the
+# migration guide warns against relying on that; 10 minutes keeps headroom over
+# the 5-minute per-test deadlines without letting a hung request run forever.
+ENDPOINT_EXECUTION_TIMEOUT_MS = 10 * 60 * 1000
 
 TERMINAL_STATUSES = {"COMPLETED", "FAILED", "TIMED_OUT", "CANCELLED"}
 
@@ -147,9 +150,9 @@ def api_request(method: str, url: str, api_key: str, body: dict | None = None) -
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {api_key}")
     req.add_header("Content-Type", "application/json")
-    # Cloudflare in front of rest.runpod.io bans the default Python-urllib UA
-    # (HTTP 403, error code 1010, first seen 2026-09-10). A browser UA is not
-    # banned; the value just needs to look like one.
+    # Cloudflare in front of the Runpod REST API has blocked the default
+    # Python-urllib UA before (HTTP 403, error code 1010, first seen on the v1
+    # host 2026-09-10); a browser-like UA is accepted, so keep sending one.
     req.add_header(
         "User-Agent",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -168,10 +171,10 @@ def create_template(api_key: str, name: str, image: str, env: dict, container_di
     log(f"Creating template {name!r} for image {image}")
     resp = api_request("POST", f"{REST_API_BASE}/templates", api_key, {
         "name": name,
-        "imageName": image,
-        "isServerless": True,
+        "image": image,
+        "serverless": True,
         "env": env,
-        "containerDiskInGb": container_disk_in_gb,
+        "disk": container_disk_in_gb,
     })
     return resp["id"]
 
@@ -180,36 +183,35 @@ def create_endpoint(
     api_key: str,
     name: str,
     template_id: str,
-    gpu_type_ids: list[str],
+    gpu_pools: list[str],
     gpu_count: int,
     allowed_cuda_versions: list[str] | None,
     min_cuda_version: str | None,
     idle_timeout: int,
 ) -> str:
-    log(f"Creating endpoint {name!r} (gpuTypeIds={gpu_type_ids})")
+    log(f"Creating endpoint {name!r} (gpuPools={gpu_pools})")
+    gpu = {"pools": gpu_pools, "count": gpu_count}
+    if allowed_cuda_versions:
+        gpu["allowedCudaVersions"] = allowed_cuda_versions
+    if min_cuda_version:
+        gpu["minCudaVersion"] = min_cuda_version
     body = {
         "name": name,
         "templateId": template_id,
-        "gpuTypeIds": gpu_type_ids,
-        "gpuCount": gpu_count,
-        "workersMin": 0,
-        "workersMax": 3,
-        "idleTimeout": idle_timeout,
-        "scalerType": "QUEUE_DELAY",
-        "scalerValue": 4,
+        "type": "QUEUE",
+        "gpu": gpu,
+        "workers": {"min": 0, "max": 3, "idleTimeout": idle_timeout},
+        "scaling": {"type": "QUEUE_DELAY", "queueDelay": 4},
+        "timeout": ENDPOINT_EXECUTION_TIMEOUT_MS,
     }
-    if allowed_cuda_versions:
-        body["allowedCudaVersions"] = allowed_cuda_versions
-    if min_cuda_version:
-        body["minCudaVersion"] = min_cuda_version
-    resp = api_request("POST", f"{REST_API_BASE}/endpoints", api_key, body)
+    resp = api_request("POST", f"{REST_API_BASE}/serverless", api_key, body)
     return resp["id"]
 
 
 def delete_endpoint(api_key: str, endpoint_id: str) -> None:
     log(f"Deleting endpoint {endpoint_id}")
     try:
-        api_request("DELETE", f"{REST_API_BASE}/endpoints/{endpoint_id}", api_key)
+        api_request("DELETE", f"{REST_API_BASE}/serverless/{endpoint_id}", api_key)
     except RuntimeError as e:
         log(f"WARNING: failed to delete endpoint {endpoint_id}: {e}")
 
@@ -267,8 +269,15 @@ def main() -> int:
     parser.add_argument("--keep", action="store_true", help="Don't tear down the endpoint/template afterward")
     parser.add_argument("--hub-json", type=Path, default=REPO_ROOT / ".runpod" / "hub.json")
     parser.add_argument("--tests-file", type=Path, default=REPO_ROOT / ".runpod" / "tests.json")
-    parser.add_argument("--gpu-type-ids", default=",".join(DEFAULT_GPU_TYPE_IDS))
-    parser.add_argument("--min-cuda-version", help="Overrides the config/hub.json minCudaVersion")
+    parser.add_argument(
+        "--gpu-pools",
+        default=",".join(DEFAULT_GPU_POOLS),
+        help="Comma-separated serverless GPU pool IDs (v2 selects pools, not GPU type IDs)",
+    )
+    parser.add_argument(
+        "--min-cuda-version",
+        help="Overrides the config/hub.json minCudaVersion (drops the hub's allowedCudaVersions; v2 rejects both together)",
+    )
     parser.add_argument("--dockerhub-repo", default=os.environ.get("DOCKERHUB_REPO", "runpod"))
     parser.add_argument("--dockerhub-img", default=os.environ.get("DOCKERHUB_IMG", "worker-v1-vllm"))
     parser.add_argument("--idle-timeout", type=int, default=60)
@@ -303,7 +312,7 @@ def main() -> int:
     if hf_token:
         env["HF_TOKEN"] = hf_token
     tests_data = json.loads(args.tests_file.read_text())
-    gpu_type_ids = [g.strip() for g in args.gpu_type_ids.split(",") if g.strip()]
+    gpu_pools = [p.strip() for p in args.gpu_pools.split(",") if p.strip()]
 
     resource_name = f"worker-vllm-e2e-{model_slug}-{run_id}"
     template_id = None
@@ -313,14 +322,19 @@ def main() -> int:
             api_key, resource_name, image, env, hub_defaults["containerDiskInGb"]
         )
         write_github_output("template_id", template_id)
+        allowed_cuda_versions = hub_defaults["allowedCudaVersions"]
+        min_cuda_version = args.min_cuda_version or hub_defaults["minCudaVersion"]
+        if args.min_cuda_version:
+            # v2 rejects gpu.allowedCudaVersions together with gpu.minCudaVersion.
+            allowed_cuda_versions = None
         endpoint_id = create_endpoint(
             api_key,
             resource_name,
             template_id,
-            gpu_type_ids,
+            gpu_pools,
             hub_defaults["gpuCount"],
-            hub_defaults["allowedCudaVersions"],
-            args.min_cuda_version or hub_defaults["minCudaVersion"],
+            allowed_cuda_versions,
+            min_cuda_version,
             args.idle_timeout,
         )
         write_github_output("endpoint_id", endpoint_id)
