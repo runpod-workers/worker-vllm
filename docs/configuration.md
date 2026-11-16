@@ -156,8 +156,9 @@ is gone:
 - `TRANSFORMERS_VERSION` runtime reinstall — the `transformers` version is pinned by
   the base image; build with a different `VLLM_VERSION` instead.
 - `MAX_CONTEXT_LEN_TO_CAPTURE` and `VLLM_ATTENTION_BACKEND` — gone upstream; use
-  `ATTENTION_BACKEND`. `DISABLE_LOG_REQUESTS` was inverted upstream — use
-  `ENABLE_LOG_REQUESTS=false` (emits `--no-enable-log-requests`). `CUDA_GRAPH_SIZES`
+  `ATTENTION_BACKEND`. `DISABLE_LOG_REQUESTS=true` emits `--disable-log-requests`
+  (restored upstream in v0.33.0 as a bool pair; `ENABLE_LOG_REQUESTS=false` still
+  works via `--no-enable-log-requests`). `CUDA_GRAPH_SIZES`
   moved into `COMPILATION_CONFIG` as `cudagraph_capture_sizes`. Removals like
   `SWAP_SPACE`, `ROPE_SCALING`/`ROPE_THETA`, `NUM_LOOKAHEAD_SLOTS`, and
   `GUIDED_DECODING_*` are in `REMOVED_FLAGS`: setting them logs a warning and they
