@@ -200,7 +200,7 @@ def create_endpoint(
         "templateId": template_id,
         "type": "QUEUE",
         "gpu": gpu,
-        "workers": {"min": 0, "max": 3, "idleTimeout": idle_timeout},
+        "workers": {"min": 1, "max": 3, "idleTimeout": idle_timeout},
         "scaling": {"type": "QUEUE_DELAY", "queueDelay": 4},
         "timeout": ENDPOINT_EXECUTION_TIMEOUT_MS,
     }
