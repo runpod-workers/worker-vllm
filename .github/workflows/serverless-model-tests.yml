@@ -50,7 +50,7 @@ jobs:
 
       - name: Run serverless e2e test
         id: e2e_test
-        run: python scripts/serverless_e2e_test.py --config configs/gpt-oss/gpt_oss_120b.yaml --build
+        run: python scripts/serverless_e2e_test.py --min-cuda-version 13.0 --config configs/gpt-oss/gpt_oss_120b.yaml --build
         env:
           RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY_2 }}
           DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'runpod' }}
@@ -145,7 +145,7 @@ jobs:
 
       - name: Run serverless e2e test
         id: e2e_test
-        run: python scripts/serverless_e2e_test.py --config "${{ matrix.config }}" --image "${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}"
+        run: python scripts/serverless_e2e_test.py --min-cuda-version 13.0 --config "${{ matrix.config }}" --image "${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}"
         env:
           RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY_2 }}
           HUGGINGFACE_ACCESS_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN_2 }}
