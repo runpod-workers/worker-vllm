@@ -327,12 +327,12 @@
               "value": "awq"
             },
             {
-              "label": "SqueezeLLM",
-              "value": "squeezellm"
-            },
-            {
               "label": "GPTQ",
               "value": "gptq"
+            },
+            {
+              "label": "bitsandbytes",
+              "value": "bitsandbytes"
             }
           ],
           "advanced": true

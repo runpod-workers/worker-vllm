@@ -60,7 +60,7 @@ Configure worker-vllm using environment variables:
 | `MODEL_NAME`                        | Path of the model weights                         |                     | Local folder or Hugging Face repo ID                               |
 | `HF_TOKEN`                          | HuggingFace access token for gated/private models |                     | Your HuggingFace access token                                      |
 | `MAX_MODEL_LEN`                     | Model's maximum context length                    |                     | Integer (e.g., 4096)                                               |
-| `QUANTIZATION`                      | Quantization method                               |                     | "awq", "gptq", "squeezellm", "bitsandbytes"                        |
+| `QUANTIZATION`                      | Quantization method                               |                     | "awq", "gptq", "bitsandbytes"                                      |
 | `TENSOR_PARALLEL_SIZE`              | Number of GPUs                                    | 1                   | Integer                                                            |
 | `GPU_MEMORY_UTILIZATION`            | Fraction of GPU memory to use                     | 0.9                 | Float between 0.0 and 1.0                                          |
 | `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 256                 | Integer                                                            |
