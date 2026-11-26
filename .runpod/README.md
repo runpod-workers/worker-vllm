@@ -51,7 +51,7 @@ All behaviour is controlled through environment variables:
 | `QUANTIZATION`                      | Quantization method                               |                     | "awq", "gptq", "bitsandbytes"                                      |
 | `TENSOR_PARALLEL_SIZE`              | Number of GPUs                                    | 1                   | Integer                                                            |
 | `GPU_MEMORY_UTILIZATION`            | Fraction of GPU memory to use                     | 0.9                 | Float between 0.0 and 1.0                                          |
-| `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 256                 | Integer                                                            |
+| `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 32 (Hub default)    | Integer                                                            |
 | `CUSTOM_CHAT_TEMPLATE`              | Custom chat template override                     |                     | Jinja2 template string                                             |
 | `ENABLE_AUTO_TOOL_CHOICE`           | Enable automatic tool selection                   | false               | boolean (true or false)                                            |
 | `TOOL_CALL_PARSER`                  | Parser for tool calls                             |                     | "mistral", "hermes", "llama3_json", "granite", "deepseek_v3", etc. |
@@ -59,6 +59,8 @@ All behaviour is controlled through environment variables:
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
 | `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 300                 | Integer                                                            |
 | `ENFORCE_EAGER`                     |  If True, we will disable CUDA graph and always execute the model in eager mode. If False, we will use CUDA graph and eager execution in hybrid for maximal performance and flexibility. | false | boolean (true or false) | 
+
+The Hub defaults `MAX_NUM_SEQS` to 32 so workers stay conservative on smaller GPUs out of the box. If you raise `MAX_CONCURRENCY` above 32 and want that much vLLM parallelism per worker, raise `MAX_NUM_SEQS` to match — an explicitly set `MAX_NUM_SEQS` overrides this default.
 
 **Pass any vLLM engine arg** not listed above by setting an env var with the **UPPERCASED** name of the corresponding `vllm serve` CLI flag (e.g. `MAX_MODEL_LEN=4096` → `--max-model-len 4096`, `ENABLE_CHUNKED_PREFILL=true` → `--enable-chunked-prefill`). The worker launches `vllm serve` with these flags, so values — including JSON like `SPECULATIVE_CONFIG` — are parsed by vLLM itself. Anything not recognized can be appended verbatim with `VLLM_EXTRA_ARGS`. See the [vLLM engine args docs](https://docs.vllm.ai/en/latest/configuration/engine_args) for all available options.
 

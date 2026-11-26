@@ -12,7 +12,7 @@ right move for a flaky download or a host that lost its GPU.
 """
 
 import re
-from typing import Optional
+from typing import Optional, Sequence
 
 # --- GPU memory -------------------------------------------------------------
 # torch prints both the request and the card's capacity; the capacity is the
@@ -28,6 +28,12 @@ _KV_TOO_SMALL = re.compile(
     re.I,
 )
 _KV_ESTIMATED_LEN = re.compile(r"estimated maximum model length is (\d+)", re.I)
+# vllm/v1/core/kv_cache_planning.py (kv_cache_utils.py before v0.34): under
+# MAX_MODEL_LEN=auto, vLLM tries to fit the context to whatever memory the
+# weights left and gives up when there is none ("Cannot
+# auto-fit max_model_len: not enough GPU memory available ..."). Matched
+# narrowly on "Cannot" so vLLM's informational auto-fit lines don't count.
+_CANNOT_AUTOFIT_LEN = re.compile(r"Cannot auto-fit max_model_len", re.I)
 
 # --- Configuration ----------------------------------------------------------
 # vllm/config/model.py: MAX_MODEL_LEN above what the model's config allows.
@@ -223,16 +229,22 @@ def revision_not_found_message(named: str, revision: str) -> str:
 
 
 def memory_shortfall(output: str) -> bool:
-    """True when startup died for lack of GPU memory in any of its three forms.
+    """True when startup died for lack of GPU memory in any of its four forms.
 
-    Split out from classify() because main.py treats this like the vanished
-    revision: one relaunch with a smaller memory footprint can genuinely
-    succeed (CUDA graph memory is reserved up front since v0.29 and the
-    batched-tokens default doubled in v0.28, so a boot can OOM where a more
-    conservative setup fits), so the worker retries once before answering
-    jobs with the error.
+    torch's OOM, no KV room for even one cache block, a KV budget too small
+    for max_model_len, and "Cannot auto-fit max_model_len" (the weights left
+    no KV room at all under MAX_MODEL_LEN=auto). Shared by main.py's staged
+    OOM relaunches and classify(): the batched-tokens default doubled in v0.28
+    and CUDA graph memory has been reserved up front since v0.29, so a boot can
+    OOM where a smaller batch — or, as a last resort, an eager relaunch — fits,
+    and retrying before answering jobs with the error is genuinely worth it.
     """
-    return bool(_OOM.search(output) or _NO_KV_MEMORY.search(output) or _KV_TOO_SMALL.search(output))
+    return bool(
+        _OOM.search(output)
+        or _NO_KV_MEMORY.search(output)
+        or _KV_TOO_SMALL.search(output)
+        or _CANNOT_AUTOFIT_LEN.search(output)
+    )
 
 
 def out_of_disk(output: str) -> bool:
@@ -257,17 +269,68 @@ def revision_not_found(output: str) -> bool:
     return bool(_REVISION_NOT_FOUND.search(output))
 
 
-def classify(output: str, model: Optional[str] = None, oom_retried: bool = False) -> Optional[str]:
+# The knobs main.py's staged OOM recovery can turn. Each is offered in the
+# terminal message only when a relaunch neither applied it nor found it already
+# in force (or pinned by VLLM_EXTRA_ARGS): the advice must describe what
+# actually remains, not repeat changes the launches already carried.
+_MEMORY_KNOB_ADVICE = (
+    (
+        "MAX_NUM_BATCHED_TOKENS",
+        "MAX_NUM_BATCHED_TOKENS=8192 (the default doubled to 16384 in v0.28, "
+        "which doubles peak activation memory)",
+    ),
+    (
+        "MAX_NUM_SEQS",
+        "a lower MAX_NUM_SEQS (fewer sequences to capture CUDA graphs for and "
+        "budget in the KV cache)",
+    ),
+    (
+        "ENFORCE_EAGER",
+        "ENFORCE_EAGER=true to skip CUDA graph capture (their memory is "
+        "reserved up front)",
+    ),
+)
+_MEMORY_CAPACITY_ADVICE = (
+    "If the model loaded but the KV cache did not fit, raising "
+    "GPU_MEMORY_UTILIZATION a little (default 0.9) can also help; and if "
+    "KV_CACHE_DTYPE=fp8 is set on an Ampere/Ada GPU, KV_CACHE_DTYPE=auto "
+    "frees the extra workspace the FlashInfer backend needs there."
+)
+
+
+def _remaining_memory_fixes(adjustments: Sequence[str], suppressed: Sequence[str]) -> str:
+    """The memory fixes the staged OOM recovery has not already covered."""
+    seen = (*adjustments, *suppressed)
+    options = [
+        advice
+        for knob, advice in _MEMORY_KNOB_ADVICE
+        if not any(entry.startswith(knob) for entry in seen)
+    ]
+    options.append(
+        "a lower MAX_MODEL_LEN, a smaller or quantized checkpoint, or a larger "
+        "GPU (or more GPUs with TENSOR_PARALLEL_SIZE)"
+    )
+    return ", ".join(options) + f". {_MEMORY_CAPACITY_ADVICE}"
+
+
+def classify(
+    output: str,
+    model: Optional[str] = None,
+    oom_adjustments: Sequence[str] = (),
+    oom_suppressed: Sequence[str] = (),
+) -> Optional[str]:
     """One actionable message for a known fatal failure, or None to let it retry.
 
-    ``oom_retried`` mirrors the revision case: set it when main.py already ran
-    its one reduced-footprint relaunch, so the wording reflects what was tried.
+    ``oom_adjustments`` mirrors the revision case: main.py passes the changes
+    its staged OOM relaunches actually applied (``oom_suppressed`` adds the
+    knobs it found already in force or pinned by VLLM_EXTRA_ARGS), so the
+    wording names the fixes that remain instead of claiming untried changes.
     """
     named = model or "The model"
 
     # Memory problems first: an OOM traceback is often surrounded by secondary
     # errors (engine core died, connection reset) that would match nothing.
-    if _OOM.search(output) or _NO_KV_MEMORY.search(output) or _KV_TOO_SMALL.search(output):
+    if memory_shortfall(output):
         capacity = _OOM_CAPACITY.search(output)
         card = f" This GPU has {capacity.group(1)} GiB." if capacity else ""
         estimated = _KV_ESTIMATED_LEN.search(output)
@@ -276,34 +339,18 @@ def classify(output: str, model: Optional[str] = None, oom_retried: bool = False
             if estimated
             else ""
         )
-        if oom_retried:
-            # By the time classify sees this output, main.py's reduced-footprint
-            # relaunch has already run, so the advice skips knobs that were
-            # already applied and names the fixes that actually remain.
+        fixes = _remaining_memory_fixes(oom_adjustments, oom_suppressed)
+        if oom_adjustments:
+            # By the time classify sees this output, main.py's staged recovery
+            # has already run, so the advice skips the knobs it changed and
+            # names the fixes that actually remain.
             return (
                 f"{named} ran out of GPU memory during startup.{card}{hint} "
-                f"The worker already retried once with a smaller footprint "
-                f"(ENFORCE_EAGER=true and MAX_NUM_BATCHED_TOKENS reduced to 8192 "
-                f"where it was higher or unset) and it still does not fit. What "
-                f"remains: a smaller or quantized checkpoint, a larger GPU (or "
-                f"more GPUs with TENSOR_PARALLEL_SIZE), a lower MAX_MODEL_LEN, or, "
-                f"if KV_CACHE_DTYPE=fp8 is set on an Ampere/Ada GPU, "
-                f"KV_CACHE_DTYPE=auto (fp8 KV forces the FlashInfer backend there, "
-                f"which needs extra workspace memory)."
+                f"The worker already relaunched with a smaller footprint "
+                f"({', '.join(oom_adjustments)}) and it still does not fit. "
+                f"What remains: {fixes}"
             )
-        return (
-            f"{named} ran out of GPU memory during startup.{card}{hint} "
-            f"Lower MAX_MODEL_LEN or MAX_NUM_SEQS, set ENFORCE_EAGER=true to skip "
-            f"CUDA graph capture, use a quantized checkpoint, or redeploy on a "
-            f"larger GPU (or more GPUs with TENSOR_PARALLEL_SIZE). If the model "
-            f"loaded but the KV cache did not fit, raising GPU_MEMORY_UTILIZATION "
-            f"a little (default 0.9) can also help. On this vLLM version two more "
-            f"knobs recover memory: MAX_NUM_BATCHED_TOKENS=8192 (the default "
-            f"doubled to 16384 in v0.28, which doubles peak activation memory), "
-            f"and, if KV_CACHE_DTYPE=fp8 is set on an Ampere/Ada GPU, "
-            f"KV_CACHE_DTYPE=auto (fp8 KV forces the FlashInfer backend there, "
-            f"which needs extra workspace memory)."
-        )
+        return f"{named} ran out of GPU memory during startup.{card}{hint} {fixes}"
 
     match = _MAX_LEN_EXCEEDS_MODEL.search(output)
     if match:

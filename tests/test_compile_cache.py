@@ -236,8 +236,9 @@ def test_second_out_of_disk_answers_jobs(paths, run_main, monkeypatch):
 
 
 def test_out_of_disk_is_relaunched_before_oom(paths, run_main, monkeypatch):
-    # The OOM relaunch sets ENFORCE_EAGER, which also turns torch.compile off;
-    # moving the cache keeps compile and CUDA graphs, so it must go first.
+    # The OOM plan's eager stage sets ENFORCE_EAGER, which also turns
+    # torch.compile off; moving the cache keeps compile and CUDA graphs, so it
+    # must go first.
     plenty_free(monkeypatch)
     monkeypatch.setenv("VLLM_CACHE_ROOT", paths.root)
     monkeypatch.setenv("XDG_CACHE_HOME", paths.xdg)

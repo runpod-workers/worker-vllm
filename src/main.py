@@ -13,16 +13,18 @@ of at the end of the download.
 If vLLM dies during startup for a reason a restart cannot fix (CUDA OOM, a
 MAX_MODEL_LEN the GPU cannot hold, a bad flag, a gated model), the worker stays
 up and answers every job with the cause instead of crash-looping; see
-startup_errors.py. Three startup failures get a single relaunch first, because
+startup_errors.py. Three startup failures get relaunches first, because
 retrying them can genuinely succeed: a Hugging Face revision that no longer
 exists (vLLM pins refs to commit hashes since v0.28, so a force-pushed repo
-invalidates the pin) is retried against the repo's current state, running out
-of disk with vLLM's compile cache on the network volume is retried with the
-cache in the container (see compile_cache.py), and a startup OOM is retried
-with a smaller memory footprint (CUDA graphs disabled and a reduced
-MAX_NUM_BATCHED_TOKENS — the two settings whose defaults grew at
-init time in recent vLLM releases). Unrecognised failures are reported by the SDK
-before the worker exits non-zero, so the platform retries them.
+invalidates the pin) is retried once against the repo's current state, running
+out of disk with vLLM's compile cache on the network volume is retried once
+with the cache in the container (see compile_cache.py), and a startup OOM is
+retried in up to two stages — first a smaller batch with CUDA graphs kept
+(MAX_NUM_BATCHED_TOKENS halved toward 8192 and MAX_NUM_SEQS bounded to
+MAX_CONCURRENCY, the two settings whose defaults grew at init time in recent
+vLLM releases), then ENFORCE_EAGER=true if the OOM comes back. Unrecognised
+failures are reported by the SDK before the worker exits non-zero, so the
+platform retries them.
 """
 
 import collections
@@ -30,6 +32,7 @@ import contextvars
 import json
 import logging
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -37,6 +40,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from typing import Optional
 
 import compile_cache
 import model_preflight
@@ -184,47 +188,231 @@ def drop_pinned_revisions() -> None:
             )
 
 
-OOM_TOKEN_BUDGET = "8192"  # vLLM doubled the max-num-batched-tokens default in v0.28
+# vLLM doubled the max-num-batched-tokens default in v0.28, doubling peak
+# activation memory at boot; the recovery halves it back toward this.
+OOM_TOKEN_BUDGET = "8192"
+# runpod's concurrency default when MAX_CONCURRENCY is unset (mirrors main()).
+DEFAULT_MAX_CONCURRENCY = 30
+# vLLM's OpenAI-server sequence default is GPU-dependent, but never below 256
+# on supported versions: 256 on smaller GPUs, 1024 on larger ones. Without an
+# explicit value, a target above this floor could increase rather than shrink
+# the launch's allocation.
+MIN_VLLM_DEFAULT_MAX_NUM_SEQS = 256
 
 
-def apply_oom_recovery() -> bool:
-    """Relax memory-hungry settings for a single relaunch after a startup OOM.
+def _positive_int(raw: str) -> Optional[int]:
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return None
+    return value if value >= 1 else None
 
-    Returns False when there is nothing left to relax (CUDA graphs are already
-    off and the batched-token budget is already small), which main.py reads as
-    "another attempt with the same footprint would OOM the same way".
+
+def _extra_args_split() -> list[str]:
+    try:
+        return shlex.split(os.getenv("VLLM_EXTRA_ARGS", ""))
+    except ValueError:
+        # Unbalanced quotes: `vllm serve` fails on the same string either way.
+        return []
+
+
+def _extra_args_pin(flag: str) -> Optional[str]:
+    """The value VLLM_EXTRA_ARGS pins for a value flag, or None when unpinned.
+
+    VLLM_EXTRA_ARGS is appended after every env-derived flag and argparse's
+    last-occurrence-wins makes it the highest-precedence source, so a pin here
+    beats any env change the recovery could make: the knob must be left alone
+    (and reported) instead of silently "adjusted". Returns the last occurrence,
+    or "" for a trailing bare flag.
     """
-    relaxed = False
-    eager = os.getenv("ENFORCE_EAGER", "").strip().lower()
-    if eager not in TRUE_VALUES:
-        os.environ["ENFORCE_EAGER"] = "true"
-        if eager:
+    pinned = None
+    tokens = _extra_args_split()
+    for i, token in enumerate(tokens):
+        if token == flag:
+            pinned = tokens[i + 1] if i + 1 < len(tokens) else ""
+        elif token.startswith(flag + "="):
+            pinned = token[len(flag) + 1:]
+    return pinned
+
+
+def _extra_args_enforce_eager() -> Optional[bool]:
+    """The eager polarity VLLM_EXTRA_ARGS pins with --enforce-eager/--no-enforce-eager."""
+    pinned = None
+    for token in _extra_args_split():
+        if token == "--enforce-eager":
+            pinned = True
+        elif token == "--no-enforce-eager":
+            pinned = False
+    return pinned
+
+
+def _enforce_eager_active() -> bool:
+    """Whether the next launch will run without CUDA graphs."""
+    pinned = _extra_args_enforce_eager()
+    if pinned is not None:
+        return pinned
+    return os.getenv("ENFORCE_EAGER", "").strip().lower() in TRUE_VALUES
+
+
+def _max_concurrency() -> int:
+    raw = os.getenv("MAX_CONCURRENCY")
+    if raw is None:
+        return DEFAULT_MAX_CONCURRENCY
+    value = _positive_int(raw)
+    if value is None:
+        logging.warning(
+            "MAX_CONCURRENCY=%r is not a positive integer; bounding MAX_NUM_SEQS "
+            "to the default %d.",
+            raw,
+            DEFAULT_MAX_CONCURRENCY,
+        )
+        return DEFAULT_MAX_CONCURRENCY
+    return value
+
+
+class StagedOomRecovery:
+    """Bounded relaunch plan for a startup OOM: shrink the batch, then drop the graphs.
+
+    Stage 1 frees memory while keeping CUDA graphs (measured in #366 to cost
+    small models no throughput at the worker's concurrency): the peak-activation
+    budget is shrunk toward MAX_NUM_BATCHED_TOKENS=8192 and MAX_NUM_SEQS is
+    bounded to the worker's MAX_CONCURRENCY, the number of sequences CUDA graphs
+    are captured for and the KV cache is budgeted against. Only a repeat OOM
+    reaches stage 2, ENFORCE_EAGER=true, which gives up the graphs whose memory
+    has been reserved up front since v0.29. Every relaunch must change
+    something: a stage with nothing left to change (already-eager included) is
+    skipped, so the plan fires at most twice and never relaunches an identical
+    footprint. ``adjustments`` records what the relaunches actually did and
+    ``suppressed`` the knobs found already in force or pinned by
+    VLLM_EXTRA_ARGS, so the terminal error neither claims untried changes nor
+    offers changes that cannot take effect.
+    """
+
+    def __init__(self) -> None:
+        self.adjustments: list[str] = []
+        self.suppressed: list[str] = []
+        self._stages = [self._shrink_allocations, self._enforce_eager]
+
+    def next_relaunch(self) -> list[str]:
+        """Apply the next stage that changes the launch; empty when none remains."""
+        while self._stages:
+            applied = self._stages.pop(0)()
+            if applied:
+                self.adjustments.extend(applied)
+                return applied
+        return []
+
+    def _shrink_allocations(self) -> list[str]:
+        applied, token_budget = self._shrink_token_budget()
+        applied += self._lower_max_num_seqs(token_budget)
+        if applied:
             logging.warning(
-                "Overriding ENFORCE_EAGER=%s for the retry: graphs are how the "
-                "boot OOM'd, so dropping them.",
-                eager,
+                "Shrinking the batch for the OOM retry without changing the "
+                "CUDA graph mode: %s.",
+                ", ".join(applied),
+            )
+        return applied
+
+    def _shrink_token_budget(self) -> tuple[list[str], Optional[int]]:
+        """Shrink MAX_NUM_BATCHED_TOKENS toward 8192; tighter explicit values win.
+
+        Returns the adjustment (if any) and the budget the next launch will
+        actually run with, for clamping MAX_NUM_SEQS (vLLM requires
+        max_num_batched_tokens >= max_num_seqs).
+        """
+        pinned = _extra_args_pin("--max-num-batched-tokens")
+        if pinned is not None:
+            logging.warning(
+                "VLLM_EXTRA_ARGS pins --max-num-batched-tokens, which wins over "
+                "MAX_NUM_BATCHED_TOKENS; leaving the peak-activation budget untouched."
+            )
+            self.suppressed.append("MAX_NUM_BATCHED_TOKENS (pinned by VLLM_EXTRA_ARGS)")
+            return [], _positive_int(pinned)
+        raw = os.getenv("MAX_NUM_BATCHED_TOKENS", "").strip()
+        if raw and raw != "0":
+            current = _positive_int(raw)
+            if current is None:
+                # The operator's value; vLLM rejects it with or without the retry.
+                self.suppressed.append(
+                    f"MAX_NUM_BATCHED_TOKENS={raw} (kept; not a positive integer)"
+                )
+                return [], None
+            if current <= int(OOM_TOKEN_BUDGET):
+                self.suppressed.append(
+                    f"MAX_NUM_BATCHED_TOKENS={current} (kept; already within {OOM_TOKEN_BUDGET})"
+                )
+                return [], current
+        os.environ["MAX_NUM_BATCHED_TOKENS"] = OOM_TOKEN_BUDGET
+        return [f"MAX_NUM_BATCHED_TOKENS={OOM_TOKEN_BUDGET}"], int(OOM_TOKEN_BUDGET)
+
+    def _lower_max_num_seqs(self, token_budget: Optional[int]) -> list[str]:
+        """Bound MAX_NUM_SEQS to MAX_CONCURRENCY, never above an explicit tighter cap."""
+        target = _max_concurrency()
+        if token_budget is not None:
+            target = min(target, token_budget)
+        pinned = _extra_args_pin("--max-num-seqs")
+        if pinned is not None:
+            logging.warning(
+                "VLLM_EXTRA_ARGS pins --max-num-seqs, which wins over MAX_NUM_SEQS; "
+                "leaving the captured batch size untouched."
+            )
+            self.suppressed.append("MAX_NUM_SEQS (pinned by VLLM_EXTRA_ARGS)")
+            return []
+        raw = os.getenv("MAX_NUM_SEQS", "").strip()
+        if raw:
+            current = _positive_int(raw)
+            if current is None:
+                self.suppressed.append(f"MAX_NUM_SEQS={raw} (kept; not a positive integer)")
+                return []
+            if current <= target:
+                # Raising an explicit tighter cap to the target would loosen
+                # memory, not tighten it.
+                self.suppressed.append(
+                    f"MAX_NUM_SEQS={current} (kept; already at or below {target})"
+                )
+                return []
+        elif target >= MIN_VLLM_DEFAULT_MAX_NUM_SEQS:
+            # The effective default varies by GPU. It might be 1024, but setting
+            # this target on a 256-default GPU would grow the footprint; leave
+            # it unset unless we know the target is below every valid default.
+            return []
+        os.environ["MAX_NUM_SEQS"] = str(target)
+        return [f"MAX_NUM_SEQS={target}"]
+
+    def _enforce_eager(self) -> list[str]:
+        """Final stage: drop CUDA graphs, whose memory is reserved up front."""
+        pinned = _extra_args_enforce_eager()
+        if pinned is True:
+            self.suppressed.append("ENFORCE_EAGER=true (already set by VLLM_EXTRA_ARGS)")
+            return []
+        if pinned is False:
+            logging.warning(
+                "VLLM_EXTRA_ARGS pins --no-enforce-eager, which wins over "
+                "ENFORCE_EAGER; keeping CUDA graphs rather than claiming a "
+                "change the launch would not see."
+            )
+            self.suppressed.append("ENFORCE_EAGER (blocked by VLLM_EXTRA_ARGS --no-enforce-eager)")
+            return []
+        raw = os.getenv("ENFORCE_EAGER", "").strip().lower()
+        if raw in TRUE_VALUES:
+            # Already eager: the OOM'd launches ran without graphs, so this
+            # stage would replay the same footprint.
+            self.suppressed.append("ENFORCE_EAGER=true (already set)")
+            return []
+        os.environ["ENFORCE_EAGER"] = "true"
+        if raw:
+            logging.warning(
+                "Overriding ENFORCE_EAGER=%s: graphs are how the boot OOM'd, so "
+                "dropping them for the final retry.",
+                raw,
             )
         else:
             logging.warning(
-                "Disabling CUDA graphs for the retry (ENFORCE_EAGER=true): their "
-                "memory has been reserved up front since v0.29, and the boot OOM'd."
+                "Disabling CUDA graphs for the final OOM retry (ENFORCE_EAGER=true): "
+                "their memory has been reserved up front since v0.29, and the "
+                "previous configuration still did not fit."
             )
-        relaxed = True
-    raw_budget = os.getenv("MAX_NUM_BATCHED_TOKENS", "").strip()
-    shrink = not raw_budget or raw_budget == "0"
-    if not shrink:
-        try:
-            shrink = int(raw_budget) > int(OOM_TOKEN_BUDGET)
-        except ValueError:
-            pass  # unparsable: it is the operator's value, keep it
-    if shrink:
-        os.environ["MAX_NUM_BATCHED_TOKENS"] = OOM_TOKEN_BUDGET
-        logging.warning(
-            "Reducing the peak-activation budget for the retry (MAX_NUM_BATCHED_TOKENS=%s).",
-            OOM_TOKEN_BUDGET,
-        )
-        relaxed = True
-    return relaxed
+        return ["ENFORCE_EAGER=true"]
 
 
 def start_backend() -> None:
@@ -242,22 +430,28 @@ def start_backend() -> None:
             "Model pre-flight failed; answering jobs with the cause instead of starting vLLM: %s",
             startup_error,
         )
-    # At most four launches: each of the three recoverable startup failures gets
-    # one relaunch — a vanished Hugging Face revision (vLLM re-resolves the pin
-    # on every launch; the pre-flight catches a *configured* revision that never
-    # existed, this catches one gone by load time or resolved by vLLM itself),
-    # running out of disk with the compile cache on the network volume (the
-    # volume can fill after the pre-launch check, during the weight download; a
-    # relaunch compiles into the container instead), and a startup OOM (a
-    # smaller footprint can fit where the defaults did not).
+    # At most five launches: each of the three recoverable startup failures gets
+    # relaunches — a vanished Hugging Face revision gets one (vLLM re-resolves
+    # the pin on every launch; the pre-flight catches a *configured* revision
+    # that never existed, this catches one gone by load time or resolved by
+    # vLLM itself), running out of disk with the compile cache on the network
+    # volume gets one (the volume can fill after the pre-launch check, during
+    # the weight download; a relaunch compiles into the container instead), and
+    # a startup OOM gets up to two staged relaunches (a smaller batch with CUDA
+    # graphs kept first, graphs off only if the OOM comes back).
     can_retry_revision = True
     can_retry_disk = True
-    can_retry_oom = True
-    oom_retried = False
+    recovery = StagedOomRecovery()
     while startup_error is None:
         vllm_process = start_vllm()
         try:
             wait_for_vllm(vllm_process)
+            if recovery.adjustments:
+                logging.info(
+                    "vLLM settled after OOM recovery (%s); CUDA graphs %s.",
+                    ", ".join(recovery.adjustments),
+                    "disabled (ENFORCE_EAGER=true)" if _enforce_eager_active() else "enabled",
+                )
             break
         except RuntimeError as e:
             logging.error("%s", e)
@@ -286,21 +480,21 @@ def start_backend() -> None:
                 )
                 recent_output.clear()
                 continue
-            if (
-                can_retry_oom
-                and startup_errors.memory_shortfall(output)
-                and apply_oom_recovery()
-            ):
-                can_retry_oom = False
-                oom_retried = True
-                logging.warning(
-                    "vLLM ran out of GPU memory during startup. Relaunching once "
-                    "with a smaller memory footprint."
-                )
-                recent_output.clear()
-                continue
+            if startup_errors.memory_shortfall(output):
+                applied = recovery.next_relaunch()
+                if applied:
+                    logging.warning(
+                        "vLLM ran out of GPU memory during startup. Relaunching "
+                        "with a smaller memory footprint (%s).",
+                        ", ".join(applied),
+                    )
+                    recent_output.clear()
+                    continue
             startup_error = startup_errors.classify(
-                output, model=os.getenv("MODEL_NAME"), oom_retried=oom_retried
+                output,
+                model=os.getenv("MODEL_NAME"),
+                oom_adjustments=recovery.adjustments,
+                oom_suppressed=recovery.suppressed,
             )
             if startup_error is None:
                 # Nothing recognisable, so let the platform restart us: a failed

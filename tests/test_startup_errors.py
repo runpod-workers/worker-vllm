@@ -33,6 +33,17 @@ MAX_LEN_EXCEEDS_MODEL = (
     "ValueError: User-specified max_model_len (65536) is greater than the derived "
     "max_model_len (max_position_embeddings=32768 or model_max_length=None in model's config.json)."
 )
+# vllm/v1/core/kv_cache_planning.py (kv_cache_utils.py before v0.34) under
+# MAX_MODEL_LEN=auto: the weights left no room at all for the KV cache.
+CANNOT_AUTOFIT = (
+    "ValueError: Cannot auto-fit max_model_len: not enough GPU memory available "
+    "to serve even a single token. Try reducing `gpu_memory_utilization`."
+)
+# The informational sibling, logged when the auto-fit succeeds: not a failure.
+AUTOFIT_INFO = (
+    "(EngineCore pid=1014) INFO 10-21 20:16:30 [kv_cache_utils.py:2400] "
+    "Auto-fitted max_model_len to 110096 tokens based on the available KV cache memory."
+)
 BAD_ARGS = "vllm serve: error: unrecognized arguments: --foo-bar 3"
 BAD_VALUE = "vllm serve: error: argument --max-model-len: invalid int value: 'lots'"
 GATED = (
@@ -78,6 +89,9 @@ class TestOutOfMemory:
 
     def test_older_kv_cache_wording_is_recognised(self):
         assert classify(KV_TOO_SMALL_OLD) is not None
+
+    def test_cannot_autofit_is_out_of_memory(self):
+        assert "ran out of GPU memory" in classify(CANNOT_AUTOFIT)
 
     def test_oom_wins_over_surrounding_noise(self):
         assert "GPU memory" in classify(f"Connection reset by peer\n{TORCH_OOM}\nEngineCore died")
@@ -150,6 +164,8 @@ class TestUnknownFailures:
             "vLLM serve exited during startup with code 1",
             # Only vLLM's own argparse errors count, not any line with "error:".
             "INFO 08-19 [launcher.py] error: none",
+            # A successful auto-fit is information, not a memory failure.
+            AUTOFIT_INFO,
         ],
     )
     def test_are_left_for_the_platform_to_retry(self, output):
@@ -197,32 +213,76 @@ class TestOomAdviceForV029:
         assert "KV_CACHE_DTYPE" in message
         assert "FlashInfer" in message
 
+    def test_default_advice_names_max_num_seqs_and_eager_too(self):
+        message = classify(TORCH_OOM)
 
-class TestOomAfterAutoRetry:
-    def test_says_the_reduced_footprint_relaunch_already_ran(self):
-        message = classify(TORCH_OOM, model="org/model", oom_retried=True)
+        assert "MAX_NUM_SEQS" in message
+        assert "ENFORCE_EAGER" in message
+
+
+class TestOomAfterRecovery:
+    def test_claims_only_the_adjustments_actually_applied(self):
+        message = classify(
+            TORCH_OOM,
+            model="org/model",
+            oom_adjustments=["MAX_NUM_BATCHED_TOKENS=8192", "MAX_NUM_SEQS=30"],
+        )
 
         assert message.startswith("org/model ran out of GPU memory")
-        assert "already retried once" in message
+        assert "already relaunched with a smaller footprint (MAX_NUM_BATCHED_TOKENS=8192, MAX_NUM_SEQS=30)" in message
+        # The knobs the retries applied are no longer offered as the fix, the
+        # ones they didn't get to still are.
         assert "ENFORCE_EAGER" in message
-        # The knobs the retry applied are no longer offered as the fix.
-        assert "MAX_NUM_BATCHED_TOKENS=8192 (the default doubled" not in message
-        # The fixes that remain are real capacity changes.
+        assert message.count("MAX_NUM_BATCHED_TOKENS") == 1
+        assert "TENSOR_PARALLEL_SIZE" in message
+        assert "quantized" in message
+
+    def test_suppressed_knobs_are_neither_claimed_nor_offered(self):
+        # Already in force, so the eager stage was a no-op the plan skipped:
+        # ENFORCE_EAGER must appear nowhere in the advice.
+        message = classify(
+            TORCH_OOM,
+            oom_adjustments=["MAX_NUM_SEQS=30"],
+            oom_suppressed=["ENFORCE_EAGER=true (already set)"],
+        )
+
+        assert "MAX_NUM_SEQS=30" in message
+        assert "MAX_NUM_BATCHED_TOKENS" in message
+        assert "ENFORCE_EAGER" not in message
+
+    def test_everything_applied_leaves_only_capacity_changes(self):
+        message = classify(
+            TORCH_OOM,
+            oom_adjustments=["MAX_NUM_BATCHED_TOKENS=8192", "MAX_NUM_SEQS=30", "ENFORCE_EAGER=true"],
+        )
+
+        assert "already relaunched" in message
+        for tried in ("MAX_NUM_BATCHED_TOKENS=8192", "MAX_NUM_SEQS=30", "ENFORCE_EAGER=true"):
+            assert tried in message
         assert "TENSOR_PARALLEL_SIZE" in message
         assert "quantized" in message
 
     def test_still_carries_the_card_and_the_kV_estimate(self):
-        assert "19.57 GiB" in classify(TORCH_OOM, oom_retried=True)
-        assert "34480 tokens" in classify(KV_TOO_SMALL, oom_retried=True)
+        assert "19.57 GiB" in classify(TORCH_OOM, oom_adjustments=["ENFORCE_EAGER=true"])
+        assert "34480 tokens" in classify(KV_TOO_SMALL, oom_adjustments=["ENFORCE_EAGER=true"])
 
 
 class TestMemoryShortfallPredicate:
-    def test_all_three_memory_wording_forms_match(self):
+    def test_all_four_memory_wording_forms_match(self):
         from startup_errors import memory_shortfall
 
         assert memory_shortfall(TORCH_OOM)
         assert memory_shortfall(NO_KV_MEMORY)
         assert memory_shortfall(KV_TOO_SMALL)
+        assert memory_shortfall(CANNOT_AUTOFIT)
+
+    def test_benign_autofit_lines_do_not_match(self):
+        from startup_errors import memory_shortfall
+
+        # The pattern needs the failure's "Cannot": a successful auto-fit's
+        # info log is not a memory failure.
+        assert not memory_shortfall(AUTOFIT_INFO)
+        assert not memory_shortfall("Auto-fitting max_model_len to the available memory")
 
     def test_non_memory_failures_do_not_match(self):
         from startup_errors import memory_shortfall

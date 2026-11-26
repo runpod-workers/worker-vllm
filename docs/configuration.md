@@ -77,6 +77,11 @@ These are consumed by the wrapper itself, not passed to vLLM:
 | `VLLM_EXTRA_ARGS`     | —       | Raw extra CLI args (see above).                                         |
 | `VLLM_CONFIG_FILE`    | —       | Path to a `vllm serve` YAML config file (`--config`).                   |
 
+`MAX_NUM_SEQS` has no worker-level default — without it, vLLM's own default applies —
+but RunPod Hub endpoints default it to 32. If you raise `MAX_CONCURRENCY` above 32
+and want that much vLLM parallelism per worker, raise `MAX_NUM_SEQS` to match;
+an explicitly set `MAX_NUM_SEQS` overrides this default.
+
 vLLM-native env vars (e.g. `VLLM_USE_DEEP_GEMM`, `PYTORCH_ALLOC_CONF`) are **not**
 converted to flags — they reach the `vllm serve` subprocess directly through the
 environment, exactly as upstream supports them. This worker's Dockerfile sets one

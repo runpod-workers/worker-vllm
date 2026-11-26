@@ -1,7 +1,7 @@
 """main() relaunches once for a vanished HF revision, and not for other failures.
 
-(Startup OOM gets its own single reduced-footprint relaunch; that policy lives
-in test_main_oom_retry.py.)
+(Startup OOM gets its own staged relaunches — up to two, shrinking the batch
+before dropping CUDA graphs; that policy lives in test_main_oom_retry.py.)
 """
 
 import sys
