@@ -291,7 +291,7 @@ The vLLM Worker is fully compatible with OpenAI's API, and you can use it with a
    ```bash
    curl https://api.runpod.ai/v2/<YOUR ENDPOINT ID>/openai/v1/chat/completions \
    -H "Content-Type: application/json" \
-   -H "Authorization: Bearer <YOUR OPENAI API KEY>" \
+   -H "Authorization: Bearer <YOUR RUNPOD API KEY>" \
    -d '{
    "model": "<YOUR DEPLOYED MODEL REPO/NAME>",
    "messages": [
@@ -377,7 +377,7 @@ This is the format used for GPT-4 and focused on instruction-following and chat.
       stream=True,
   )
   # Stream the response
-  for response in response_stream:
+  for chunk in response_stream:
       print(chunk.choices[0].delta.content or "", end="", flush=True)
   ```
 - **Non-Streaming**:
@@ -524,7 +524,7 @@ Below are all available sampling parameters that you can specify in the `samplin
 You may either use a `prompt` or a list of `messages` as input.
 
 1.  `prompt`
-    The prompt string can be any string, and the model's chat template will not be applied to it unless `apply_chat_template` is set to `true`, in which case it will be treated as a user message.
+    The prompt string can be any string. It is sent as-is to the `/v1/completions` route, and the model's chat template is not applied to it.
 
         Example:
         ```json
