@@ -63,12 +63,14 @@ Configure worker-vllm using environment variables:
 | `QUANTIZATION`                      | Quantization method                               |                     | "awq", "gptq", "bitsandbytes"                                      |
 | `TENSOR_PARALLEL_SIZE`              | Number of GPUs                                    | 1                   | Integer                                                            |
 | `GPU_MEMORY_UTILIZATION`            | Fraction of GPU memory to use                     | 0.9                 | Float between 0.0 and 1.0                                          |
-| `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 256                 | Integer                                                            |
+| `MAX_NUM_SEQS`                      | Maximum number of sequences per iteration         | 32 (Hub default)    | Integer                                                            |
 | `CUSTOM_CHAT_TEMPLATE`              | Custom chat template override                     |                     | Jinja2 template string                                             |
 | `ENABLE_AUTO_TOOL_CHOICE`           | Enable automatic tool selection                   | false               | boolean (true or false)                                            |
 | `TOOL_CALL_PARSER`                  | Parser for tool calls                             |                     | "mistral", "hermes", "llama3_json", "granite", "deepseek_v3", etc. |
 | `OPENAI_SERVED_MODEL_NAME_OVERRIDE` | Override served model name in API                 |                     | String                                                             |
 | `MAX_CONCURRENCY`                   | Maximum concurrent requests                       | 30                  | Integer                                                            |
+
+The Hub defaults `MAX_NUM_SEQS` to 32 so workers stay conservative on smaller GPUs out of the box. If you raise `MAX_CONCURRENCY` above 32 and want that much vLLM parallelism per worker, raise `MAX_NUM_SEQS` to match — an explicitly set `MAX_NUM_SEQS` overrides this default.
 
 **Pass any vLLM engine arg** as an environment variable: the worker translates env vars into `vllm serve` CLI flags. Any env var whose name is the UPPERCASED form of a `vllm serve` flag is applied automatically:
 

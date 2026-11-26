@@ -286,8 +286,8 @@
         "input": {
           "name": "Max Num Seqs",
           "type": "number",
-          "description": "Maximum number of sequences per iteration.",
-          "default": 256,
+          "description": "Maximum number of sequences per iteration. If you raise MAX_CONCURRENCY above 32 and want that much vLLM parallelism, raise this too; the default does not replace an explicitly set value.",
+          "default": 32,
           "advanced": true
         }
       },
